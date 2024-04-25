@@ -1,10 +1,10 @@
 /**
  * 定型抜き型を作成する関数
- * length=配列の長さ
- * type=定型抜き型のタイプ
- * 1=全て1
- * 2=偶数行が1
- * 3=偶数列が1
+ * @param length 配列の長さ
+ * @param type 定型抜き型のタイプ
+ * 1 = 全て1, 
+ * 2 = 偶数行が1, 
+ * 3 = 偶数列が1, 
  */
 function setFormatCuttingDie(length, type) {
     /**
@@ -35,7 +35,7 @@ function setFormatCuttingDie(length, type) {
         formatArray.push(temporaryArray);
     }
 
-    //タイプ3はタイプ2の転置行列とする
+    // タイプ3はタイプ2の転置行列とする
     if (type == 3) {
         return transpose(formatArray, length);
     }
