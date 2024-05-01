@@ -36,7 +36,15 @@ function MakeMatrixQuestion(height, width) {
         elementCStart++;
     }
 
-    // 配列を1次元から2次元に変換する
+    //完成した配列をランダムに並び替える
+    while (elementCount) {
+        var j = Math.floor(Math.random() * elementCount);
+        var t = elementArray[--elementCount];
+        elementArray[elementCount] = elementArray[j];
+        elementArray[j] = t;
+    }
+
+    //今まで取り扱ってた配列は1次元なので2次元に変換する
     for (let i = 0; i < height; i++) {
         /**
          * pushする1次元配列を一時的に保存する配列
