@@ -155,6 +155,29 @@ function PartitionMatrix(array, size) {
     return regularLargeArray;
 }
 
+function CuttingDie(array,dieArray,coordinate,direction){
+    /**
+    * 与えられた配列の縦の要素数
+    */
+    const height = array.length;
+    /**
+    * 与えられた配列の横の要素数
+    */
+    const width = array[0].length;
+    /**
+    * 与えられた抜き型の縦の要素数
+    */
+    const dieHeight = dieArray.length;
+    /**
+    * 与えられた抜き型の横の要素数
+    */
+    const dieWidth = dieArray[0].length;
+
+    for (i=coordinate;i<coordinate+dieWidth;i++){
+
+    }
+}
+
 let testArray = MakeMatrixQuestion(5, 6);
 console.log(testArray);
 testArray = PartitionMatrix(testArray, 3);
