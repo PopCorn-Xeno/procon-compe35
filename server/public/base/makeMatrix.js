@@ -153,5 +153,6 @@ testArray = PartitionMatrix(testArray, 3);
 for (let i = 0; i < 2; i++) {
     for (let j = 0; j < 2; j++) {
         console.log(testArray[i][j]);
+        // 
     }
 }
