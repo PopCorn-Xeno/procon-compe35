@@ -102,9 +102,11 @@ const types = Object.freeze({
 })
 
 // 分割代入で受け取る
+/*
 let [testArray, i] = setFormatCuttingDie(4, 3);
 console.log(i);
 console.log(testArray);
+*/
 
 module.exports.setFormatCuttingDie = setFormatCuttingDie;
 module.exports.transpose = transpose;

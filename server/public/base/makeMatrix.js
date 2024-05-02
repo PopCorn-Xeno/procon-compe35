@@ -4,6 +4,8 @@
  * @param width 配列の横の要素数
  */
 
+const { transpose, setFormatCuttingDie } = require("./formatCuttingDie");
+
 function MakeMatrixQuestion(height, width) {
     /**
      * 問題の完成形の配列
@@ -155,7 +157,16 @@ function PartitionMatrix(array, size) {
     return regularLargeArray;
 }
 
-function CuttingDie(array,dieArray,coordinate,direction){
+function CuttingDie(array, dieArray, coordinate, direction) {
+
+    if (direction == 1 || direction == 3) {
+        array = transpose(array);
+        dieArray = transpose(dieArray);
+        let swap = coordinate[1];
+        coordinate[0] = coordinate[1];
+        coordinate[1] = swap;
+    }
+
     /**
     * 与えられた配列の縦の要素数
     */
@@ -173,18 +184,50 @@ function CuttingDie(array,dieArray,coordinate,direction){
     */
     const dieWidth = dieArray[0].length;
 
-    for (i=coordinate;i<coordinate+dieWidth;i++){
+    for (let i = coordinate[1]; i < coordinate[1] + dieHeight; i++) {
+        let pullOut = []
+        let pullOutCount = 0;
+        let temporaryArray = [];
+        for (let j = 0; j < width; j++) {
+            console.log(i+","+j);
+            console.log(dieArray[i][j]);
+            if (coordinate[0] <= i && i <= coordinate[0] + dieWidth && dieArray[i][j] == 1) {
+                pullOut.push(array[i][j]);
+                pulloutCout++;
+            }
+            else {
+                temporaryArray.push(array[i][j]);
+            }
+        }
 
+        console.log(temporaryArray);
+        console.log(pullOutCount);
+
+        if (pullOutCount != 0) {
+            for (let j = 0; j < pullOutCount; j++) {
+                if (direction == 1 || direction == 4) {
+                    temporaryArray.unshift(pullOut[j]);
+                }
+                if (direction == 2 || direction == 3) {
+                    temporaryArray.push(pullOut[j]);
+                }
+            }
+        }
+        for (let j = 0; j < width; j++) {
+            array[i][j] = temporaryArray[i][j];
+        }
     }
+
+    if (direction == 1 || direction == 3) {
+        return transpose(array);
+    }
+
+    return array;
 }
 
-let testArray = MakeMatrixQuestion(5, 6);
+let testArray = MakeMatrixQuestion(6, 6);
 console.log(testArray);
-testArray = PartitionMatrix(testArray, 3);
-for (let i = 0; i < 2; i++) {
-    for (let j = 0; j < 2; j++) {
-        console.log(testArray[i][j]);
-    }
-}
-
-//test
+let die = setFormatCuttingDie(2, 1);
+let coor = [1, 2];
+testArray = CuttingDie(testArray, die[0], coor, 4);
+console.log(testArray);
