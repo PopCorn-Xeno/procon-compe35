@@ -247,3 +247,4 @@ function pullOut(array, cuttingTemplate, position, direction) {
 module.exports.makeQuestionBoard = makeQuestionBoard;
 module.exports.partitionBoard = partitionBoard;
 module.exports.transpose = transpose;
+module.exports.pullOut = pullOut;
