@@ -1,10 +1,10 @@
 /**
  * 定型抜き型を作成する関数
- * @param {number} length 配列の長さ
+ * @param {number} length 配列の大きさ
  * @param {number} type 定型抜き型のタイプ - typesオブジェクトを参照
  * @returns 定型抜き型とその通し番号を含む配列
  */
-function setFormatCuttingDie(length, type) {
+function setFormatCuttingTemplate(length, type) {
     /**
     * 定型抜き型の完成形の配列
     * @type {number[][]}
@@ -12,9 +12,7 @@ function setFormatCuttingDie(length, type) {
     const formatArray = [];
 
     for (let i = 0; i < length; i++) {
-        /**
-        * pushする1次元配列を一時的に保存する配列
-        */
+        /**pushする1次元配列を一時的に保存する配列*/
         let temporaryArray = [];
         //2次元配列を作る2重forループ
         for (let j = 0; j < length; j++) {
@@ -47,11 +45,11 @@ function setFormatCuttingDie(length, type) {
      * @param {number} type 定型抜き型のタイプ
      * @returns 定型抜き型の通し番号
      */
-    const dieIndex = (length, type) => 
+    const dieIndex = (length, type) =>
         // 長さが2以上256以下でタイプ番号が正常の時のみ計算する
         // 長さ1のときは通し番号0
-        (length >= 2 && length <= 256) && (type >= types.type1 && type <= types.type3) ? 
-        1 + 3 * (Math.log2(length) - 1) + type - 1 : 0;
+        (length >= 2 && length <= 256) && (type >= types.type1 && type <= types.type3) ?
+            1 + 3 * (Math.log2(length) - 1) + type - 1 : 0;
 
     return { die: formatArray, index: dieIndex(length, type) };
 }
@@ -63,13 +61,9 @@ function setFormatCuttingDie(length, type) {
 */
 function transpose(array) {
 
-    /**
-    * 与えられた引数の縦の要素数
-    */
+    /**与えられた引数の縦の要素数*/
     const height = array.length;
-    /**
-    * 与えられた引数の横の要素数
-    */
+    /**与えられた引数の横の要素数*/
     const width = array[0].length;
     /**
     * 転置後の配列
@@ -78,9 +72,7 @@ function transpose(array) {
     let transposedArray = [];
 
     for (let i = 0; i < height; i++) {
-        /**
-        * pushする1次元配列を一時的に保存する配列
-        */
+        /**pushする1次元配列を一時的に保存する配列*/
         let temporaryArray = [];
         for (let j = 0; j < width; j++) {
             temporaryArray.push(array[j][i]);
@@ -103,11 +95,11 @@ const types = Object.freeze({
 
 // 分割代入で受け取る
 /*
-let [testArray, i] = setFormatCuttingDie(4, 3);
+let [testArray, i] = setFormatCuttingTemplate(4, 3);
 console.log(i);
 console.log(testArray);
 */
 
-module.exports.setFormatCuttingDie = setFormatCuttingDie;
+module.exports.setFormatCuttingTemplate = setFormatCuttingTemplate;
 module.exports.transpose = transpose;
 module.exports.dieTypes = types;

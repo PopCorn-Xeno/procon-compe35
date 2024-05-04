@@ -1,5 +1,3 @@
-const { transpose, setFormatCuttingDie, dieTypes } = require("./formatCuttingDie");
-
 /**
  * 問題の完成形のボードをランダムに作成する関数
  * @param {number} height 配列の縦の要素数
@@ -12,17 +10,11 @@ function makeQuestionBoard(height, width) {
      * @type {number[]}
      */
     let regularArray = [];
-    /**
-     * 配列の要素数
-     */
+    /** 配列の要素数*/
     let elementCount = height * width;
-    /**
-     * for文内で配列に要素が入った回数
-     */
-    let elementCStart = 0;
-    /**
-     * 問題の完成形の1次元配列
-     */
+    /**for文内で配列に要素が入った回数*/
+    let elementCountStart = 0;
+    /** 問題の完成形の1次元配列*/
     let elementArray = [];
 
     /**
@@ -58,14 +50,14 @@ function makeQuestionBoard(height, width) {
     for (let i = 0; i <= 3; i++) {
         for (let j = 0; j < elementCount / 10; j++) {
             elementArray.push(i);
-            elementCStart++;
+            elementCountStart++;
         }
     }
 
     // 最低保証を作った後の配列を乱数で埋める
-    while (elementCStart < elementCount) {
+    while (elementCountStart < elementCount) {
         elementArray.push(Math.floor(Math.random() * 4));
-        elementCStart++;
+        elementCountStart++;
     }
 
     // 完成した配列をランダムに並び替える
@@ -100,13 +92,9 @@ function makeQuestionBoard(height, width) {
  * @param {number} size 1辺をどれくらいの大きさで分割するか
  */
 function partitionMatrix(array, size) {
-    /**
-    * 与えられた引数の縦の要素数
-    */
+    /** 与えられた引数の縦の要素数*/
     const height = array.length;
-    /**
-    * 与えられた引数の横の要素数
-    */
+    /**与えられた引数の横の要素数*/
     const width = array[0].length;
 
     /**
@@ -115,19 +103,13 @@ function partitionMatrix(array, size) {
     */
     let regularLargeArray = [];
     for (let I = 0; I < Math.ceil(height / size); I++) {
-        /**
-        * 外側の配列の横列
-        */
+        /**外側の配列の横列*/
         let temporaryLargeArray = [];
         for (let J = 0; J < Math.ceil(width / size); J++) {
-            /**
-            * 内側の配列の縦列
-            */
+            /** 内側の配列の縦列*/
             let regularSmallArray = [];
             for (let i = I * size; i < I * size + size; i++) {
-                /**
-                * 内側の配列の横列
-                */
+                /**内側の配列の横列*/
                 let temporarySmallArray = [];
                 for (let j = J * size; j < J * size + size; j++) {
                     if (i < height && j < width) {
@@ -137,13 +119,10 @@ function partitionMatrix(array, size) {
                         temporarySmallArray.push(4);
                     }
                 }
-
                 regularSmallArray.push(temporarySmallArray);
             }
-
             temporaryLargeArray.push(regularSmallArray);
         }
-
         regularLargeArray.push(temporaryLargeArray);
     }
 
@@ -151,74 +130,78 @@ function partitionMatrix(array, size) {
 }
 
 /**
- * 
- * @param {number[]} array 
- * @param {number[][]} dieArray 
- * @param {number[]} position 
- * @param {number} direction 
+ * 抜き型で指定した座標を抜き、指定した方向に寄せ、隙間を抜いた要素で埋める関数
+ * @param {number[][]} array　並べ替えたい2次元配列 
+ * @param {number[][]} cuttingTemplate　抜き型の配列
+ * @param {number[]} position　座標(x,y)
+ * @param {number} direction 方向(上から時計回りに1~4の数値で割り当て)
  * @returns 
  */
-function cutBoard(array, dieArray, position, direction) {
+function cutBoard(array, cuttingTemplate, position, direction) {
 
+    //縦方向の操作は配列と抜き型を転置し座標を交換して操作する
     if (direction == 1 || direction == 3) {
         array = transpose(array);
-        dieArray = transpose(dieArray);
+        cuttingTemplate = transpose(cuttingTemplate);
         let swap = position[1];
-        position[0] = position[1];
-        position[1] = swap;
+        position[1] = position[0];
+        position[0] = swap;
     }
 
-    /**
-    * 与えられた配列の縦の要素数
-    */
+    /**与えられた配列の縦の要素数*/
     const height = array.length;
-    /**
-    * 与えられた配列の横の要素数
-    */
+    /**与えられた配列の横の要素数*/
     const width = array[0].length;
-    /**
-    * 与えられた抜き型の縦の要素数
-    */
-    const dieHeight = dieArray.length;
-    /**
-    * 与えられた抜き型の横の要素数
-    */
-    const dieWidth = dieArray[0].length;
+    /**与えられた抜き型の縦の要素数*/
+    const dieHeight = cuttingTemplate.length;
+    /**与えられた抜き型の横の要素数*/
+    const dieWidth = cuttingTemplate[0].length;
 
+    //引数arrayを操作するための縦列のfor文
     for (let i = position[1]; i < position[1] + dieHeight; i++) {
+
+        /** 抜いた要素を記録する配列 */
         let pullOut = []
-        let pullOutCount = 0;
+        /** 配列の横列(1行のみ) */
         let temporaryArray = [];
+
+        //横列のfor文その1
         for (let j = 0; j < width; j++) {
-            console.log(`${i}, ${j}`);
-            console.log(dieArray[i][j]);
-            if (position[0] <= i && i <= position[0] + dieWidth && dieArray[i][j] == 1) {
-                pullOut.push(array[i][j]);
-                pulloutCout++;
+            //抜き型の1の部分をpullOutに記録し、そうでない部分をtemporaryArrayに記録する
+            if (position[0] <= j && j < position[0] + dieWidth) {
+                if (cuttingTemplate[i - position[1]][j - position[0]] == 1) {
+                    if (direction == 1 || direction == 4) {
+                        pullOut.push(array[i][j]);
+                    }
+                    if (direction == 2 || direction == 3) {
+                        pullOut.unshift(array[i][j]);
+                    }
+                }
             }
             else {
                 temporaryArray.push(array[i][j]);
             }
         }
 
-        console.log(temporaryArray);
-        console.log(pullOutCount);
-
-        if (pullOutCount != 0) {
-            for (let j = 0; j < pullOutCount; j++) {
-                if (direction == 1 || direction == 4) {
-                    temporaryArray.unshift(pullOut[j]);
-                }
-                if (direction == 2 || direction == 3) {
-                    temporaryArray.push(pullOut[j]);
-                }
+        //横列のfor文その2
+        for (let j = 0; j < pullOut.length; j++) {
+            //pullOutの配列を右か左に寄せる
+            if (direction == 1 || direction == 4) {
+                temporaryArray.push(pullOut[j]);
+            }
+            if (direction == 2 || direction == 3) {
+                temporaryArray.unshift(pullOut[j]);
             }
         }
+
+        //横列のfor文その3
         for (let j = 0; j < width; j++) {
-            array[i][j] = temporaryArray[i][j];
+            //引数で与えられた配列に再代入される
+            array[i][j] = temporaryArray[j];
         }
     }
 
+    //縦方向の操作はもう一度転置をして元に戻す
     if (direction == 1 || direction == 3) {
         return transpose(array);
     }
@@ -226,9 +209,5 @@ function cutBoard(array, dieArray, position, direction) {
     return array;
 }
 
-let testArray = makeQuestionBoard(6, 6);
-console.log(testArray);
-let { die } = setFormatCuttingDie(2, dieTypes.type1);
-let pos = [1, 2];
-testArray = cutBoard(testArray, die, pos, 4);
-console.log(testArray);
+module.exports.makeQuestionBoard=makeQuestionBoard;
+module.exports.partitionMatrix=partitionMatrix;
