@@ -53,7 +53,7 @@ function setFormatCuttingDie(length, type) {
         (length >= 2 && length <= 256) && (type >= types.type1 && type <= types.type3) ? 
         1 + 3 * (Math.log2(length) - 1) + type - 1 : 0;
 
-    return [formatArray, dieIndex(length, type)];
+    return { die: formatArray, index: dieIndex(length, type) };
 }
 
 
