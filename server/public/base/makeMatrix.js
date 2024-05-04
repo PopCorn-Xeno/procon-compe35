@@ -1,14 +1,15 @@
+const { transpose, setFormatCuttingDie, dieTypes } = require("./formatCuttingDie");
+
 /**
- * 問題の完成形の配列をランダムに作成する関数
- * @param height 配列の縦の要素数
- * @param width 配列の横の要素数
+ * 問題の完成形のボードをランダムに作成する関数
+ * @param {number} height 配列の縦の要素数
+ * @param {number} width 配列の横の要素数
+ * @returns 完成したボード（配列）
  */
-
-const { transpose, setFormatCuttingDie } = require("./formatCuttingDie");
-
-function MakeMatrixQuestion(height, width) {
+function makeQuestionBoard(height, width) {
     /**
      * 問題の完成形の配列
+     * @type {number[]}
      */
     let regularArray = [];
     /**
@@ -24,6 +25,35 @@ function MakeMatrixQuestion(height, width) {
      */
     let elementArray = [];
 
+    /**
+    * ボードをランダムに並び替える
+    * @param {number[][]} array 並び替えるボード（2次元配列）
+    */
+    const shuffleBoard = array => {
+        /** 与えられた引数の縦の要素数 */
+        const height = array.length;
+
+        /** 与えられた引数の横の要素数 */
+        const width = array[0].length;
+
+        for (let i = height - 1; -1 < i; i--) {
+            for (let j = width - 1; -1 < j; j--) {
+                /** ランダムに抽選された縦列の数値 */
+                let randomHeight = Math.floor(Math.random() * (i + 1));
+
+                /** ランダムに抽選された横列の数値 */
+                let randomWidth = Math.floor(Math.random() * (j + 1));
+
+                /** スワップする数値を一時的に保存する変数 */
+                let temporaryElement = array[i][j];
+
+                array[i][j] = array[randomHeight][randomWidth];
+                array[randomHeight][randomWidth] = temporaryElement;
+            }
+        }
+        return array;
+    }
+
     // それぞれの要素数は全体の要素数の10%以上あるという法則の最低保証をつくるfor文
     for (let i = 0; i <= 3; i++) {
         for (let j = 0; j < elementCount / 10; j++) {
@@ -38,7 +68,7 @@ function MakeMatrixQuestion(height, width) {
         elementCStart++;
     }
 
-    //完成した配列をランダムに並び替える
+    // 完成した配列をランダムに並び替える
     while (elementCount) {
         var j = Math.floor(Math.random() * elementCount);
         var t = elementArray[--elementCount];
@@ -48,10 +78,9 @@ function MakeMatrixQuestion(height, width) {
 
     //今まで取り扱ってた配列は1次元なので2次元に変換する
     for (let i = 0; i < height; i++) {
-        /**
-         * pushする1次元配列を一時的に保存する配列
-         */
+        /** pushする1次元配列を一時的に保存する配列 */
         let temporaryArray = [];
+
         for (let j = 0; j < width; j++) {
             temporaryArray.push(elementArray[0]);
             elementArray.shift();
@@ -60,45 +89,9 @@ function MakeMatrixQuestion(height, width) {
     }
 
     // 2次元配列をランダムに並び替える
-    regularArray = MatrixShuffle(regularArray);
+    regularArray = shuffleBoard(regularArray);
 
     return regularArray;
-}
-
-/**
- * 2次元配列をランダムに並び替える
- * @param array 並び替える2次元配列
- */
-function MatrixShuffle(array) {
-    /**
-    * 与えられた引数の縦の要素数
-    */
-    const height = array.length;
-    /**
-    * 与えられた引数の横の要素数
-    */
-    const width = array[0].length;
-
-    for (let i = height - 1; -1 < i; i--) {
-        for (let j = width - 1; -1 < j; j--) {
-            /**
-            * ランダムに抽選された縦列の数値
-            */
-            let randomHeight = Math.floor(Math.random() * (i + 1));
-            /**
-            * ランダムに抽選された横列の数値
-            */
-            let randomWidth = Math.floor(Math.random() * (j + 1));
-            /**
-            * スワップする数値を一時的に保存する変数
-            */
-            let temporaryElement = array[i][j];
-            array[i][j] = array[randomHeight][randomWidth];
-            array[randomHeight][randomWidth] = temporaryElement;
-        }
-    }
-
-    return array;
 }
 
 /**
@@ -106,7 +99,7 @@ function MatrixShuffle(array) {
  * @param {number[][]} array 分割する2次元配列
  * @param {number} size 1辺をどれくらいの大きさで分割するか
  */
-function PartitionMatrix(array, size) {
+function partitionMatrix(array, size) {
     /**
     * 与えられた引数の縦の要素数
     */
@@ -141,7 +134,7 @@ function PartitionMatrix(array, size) {
                         temporarySmallArray.push(array[i][j]);
                     }
                     else {
-                        temporarySmallArray.push(null);
+                        temporarySmallArray.push(4);
                     }
                 }
 
@@ -157,14 +150,22 @@ function PartitionMatrix(array, size) {
     return regularLargeArray;
 }
 
-function CuttingDie(array, dieArray, coordinate, direction) {
+/**
+ * 
+ * @param {number[]} array 
+ * @param {number[][]} dieArray 
+ * @param {number[]} position 
+ * @param {number} direction 
+ * @returns 
+ */
+function cutBoard(array, dieArray, position, direction) {
 
     if (direction == 1 || direction == 3) {
         array = transpose(array);
         dieArray = transpose(dieArray);
-        let swap = coordinate[1];
-        coordinate[0] = coordinate[1];
-        coordinate[1] = swap;
+        let swap = position[1];
+        position[0] = position[1];
+        position[1] = swap;
     }
 
     /**
@@ -184,14 +185,14 @@ function CuttingDie(array, dieArray, coordinate, direction) {
     */
     const dieWidth = dieArray[0].length;
 
-    for (let i = coordinate[1]; i < coordinate[1] + dieHeight; i++) {
+    for (let i = position[1]; i < position[1] + dieHeight; i++) {
         let pullOut = []
         let pullOutCount = 0;
         let temporaryArray = [];
         for (let j = 0; j < width; j++) {
-            console.log(i+","+j);
+            console.log(`${i}, ${j}`);
             console.log(dieArray[i][j]);
-            if (coordinate[0] <= i && i <= coordinate[0] + dieWidth && dieArray[i][j] == 1) {
+            if (position[0] <= i && i <= position[0] + dieWidth && dieArray[i][j] == 1) {
                 pullOut.push(array[i][j]);
                 pulloutCout++;
             }
@@ -225,9 +226,9 @@ function CuttingDie(array, dieArray, coordinate, direction) {
     return array;
 }
 
-let testArray = MakeMatrixQuestion(6, 6);
+let testArray = makeQuestionBoard(6, 6);
 console.log(testArray);
-let die = setFormatCuttingDie(2, 1);
-let coor = [1, 2];
-testArray = CuttingDie(testArray, die[0], coor, 4);
+let { die } = setFormatCuttingDie(2, dieTypes.type1);
+let pos = [1, 2];
+testArray = cutBoard(testArray, die, pos, 4);
 console.log(testArray);
