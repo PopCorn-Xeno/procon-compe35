@@ -166,17 +166,17 @@ function transpose(array) {
 /**
  * 抜き型で指定した座標を抜き、指定した方向に寄せ、隙間を抜いた要素で埋める関数
  * @param {number[][]} array　並べ替えたい2次元配列 
- * @param {number[][]} cuttingTemplate　抜き型の配列
+ * @param {number[][]} pattern　抜き型の配列
  * @param {number[]} position　座標(x,y)
  * @param {number} direction 方向(上から時計回りに1~4の数値で割り当て)
  * @returns 
  */
-function pullOut(array, cuttingTemplate, position, direction) {
+function pullOut(array, pattern, position, direction) {
 
     //縦方向の操作は配列と抜き型を転置し座標を交換して操作する
     if (direction == 1 || direction == 3) {
         array = transpose(array);
-        cuttingTemplate = transpose(cuttingTemplate);
+        pattern = transpose(pattern);
         let swap = position[1];
         position[1] = position[0];
         position[0] = swap;
@@ -187,9 +187,9 @@ function pullOut(array, cuttingTemplate, position, direction) {
     /**与えられた配列の横の要素数*/
     const width = array[0].length;
     /**与えられた抜き型の縦の要素数*/
-    const dieHeight = cuttingTemplate.length;
+    const dieHeight = pattern.length;
     /**与えられた抜き型の横の要素数*/
-    const dieWidth = cuttingTemplate[0].length;
+    const dieWidth = pattern[0].length;
 
     //引数arrayを操作するための縦列のfor文
     for (let i = position[1]; i < position[1] + dieHeight; i++) {
@@ -204,7 +204,7 @@ function pullOut(array, cuttingTemplate, position, direction) {
         for (let j = 0; j < width; j++) {
             // 抜き型の1の部分をpullOutに記録し、そうでない部分をtemporaryArrayに記録する
             if (position[0] <= j && j < position[0] + dieWidth) {
-                if (cuttingTemplate[i - position[1]][j - position[0]] == 1) {
+                if (pattern[i - position[1]][j - position[0]] == 1) {
                     if (direction == 1 || direction == 4) {
                         pulldOutArray.push(array[i][j]);
                     }
