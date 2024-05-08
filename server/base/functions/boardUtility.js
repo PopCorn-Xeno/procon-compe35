@@ -244,7 +244,37 @@ function pullOut(array, pattern, position, direction) {
     return array;
 }
 
+function evaluate(questionBoard, currentBoard) {
+
+    if (questionBoard.length != currentBoard.length || questionBoard[0].length != currentBoard[0].length) {
+        return console.log("error!!(比較する配列の大きさが違います");
+    }
+
+    /**与えられたボードの縦の要素数*/
+    const height = questionBoard.length;
+    /**与えられたボードの横の要素数*/
+    const width = questionBoard[0].length;
+
+    let array = [];
+
+    for (let i = 0; i < height; i++) {
+        temporaryArray = [];
+        for (let j = 0; j < width; j++) {
+            if (questionBoard[i][j] == currentBoard[i][j]) {
+                temporaryArray.push(0);
+            }
+            else {
+                temporaryArray.push(1);
+            }
+        }
+        array.push(temporaryArray);
+    }
+
+    return array;
+}
+
 module.exports.makeQuestionBoard = makeQuestionBoard;
 module.exports.partitionBoard = partitionBoard;
 module.exports.transpose = transpose;
 module.exports.pullOut = pullOut;
+module.exports.evaluate = evaluate;
