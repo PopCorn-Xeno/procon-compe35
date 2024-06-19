@@ -1,3 +1,7 @@
+const { Order,BoardData } = require("./class");
+
+const board = new BoardData(8,8);
+
 /**
  * 問題の完成形のボードをランダムに作成する関数
  * @param {number} height 配列の縦の要素数
@@ -244,10 +248,66 @@ function pullOut(array, pattern, position, direction) {
     return array;
 }
 
+function swap(array,position1,position2,size=1){
+
+    /**与えられた配列の縦の要素数*/
+    let height = array.length;
+    /**与えられた配列の横の要素数*/
+    let width = array[0].length;
+    /**値を交換する用の変数*/
+    let swap;
+    
+    //エラー処理
+    if(position1[0]!=position2[0]&&position1[1]!=position2[1]){
+        return console.log("error!!(swap関数):要素同士が直線上に並んでいません");
+    }
+
+    if(width<position1[0]){
+        return console.log("error!!(swap関数):position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
+    }
+    else if(width<position2[0]){
+        return console.log("error!!(swap関数):position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
+    }
+
+    if(height<position1[1]){
+        return console.log("error!!(swap関数):position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
+    }
+    else if(height<position2[1]){
+        return console.log("error!!(swap関数):position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
+    }
+
+    if(position1[0]==position2[0]){
+        array = transpose(array);
+        swap=position1[0];
+        position1[0]=position1[1];
+        position1[1]=swap;
+        swap=position2[0];
+        position2[0]=position2[1];
+        position2[1]=swap;
+        swap=height;
+        height=width;
+        width=swap;
+    }
+
+    if(position2[0]<position1[0]){
+        swap=position1[0];
+        position1[0]=position2[0];
+        position2[0]=swap;
+    }
+
+    const leftLength=position1[0]-1;
+    const centerLength=width-position1[0]-position2[0];
+    const rightLength=width-position2[0];
+
+    
+
+    return;
+}
+
 function evaluate(questionBoard, currentBoard) {
 
     if (questionBoard.length != currentBoard.length || questionBoard[0].length != currentBoard[0].length) {
-        return console.log("error!!(比較する配列の大きさが違います");
+        return console.log("error!!(evalute関数):比較する配列の大きさが違います");
     }
 
     /**与えられたボードの縦の要素数*/
@@ -278,3 +338,7 @@ module.exports.partitionBoard = partitionBoard;
 module.exports.transpose = transpose;
 module.exports.pullOut = pullOut;
 module.exports.evaluate = evaluate;
+
+let a=1;
+let b=5;
+console.log(a>b);

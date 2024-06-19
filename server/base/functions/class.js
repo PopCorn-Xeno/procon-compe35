@@ -205,3 +205,6 @@ class Order {
         this.direction = direction;
     }
 }
+
+module.exports.BoardData = BoardData;
+module.exports.Order=Order;
