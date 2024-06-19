@@ -51,12 +51,6 @@ class BoardData {
         cells: [[]]
     }];
 
-    /**
-     * 現在作業中のボード
-     * @type {[number[][]]}
-     */
-    current;
-
     /** ボードの情報 */
     get board() {
         return this.#board;
@@ -67,13 +61,19 @@ class BoardData {
         return this.#patterns;
     }
 
-    constructor(height, width, data = null) {
+    /**
+     * 
+     * @param {*} data 
+     * @param {*} width 
+     * @param {*} height 
+     */
+    constructor(data = null, width = 0, height = 0) {
         // 受信データを使用しなかった場合、問題をランダムで作るモードに移行する
-        if (data === null && (height || width)) {
+        if (data === null) {
             this.#makeRandom(height, width);
-            return this;
+            return;
         }
-
+        
         // 受信データを使用する場合、JSONからデータを取得する
         /**
          * 受信データのボード情報をコピー
@@ -192,19 +192,53 @@ class BoardData {
         // 2次元配列をランダムに並び替える
         this.#board.start = shuffleBoard(regularArray);
         this.#board.goal = shuffleBoard(this.#board.start);
-        this.#board.height = regularArray.length;
-        this.#board.width = regularArray[0].length;
+
         return this;
     }
 }
 
-class Order {
-    constructor(pattern, position, direction) {
-        this.pattern = pattern;
-        this.position = position;
-        this.direction = direction;
+class Board { 
+    
+    /**
+     * 
+     */
+    width = 0;
+
+    /**
+     * 
+     */
+    height = 0;
+
+    /**
+     * 
+     */
+    array = [[]];
+
+    /**
+     * 
+     * @param {number[][]} array 
+     */
+    constructor(array) {
+        this.array = array;
+        this.height = array.length;
+        this.width =  array[0].length;
     }
 }
 
+class Order {
+    constructor(pattern, position, direction, array) {
+        this.pattern = pattern;
+        this.position = position;
+        this.direction = direction;
+        this.array = array;
+    }
+}
+
+// 受信データなしでボードデータをつくるとき
+const boardData = new BoardData(null, 6, 6);
+const board = new Board(boardData.board.start);
+// ここまでテンプレ
+console.log(board);
+
 module.exports.BoardData = BoardData;
-module.exports.Order=Order;
+module.exports.Order = Order;
