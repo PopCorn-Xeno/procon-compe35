@@ -27,29 +27,11 @@ class BoardData {
         goal: [[]]
     };
 
-    /** この問題で使える一般抜き型の情報 */
-    #patterns = [{
-        /**
-         * 抜き型の通し番号
-         * @type {number}
-         */
-        p: 0,
-        /**
-         * 抜き型の横幅
-         * @type {number}
-         */
-        width: 0,
-        /**
-         * 抜き型の高さ
-         * @type {number}
-         */
-        height: 0,
-        /**
-         * 抜き型の配置
-         * @type {number[][]}
-         */
-        cells: [[]]
-    }];
+    /**
+     * この問題で使える一般抜き型の情報
+     * @type {Board[]}
+     */
+    #patterns = [];
 
     /** ボードの情報 */
     get board() {
@@ -71,31 +53,36 @@ class BoardData {
         // 受信データを使用しなかった場合、問題をランダムで作るモードに移行する
         if (data === null) {
             this.#makeRandom(height, width);
-            return;
         }
-        
         // 受信データを使用する場合、JSONからデータを取得する
-        /**
-         * 受信データのボード情報をコピー
-         * @type {{}}
-         */
-        let board = data?.board;
-        /**
-         * 受信データの抜き型情報をコピー
-         * @type {{}[]}
-         */
-        let patterns = data?.general?.patterns;
+        else {
+            /**
+             * 受信データのボード情報をコピー
+             * @type {{}}
+             */
+            let board = data?.board;
+            /**
+             * 受信データの抜き型情報をコピー
+             * @type {{}[]}
+             */
+            let patterns = data?.general?.patterns;
 
-        this.#board.width = board?.width;
-        this.#board.height = board?.height;
-        // 最後は符号の演算子を利用して暗黙的に数値型に変換する
-        // for文の方が早く回るが、処理時間が気になり始めたときに改善する
-        this.#board.start = board?.start.map(str => str.split("").map(elem => +elem));
-        this.#board.goal = board?.goal.map(str => str.split("").map(elem => +elem));
+            this.#board.width = board?.width;
+            this.#board.height = board?.height;
+            // 最後は符号の演算子を利用して暗黙的に数値型に変換する
+            // for文の方が早く回るが、処理時間が気になり始めたときに改善する
+            this.#board.start = board?.start.map(str => str.split("").map(elem => +elem));
+            this.#board.goal = board?.goal.map(str => str.split("").map(elem => +elem));
 
-        this.#patterns = patterns;
-        for (let i = 0; i < this.#patterns.length; i++) {
-            this.#patterns[i].cells = this.#patterns[i].cells.map(str => str.split("").map(elem => +elem));
+            this.#patterns = patterns;
+            for (let i = 0; i < this.#patterns.length; i++) {
+                this.#patterns[i].cells = this.#patterns[i].cells.map(str => str.split("").map(elem => +elem));
+            }
+        }
+
+        for (let i = 0; i < 25; i++) {
+            this.#patterns.push(this.#setFormatPattern(i));
+            console.log(i+"番目のパターンが代入されました");
         }
     }
 
@@ -195,24 +182,86 @@ class BoardData {
 
         return this;
     }
+
+    #setFormatPattern(patternNumber) {
+
+        if (patternNumber == 0) {
+            const array = 1;
+            return new Board(array);
+        }
+
+        /**
+        * 定型抜き型の完成形の配列
+        * @param {number[][]} formatPattern
+        */
+        const formatPattern = [];
+        /**
+        * 抜き型の大きさ
+        * @param {number} length
+        */
+        const length = Math.pow(2, Math.floor((patternNumber + 2) / 3));
+        /**
+        * 抜き型のタイプ
+        * @param {number} type
+        */
+        const type = (patternNumber - 1) % 3 + 1;
+
+        for (let i = 0; i < length; i++) {
+            /**　pushする1次元配列を一時的に保存する配列　*/
+            let temporaryArray = [];
+            //　2次元配列を作る2重forループ
+            for (let j = 0; j < length; j++) {
+                // タイプ毎の場合分け
+                // タイプ1の場合
+                if (type == 1) {
+                    temporaryArray.push(1);
+                }
+                // タイプ2, 3の場合
+                else if (type > 1) {
+                    if (i % 2 == 0) {
+                        temporaryArray.push(1);
+                    }
+                    else {
+                        temporaryArray.push(0);
+                    }
+                }
+            }
+            formatPattern.push(temporaryArray);
+        }
+
+        let board = new Board(formatPattern);
+
+        // タイプ3はタイプ2の転置行列とする
+        if (type == 3) {
+            transpose(board);
+        }
+        return board;
+    }
 }
 
-class Board { 
-    
+class Board {
     /**
-     * 
-     */
-    width = 0;
-
-    /**
-     * 
-     */
-    height = 0;
-
-    /**
-     * 
+     *Boardクラスの中の配列
      */
     array = [[]];
+    /**
+     *Boardクラスの中の配列の高さ
+     */
+    get height() {
+        if (this.array == 1) {
+            return 1;
+        }
+        return this.array.length;
+    }
+    /**
+     *Boardクラスの中の配列の幅
+     */
+    get width() {
+        if (this.array == 1) {
+            return 1;
+        }
+        return this.array[0].length;
+    }
 
     /**
      * 
@@ -220,8 +269,6 @@ class Board {
      */
     constructor(array) {
         this.array = array;
-        this.height = array.length;
-        this.width =  array[0].length;
     }
 }
 
@@ -236,9 +283,10 @@ class Order {
 
 // 受信データなしでボードデータをつくるとき
 const boardData = new BoardData(null, 6, 6);
+console.log(boardData.patterns[5]);
 const board = new Board(boardData.board.start);
 // ここまでテンプレ
-console.log(board);
 
 module.exports.BoardData = BoardData;
 module.exports.Order = Order;
+module.exports.Board = Board;

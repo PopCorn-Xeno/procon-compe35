@@ -1,10 +1,10 @@
-const { Order, BoardData } = require("./class");
+const { Order, BoardData, Board } = require("./class");
 
 /**
  * 問題の完成形のボードをランダムに作成する関数
  * @param {number} height 配列の縦の要素数
  * @param {number} width 配列の横の要素数
- * @returns 完成したボード（配列）
+ * @returns 完成したボード(Boardクラス)
  */
 function makeQuestionBoard(height, width) {
     /**
@@ -93,31 +93,24 @@ function makeQuestionBoard(height, width) {
     // 2次元配列をランダムに並び替える
     regularArray = shuffleBoard(regularArray);
 
-    return regularArray;
+    return new Board(regularArray);
 }
 
 /**
  * 2次元配列を分割した2次元配列を4次元配列として記憶する配列
- * @param {number[][]} array 分割する2次元配列
+ * @param {Board} board 分割する2次元配列
  * @param {number} size 1辺をどれくらいの大きさで分割するか
  */
-function partitionBoard(array, size) {
-
-    /** 与えられた引数の縦の要素数　*/
-    const height = array.length;
-
-    /**　与えられた引数の横の要素数　*/
-    const width = array[0].length;
-
+function partitionBoard(board, size) {
     /**
     * 外側の配列の縦列
     * @type {number[][][][]}
     */
     let regularLargeArray = [];
-    for (let I = 0; I < Math.ceil(height / size); I++) {
+    for (let I = 0; I < Math.ceil(board.height / size); I++) {
         /**外側の配列の横列*/
         let temporaryLargeArray = [];
-        for (let J = 0; J < Math.ceil(width / size); J++) {
+        for (let J = 0; J < Math.ceil(board.width / size); J++) {
             /** 内側の配列の縦列*/
             let regularSmallArray = [];
             for (let i = I * size; i < I * size + size; i++) {
@@ -125,7 +118,7 @@ function partitionBoard(array, size) {
                 let temporarySmallArray = [];
                 for (let j = J * size; j < J * size + size; j++) {
                     if (i < height && j < width) {
-                        temporarySmallArray.push(array[i][j]);
+                        temporarySmallArray.push(board.array[i][j]);
                     }
                     else {
                         temporarySmallArray.push(4);
@@ -143,62 +136,57 @@ function partitionBoard(array, size) {
 
 /**
 * 配列を転置する関数
-* @param {number[]} array
+* @param {Board} board
 */
-function transpose(array) {
-
-    /**　与えられた引数の縦の要素数　*/
-    const height = array.length;
-    /**　与えられた引数の横の要素数　*/
-    const width = array[0].length;
+function transpose(board) {
     /**
     * 転置後の配列
     * @type {number[][]}
     */
     let transposedArray = [];
 
-    for (let i = 0; i < height; i++) {
+    for (let i = 0; i < board.width; i++) {
         /**　pushする1次元配列を一時的に保存する配列　*/
         let temporaryArray = [];
-        for (let j = 0; j < width; j++) {
-            temporaryArray.push(array[j][i]);
+        for (let j = 0; j < board.height; j++) {
+            temporaryArray.push(board.array[j][i]);
         }
         transposedArray.push(temporaryArray);
     }
 
-    return transposedArray;
+    board.array=transposedArray;
 }
 
 /**
  * 抜き型で指定した座標を抜き、指定した方向に寄せ、隙間を抜いた要素で埋める関数
- * @param {number[][]} array　並べ替えたい2次元配列 
- * @param {number[][]} pattern　抜き型の配列
+ * @param {Board} board　並べ替えたい2次元配列 
+ * @param {Board} pattern　抜き型の配列
  * @param {number[]} position　座標(x,y)
  * @param {number} direction 方向(上から時計回りに1~4の数値で割り当て)
  * @returns 
  */
-function pullOut(array, pattern, position, direction) {
+function pullOut(board, pattern, position, direction) {
 
     //縦方向の操作は配列と抜き型を転置し座標を交換して操作する
     if (direction == 1 || direction == 3) {
-        array = transpose(array);
-        pattern = transpose(pattern);
+        transpose(board);
+        transpose(pattern);
         let swap = position[1];
         position[1] = position[0];
         position[0] = swap;
     }
 
     /**与えられた配列の縦の要素数*/
-    const height = array.length;
+    const height = board.length;
     /**与えられた配列の横の要素数*/
-    const width = array[0].length;
+    const width = board[0].length;
     /**与えられた抜き型の縦の要素数*/
     const dieHeight = pattern.length;
     /**与えられた抜き型の横の要素数*/
     const dieWidth = pattern[0].length;
 
     //引数arrayを操作するための縦列のfor文
-    for (let i = position[1]; i < position[1] + dieHeight; i++) {
+    for (let i = position[1]; i < position[1] + pattern.height; i++) {
 
         /** 抜いた要素を記録する配列 */
         let pulldOutArray = [];
@@ -207,20 +195,20 @@ function pullOut(array, pattern, position, direction) {
         let temporaryArray = [];
 
         // 横列のfor文その1
-        for (let j = 0; j < width; j++) {
+        for (let j = 0; j < board.width; j++) {
             // 抜き型の1の部分をpullOutに記録し、そうでない部分をtemporaryArrayに記録する
-            if (position[0] <= j && j < position[0] + dieWidth) {
+            if (position[0] <= j && j < position[0] + pattern.width) {
                 if (pattern[i - position[1]][j - position[0]] == 1) {
                     if (direction == 1 || direction == 4) {
-                        pulldOutArray.push(array[i][j]);
+                        pulldOutArray.push(board.array[i][j]);
                     }
                     if (direction == 2 || direction == 3) {
-                        pulldOutArray.unshift(array[i][j]);
+                        pulldOutArray.unshift(board.array[i][j]);
                     }
                 }
             }
             else {
-                temporaryArray.push(array[i][j]);
+                temporaryArray.push(board[i][j]);
             }
         }
 
@@ -236,46 +224,53 @@ function pullOut(array, pattern, position, direction) {
         }
 
         // 横列のfor文その3
-        for (let j = 0; j < width; j++) {
+        for (let j = 0; j < board.width; j++) {
             // 引数で与えられた配列に再代入される
-            array[i][j] = temporaryArray[j];
+            board.array[i][j] = temporaryArray[j];
         }
     }
 
     // 縦方向の操作はもう一度転置をして元に戻す
     if (direction == 1 || direction == 3) {
-        return transpose(array);
+        return transpose(board);
     }
-
-    return array;
 }
 
-function swap(array, position1, position2, size = 1) {
+function swap(board, position1, position2, size = 1) {
 
     /** 与えられた配列の縦の要素数 */
-    let height = array.length;
+    let height = board.height;
     /** 与えられた配列の横の要素数 */
     let width = array[0].length;
     /** 値を交換する用の変数 */
     let swap;
 
     // エラー処理
+    let errorFlag = false;
     if (position1[0] != position2[0] && position1[1] != position2[1]) {
-        return console.error("swap関数:要素同士が直線上に並んでいません");
+        console.error("swap関数:要素同士が直線上に並んでいません");
+        errorFlag = true;
     }
 
     if (width < position1[0]) {
-        return console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
+        console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
+        errorFlag = true;
     }
     else if (width < position2[0]) {
-        return console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
+        console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
+        errorFlag = true;
     }
 
     if (height < position1[1]) {
-        return console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
+        console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
+        errorFlag = true;
     }
     else if (height < position2[1]) {
-        return console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
+        console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
+        errorFlag = true;
+    }
+    if (errorFlag == true) {
+        return board;
     }
 
     if (position1[0] == position2[0]) {
@@ -340,7 +335,4 @@ module.exports.partitionBoard = partitionBoard;
 module.exports.transpose = transpose;
 module.exports.pullOut = pullOut;
 module.exports.evaluate = evaluate;
-
-let a = 1;
-let b = 5;
-console.log(a > b);
+module.exports.swap = swap

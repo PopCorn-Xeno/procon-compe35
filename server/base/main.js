@@ -1,21 +1,12 @@
+const { makeQuestionBoard, partitionBoard, transpose, pullOut, evaluate, swap } = require("./functions/boardUtility");
 const { setFormatPattern, patternTypes } = require("./functions/formatPattern");
-const { makeQuestionBoard, partitionBoard, transpose, pullOut, evaluate } = require("./functions/boardUtility");
+const { BoardData, Board } = require("./functions/class");
 
 const accuracy = 1000;
 const start = performance.now();
 
-let questionBoard = makeQuestionBoard(6, 6);
-let currentBoard = makeQuestionBoard(6, 6);
-questionBoard = partitionBoard(questionBoard, 3);
-currentBoard = partitionBoard(currentBoard, 3);
-
-for (let i = 0; i < 2; i++) {
-    for (let j = 0; j < 2; j++) {
-        console.log(questionBoard[i][j]);
-        console.log(currentBoard[i][j]);
-        console.log(evaluate(questionBoard[i][j], currentBoard[i][j]));
-    }
-}
+const questionBoard = new BoardData(null, 6, 6);
+console.log(questionBoard.patterns[5]);
 
 const end = performance.now();
 console.log("計算時間=" + (Math.round((end - start) * accuracy) / (1000 * accuracy)) + "秒");
