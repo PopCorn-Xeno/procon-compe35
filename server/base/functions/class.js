@@ -1,4 +1,3 @@
-const { setFormatPattern, patternTypes } = require("./formatPattern");
 const { makeQuestionBoard, partitionBoard, transpose, pullOut } = require("./boardUtility");
 
 class BoardData {
@@ -206,36 +205,49 @@ class BoardData {
         */
         const type = (patternNumber - 1) % 3 + 1;
 
-        for (let i = 0; i < length; i++) {
-            /**　pushする1次元配列を一時的に保存する配列　*/
-            let temporaryArray = [];
-            //　2次元配列を作る2重forループ
-            for (let j = 0; j < length; j++) {
-                // タイプ毎の場合分け
-                // タイプ1の場合
-                if (type == 1) {
+        let temporaryArray = [];
+
+        switch(type){
+            case 1:
+                for(let i=0;i<length;i++){
                     temporaryArray.push(1);
                 }
-                // タイプ2, 3の場合
-                else if (type > 1) {
-                    if (i % 2 == 0) {
+                for (let i = 0; i < length; i++) {
+                    formatPattern.push(temporaryArray);
+                }
+                break;
+            case 2:
+                for(let i=1;i>=0;i--){
+                    let temporaryArray2 = [];
+                    for(let j=0;j<length;j++){
+                        temporaryArray2.push(i);
+                    }
+                    temporaryArray.push(temporaryArray2);
+                }
+                for (let i = 0; i < length; i++) {
+                    if(i%2==0){
+                        formatPattern.push(temporaryArray[0]);
+                    }
+                    else{
+                        formatPattern.push(temporaryArray[1]);
+                    }
+                }
+                break;
+            case 3:
+                for(let i=0;i<length;i++){
+                    if(i%2==0){
                         temporaryArray.push(1);
                     }
-                    else {
+                    else{
                         temporaryArray.push(0);
                     }
                 }
-            }
-            formatPattern.push(temporaryArray);
+                for (let i = 0; i < length; i++) {
+                    formatPattern.push(temporaryArray);
+                }
+                break;
         }
-
-        let board = new Board(formatPattern);
-
-        // タイプ3はタイプ2の転置行列とする
-        if (type == 3) {
-            transpose(board);
-        }
-        return board;
+        return new Board(formatPattern);
     }
 }
 
@@ -280,12 +292,6 @@ class Order {
         this.array = array;
     }
 }
-
-// 受信データなしでボードデータをつくるとき
-const boardData = new BoardData(null, 6, 6);
-console.log(boardData.patterns[5]);
-const board = new Board(boardData.board.start);
-// ここまでテンプレ
 
 module.exports.BoardData = BoardData;
 module.exports.Order = Order;
