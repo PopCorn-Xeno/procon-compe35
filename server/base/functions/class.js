@@ -1,4 +1,5 @@
-const { makeQuestionBoard, partitionBoard, transpose, pullOut } = require("./boardUtility");
+const { makeQuestionBoard, partitionBoard, pullOut } = require("./boardUtility");
+const cloneDeep = require("lodash/cloneDeep");
 
 class BoardData {
 
@@ -81,7 +82,6 @@ class BoardData {
 
         for (let i = 0; i < 25; i++) {
             this.#patterns.push(this.#setFormatPattern(i));
-            console.log(i+"番目のパターンが代入されました");
         }
     }
 
@@ -115,7 +115,7 @@ class BoardData {
 
             // 遅いかもしれん
             /** 引数の対象配列をディープコピーしたシャッフル用の配列 */
-            let clone = JSON.parse(JSON.stringify(array));
+            let clone = cloneDeep(array);
 
             /** 与えられた引数の縦の要素数 */
             const height = clone.length;
@@ -207,9 +207,9 @@ class BoardData {
 
         let temporaryArray = [];
 
-        switch(type){
+        switch (type) {
             case 1:
-                for(let i=0;i<length;i++){
+                for (let i = 0; i < length; i++) {
                     temporaryArray.push(1);
                 }
                 for (let i = 0; i < length; i++) {
@@ -217,28 +217,28 @@ class BoardData {
                 }
                 break;
             case 2:
-                for(let i=1;i>=0;i--){
+                for (let i = 1; i >= 0; i--) {
                     let temporaryArray2 = [];
-                    for(let j=0;j<length;j++){
+                    for (let j = 0; j < length; j++) {
                         temporaryArray2.push(i);
                     }
                     temporaryArray.push(temporaryArray2);
                 }
                 for (let i = 0; i < length; i++) {
-                    if(i%2==0){
+                    if (i % 2 == 0) {
                         formatPattern.push(temporaryArray[0]);
                     }
-                    else{
+                    else {
                         formatPattern.push(temporaryArray[1]);
                     }
                 }
                 break;
             case 3:
-                for(let i=0;i<length;i++){
-                    if(i%2==0){
+                for (let i = 0; i < length; i++) {
+                    if (i % 2 == 0) {
                         temporaryArray.push(1);
                     }
-                    else{
+                    else {
                         temporaryArray.push(0);
                     }
                 }
@@ -281,6 +281,10 @@ class Board {
      */
     constructor(array) {
         this.array = array;
+    }
+
+    transpose() {
+        this.array = this.array[0].map((col, i) => this.array.map(row => row[i]));
     }
 }
 

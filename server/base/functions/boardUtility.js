@@ -1,4 +1,5 @@
 const { Order, BoardData, Board } = require("./class");
+const cloneDeep = require("lodash/cloneDeep");
 
 /**
  * 問題の完成形のボードをランダムに作成する関数
@@ -135,29 +136,6 @@ function partitionBoard(board, size) {
 }
 
 /**
-* 配列を転置する関数
-* @param {Board} board
-*/
-function transpose(board) {
-    /**
-    * 転置後の配列
-    * @type {number[][]}
-    */
-    let transposedArray = [];
-
-    for (let i = 0; i < board.width; i++) {
-        /**　pushする1次元配列を一時的に保存する配列　*/
-        let temporaryArray = [];
-        for (let j = 0; j < board.height; j++) {
-            temporaryArray.push(board.array[j][i]);
-        }
-        transposedArray.push(temporaryArray);
-    }
-
-    board.array=transposedArray;
-}
-
-/**
  * 抜き型で指定した座標を抜き、指定した方向に寄せ、隙間を抜いた要素で埋める関数
  * @param {Board} board　並べ替えたい2次元配列 
  * @param {Board} pattern　抜き型の配列
@@ -167,72 +145,80 @@ function transpose(board) {
  */
 function pullOut(board, pattern, position, direction) {
 
-    //縦方向の操作は配列と抜き型を転置し座標を交換して操作する
-    if (direction == 1 || direction == 3) {
-        transpose(board);
-        transpose(pattern);
-        let swap = position[1];
-        position[1] = position[0];
-        position[0] = swap;
-    }
+    let transposedArray = [];
+    let clonePattern = cloneDeep(pattern);
+    console.log(typeof (clonePattern))
 
-    /**与えられた配列の縦の要素数*/
-    const height = board.length;
-    /**与えられた配列の横の要素数*/
-    const width = board[0].length;
-    /**与えられた抜き型の縦の要素数*/
-    const dieHeight = pattern.length;
-    /**与えられた抜き型の横の要素数*/
-    const dieWidth = pattern[0].length;
+    if (direction % 2 == 1) {
+        board.transpose();
+        clonePattern.transpose();
+        let swap = position[0];
+        position[0] = position[1];
+        position[1] = swap;
+    }
 
     //引数arrayを操作するための縦列のfor文
-    for (let i = position[1]; i < position[1] + pattern.height; i++) {
-
+    for (let i = 0; i < board.height; i++) {
         /** 抜いた要素を記録する配列 */
-        let pulldOutArray = [];
+        //let pulledOutArray = [];
 
         /** 配列の横列(1行のみ) */
-        let temporaryArray = [];
+        //let temporaryArray = [];
 
-        // 横列のfor文その1
-        for (let j = 0; j < board.width; j++) {
-            // 抜き型の1の部分をpullOutに記録し、そうでない部分をtemporaryArrayに記録する
-            if (position[0] <= j && j < position[0] + pattern.width) {
-                if (pattern[i - position[1]][j - position[0]] == 1) {
-                    if (direction == 1 || direction == 4) {
-                        pulldOutArray.push(board.array[i][j]);
-                    }
-                    if (direction == 2 || direction == 3) {
-                        pulldOutArray.unshift(board.array[i][j]);
-                    }
-                }
+        let advancedPattern = [];
+
+        if (position[1] <= i && i < position[1] + clonePattern.height) {
+
+            if (direction % 2 == 0) {
+                advancedPattern = Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(Array(board.width - clonePattern.width - position[0]).fill(0)));
             }
             else {
-                temporaryArray.push(board[i][j]);
+                advancedPattern = Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(Array(board.width - clonePattern.width - position[0]).fill(0)));
+            }
+
+            let pulledOutArrayLength = advancedPattern.findIndex(element => element == 1);
+            if (pulledOutArrayLength == -1) {
+                pulledOutArrayLength = 0;
+            }
+            let temporaryArrayLength = board.width - pulledOutArrayLength;
+            let pulledOutArray = Array(pulledOutArrayLength).fill(0);
+            let temporaryArray = Array(temporaryArrayLength).fill(0);
+            let j = 0;
+            let pulledOutArrayEx=pulledOutArray.map();
+            j = 0;
+            let temporaryArrayEx=temporaryArray.map(element => board.array[i][j]);
+
+            /*
+            for (let j = 0; j < board.width; j++) {
+                if (advancedPattern[j] == 1) {
+                    pulledOutArray.push(board.array[i][j]);
+                }
+                else {
+                    temporaryArray.push(board.array[i][j]);
+                }
+            }
+            */
+
+            switch (direction) {
+                case 1:
+                case 4:
+                    transposedArray.push(temporaryArrayEx.concat(pulledOutArrayEx));
+                    break;
+                case 2:
+                case 3:
+                    transposedArray.push(pulledOutArrayEx.concat(temporaryArrayEx));
+                    break;
             }
         }
-
-        // 横列のfor文その2
-        for (let j = 0; j < pulldOutArray.length; j++) {
-            //pullOutの配列を右か左に寄せる
-            if (direction == 1 || direction == 4) {
-                temporaryArray.push(pulldOutArray[j]);
-            }
-            if (direction == 2 || direction == 3) {
-                temporaryArray.unshift(pulldOutArray[j]);
-            }
-        }
-
-        // 横列のfor文その3
-        for (let j = 0; j < board.width; j++) {
-            // 引数で与えられた配列に再代入される
-            board.array[i][j] = temporaryArray[j];
+        else {
+            transposedArray.push(board.array[i]);
         }
     }
 
-    // 縦方向の操作はもう一度転置をして元に戻す
-    if (direction == 1 || direction == 3) {
-        return transpose(board);
+    board.array = transposedArray;
+
+    if (direction % 2 == 1) {
+        board.transpose();
     }
 }
 
@@ -332,7 +318,6 @@ function evaluate(questionBoard, currentBoard) {
 
 module.exports.makeQuestionBoard = makeQuestionBoard;
 module.exports.partitionBoard = partitionBoard;
-module.exports.transpose = transpose;
 module.exports.pullOut = pullOut;
 module.exports.evaluate = evaluate;
 module.exports.swap = swap
