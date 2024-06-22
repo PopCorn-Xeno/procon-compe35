@@ -113,7 +113,6 @@ class BoardData {
         */
         const shuffleBoard = array => {
 
-            // 遅いかもしれん
             /** 引数の対象配列をディープコピーしたシャッフル用の配列 */
             let clone = cloneDeep(array);
 
@@ -190,11 +189,6 @@ class BoardData {
         }
 
         /**
-        * 定型抜き型の完成形の配列
-        * @param {number[][]} formatPattern
-        */
-        const formatPattern = [];
-        /**
         * 抜き型の大きさ
         * @param {number} length
         */
@@ -205,49 +199,18 @@ class BoardData {
         */
         const type = (patternNumber - 1) % 3 + 1;
 
-        let temporaryArray = [];
+        let i = 0;
 
         switch (type) {
             case 1:
-                for (let i = 0; i < length; i++) {
-                    temporaryArray.push(1);
-                }
-                for (let i = 0; i < length; i++) {
-                    formatPattern.push(temporaryArray);
-                }
-                break;
+                return new Board(new Array(length).fill(new Array(length).fill(1)));
             case 2:
-                for (let i = 1; i >= 0; i--) {
-                    let temporaryArray2 = [];
-                    for (let j = 0; j < length; j++) {
-                        temporaryArray2.push(i);
-                    }
-                    temporaryArray.push(temporaryArray2);
-                }
-                for (let i = 0; i < length; i++) {
-                    if (i % 2 == 0) {
-                        formatPattern.push(temporaryArray[0]);
-                    }
-                    else {
-                        formatPattern.push(temporaryArray[1]);
-                    }
-                }
-                break;
+                i = 0;
+                return new Board(new Array(length).fill(0).map(() => i++ % 2 == 0 ? new Array(length).fill(1) : new Array(length).fill(0)));
             case 3:
-                for (let i = 0; i < length; i++) {
-                    if (i % 2 == 0) {
-                        temporaryArray.push(1);
-                    }
-                    else {
-                        temporaryArray.push(0);
-                    }
-                }
-                for (let i = 0; i < length; i++) {
-                    formatPattern.push(temporaryArray);
-                }
-                break;
+                i = 0;
+                return new Board(new Array(length).fill(new Array(length).fill(0).map(() => i++ % 2 == 0 ? 1 : 0)));
         }
-        return new Board(formatPattern);
     }
 }
 
@@ -269,6 +232,9 @@ class Board {
      *Boardクラスの中の配列の幅
      */
     get width() {
+        if (this.array[0] == null) {
+            return 0;
+        }
         if (this.array == 1) {
             return 1;
         }

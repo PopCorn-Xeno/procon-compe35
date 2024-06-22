@@ -145,10 +145,9 @@ function partitionBoard(board, size) {
  */
 function pullOut(board, pattern, position, direction) {
 
-    let transposedArray = [];
+    let array = [];
     let clonePattern = cloneDeep(pattern);
-    console.log(typeof (clonePattern))
-
+    
     if (direction % 2 == 1) {
         board.transpose();
         clonePattern.transpose();
@@ -157,65 +156,46 @@ function pullOut(board, pattern, position, direction) {
         position[1] = swap;
     }
 
+    if (position[0] < 0 || position[1] < 0) {
+        clonePattern.array = clonePattern.array.slice(-position[1]).map(array => array.slice(-position[0]));
+        position.fill(0);
+    }
+
+    if (board.width - clonePattern.width - position[0] < 0) {
+        clonePattern.array = clonePattern.array.slice(0, board.height - position[1]).map(array => array.slice(0, board.width - position[0]));
+    }
+
     //引数arrayを操作するための縦列のfor文
     for (let i = 0; i < board.height; i++) {
-        /** 抜いた要素を記録する配列 */
-        //let pulledOutArray = [];
-
-        /** 配列の横列(1行のみ) */
-        //let temporaryArray = [];
 
         let advancedPattern = [];
 
         if (position[1] <= i && i < position[1] + clonePattern.height) {
 
-            if (direction % 2 == 0) {
-                advancedPattern = Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(Array(board.width - clonePattern.width - position[0]).fill(0)));
-            }
-            else {
-                advancedPattern = Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(Array(board.width - clonePattern.width - position[0]).fill(0)));
-            }
+            advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
 
-            let pulledOutArrayLength = advancedPattern.findIndex(element => element == 1);
-            if (pulledOutArrayLength == -1) {
-                pulledOutArrayLength = 0;
-            }
-            let temporaryArrayLength = board.width - pulledOutArrayLength;
-            let pulledOutArray = Array(pulledOutArrayLength).fill(0);
-            let temporaryArray = Array(temporaryArrayLength).fill(0);
             let j = 0;
-            let pulledOutArrayEx=pulledOutArray.map();
+            let pulledOutArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 1).map(element => element.value);
             j = 0;
-            let temporaryArrayEx=temporaryArray.map(element => board.array[i][j]);
-
-            /*
-            for (let j = 0; j < board.width; j++) {
-                if (advancedPattern[j] == 1) {
-                    pulledOutArray.push(board.array[i][j]);
-                }
-                else {
-                    temporaryArray.push(board.array[i][j]);
-                }
-            }
-            */
+            let temporaryArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 0).map(element => element.value);
 
             switch (direction) {
                 case 1:
                 case 4:
-                    transposedArray.push(temporaryArrayEx.concat(pulledOutArrayEx));
+                    array.push(temporaryArray.concat(pulledOutArray));
                     break;
                 case 2:
                 case 3:
-                    transposedArray.push(pulledOutArrayEx.concat(temporaryArrayEx));
+                    array.push(pulledOutArray.concat(temporaryArray));
                     break;
             }
         }
         else {
-            transposedArray.push(board.array[i]);
+            array.push(board.array[i]);
         }
     }
 
-    board.array = transposedArray;
+    board.array = array;
 
     if (direction % 2 == 1) {
         board.transpose();
