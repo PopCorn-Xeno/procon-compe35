@@ -6,25 +6,15 @@ class BoardData {
     /** ボードの情報 */
     #board = {
         /**
-         * ボードの横幅
-         * @type {number}
-         */
-        width: 0,
-        /**
-         * ボードの縦幅
-         * @type {number}
-         */
-        height: 0,
-        /**
          * ボードの初期状態
-         * @type {number[][]}
+         * @type {Board}
          */
-        start: [[]],
+        start: Board,
         /**
          * ボードの最終状態
-         * @type {number[][]}
+         * @type {Board}
          */
-        goal: [[]]
+        goal: Board
     };
 
     /**
@@ -175,8 +165,8 @@ class BoardData {
         }
 
         // 2次元配列をランダムに並び替える
-        this.#board.start = shuffleBoard(regularArray);
-        this.#board.goal = shuffleBoard(this.#board.start);
+        this.#board.start = new Board(shuffleBoard(regularArray));
+        this.#board.goal = new Board(shuffleBoard(this.#board.start.array));
 
         return this;
     }

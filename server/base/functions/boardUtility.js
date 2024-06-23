@@ -145,9 +145,21 @@ function partitionBoard(board, size) {
  */
 function pullOut(board, pattern, position, direction) {
 
-    let array = [];
+    let errorFlag = false;
+    if (position[0] < 0 && pattern.width <= -position[0] || board.width <= position[0]) {
+        console.error("pullOut関数:x座標が不正な値です(抜き型がボードから完全にはみ出しています");
+        errorFlag = true;
+    }
+    if (position[1] < 0 && pattern.height <= -position[1] || board.width <= position[1]) {
+        console.error("pullOut関数:y座標が不正な値です(抜き型がボードから完全にはみ出しています");
+        errorFlag = true
+    }
+    if (errorFlag == true) {
+        return false;
+    }
+
     let clonePattern = cloneDeep(pattern);
-    
+
     if (direction % 2 == 1) {
         board.transpose();
         clonePattern.transpose();
@@ -156,24 +168,30 @@ function pullOut(board, pattern, position, direction) {
         position[1] = swap;
     }
 
-    if (position[0] < 0 || position[1] < 0) {
-        clonePattern.array = clonePattern.array.slice(-position[1]).map(array => array.slice(-position[0]));
-        position.fill(0);
+    if (position[1] < 0) {
+        clonePattern.array = clonePattern.array.slice(Math.abs(position[1]));
+        position[1] = 0;
+    }
+    if (position[0] < 0) {
+        clonePattern.array = clonePattern.array.map(array => array.slice(Math.abs(position[0])));
+        position[0] = 0;
     }
 
-    //縦にも対応させて
     if (board.width - clonePattern.width - position[0] < 0) {
         clonePattern.array = clonePattern.array.slice(0, board.height - position[1]).map(array => array.slice(0, board.width - position[0]));
     }
 
-    //引数arrayを操作するための縦列のfor文
-    for (let i = 0; i < board.height; i++) {
+    errorFlag = true;
 
+    const pull = (i) => {
         let advancedPattern = [];
 
         if (position[1] <= i && i < position[1] + clonePattern.height) {
 
             advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
+            if (advancedPattern.filter((element) => element == 1).length != 0 && errorFlag == true) {
+                errorFlag = false;
+            }
 
             let j = 0;
             let pulledOutArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 1).map(element => element.value);
@@ -183,20 +201,25 @@ function pullOut(board, pattern, position, direction) {
             switch (direction) {
                 case 1:
                 case 4:
-                    array.push(temporaryArray.concat(pulledOutArray));
-                    break;
+                    return temporaryArray.concat(pulledOutArray);
                 case 2:
                 case 3:
-                    array.push(pulledOutArray.concat(temporaryArray));
-                    break;
+                    return pulledOutArray.concat(temporaryArray);
             }
         }
         else {
-            array.push(board.array[i]);
+            return board.array[i];
         }
     }
 
-    board.array = array;
+    let array = [...Array(board.height)].map((_, i) => i++).map(i => pull(i));
+
+    if (errorFlag == false) {
+        board.array = array;
+    }
+    else {
+        console.error("pullOut関数:使用した抜き型の要素に1がなかったため有効な操作になりませんでした");
+    }
 
     if (direction % 2 == 1) {
         board.transpose();
