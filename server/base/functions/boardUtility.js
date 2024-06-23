@@ -161,6 +161,7 @@ function pullOut(board, pattern, position, direction) {
         position.fill(0);
     }
 
+    //縦にも対応させて
     if (board.width - clonePattern.width - position[0] < 0) {
         clonePattern.array = clonePattern.array.slice(0, board.height - position[1]).map(array => array.slice(0, board.width - position[0]));
     }

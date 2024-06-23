@@ -1,17 +1,16 @@
 const { makeQuestionBoard, partitionBoard, pullOut, evaluate, swap } = require("./functions/boardUtility");
+const { pullOutOld } = require("./functions/legacy");
 const { BoardData, Board } = require("./functions/class");
-
-
-const patternData = new BoardData(null, 6, 6);
-const question = new Board(patternData.board.start);
-console.log(question.array);
-console.log(patternData.patterns[5]);
 
 console.log("測定を開始します");
 const accuracy = 1000;
 const start = performance.now();
 
-pullOut(question,patternData.patterns[5],[-15,-15],2);
+const patternData = new BoardData(null, 256, 256);
+const question = new Board(patternData.board.start);
+console.log(question.array);
+console.log(patternData.patterns[21]);
+pullOutOld(question,patternData.patterns[21],[15,15],1);
 console.log(question.array);
 
 const end = performance.now();
