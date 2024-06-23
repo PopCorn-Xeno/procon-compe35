@@ -245,11 +245,11 @@ class Board {
 }
 
 class Order {
-    constructor(pattern, position, direction, array) {
-        this.pattern = pattern;
+    constructor(array, pattern, position, direction) {
+        this.array = new Board(array);
+        this.pattern = new Board(pattern);
         this.position = position;
         this.direction = direction;
-        this.array = array;
     }
 }
 

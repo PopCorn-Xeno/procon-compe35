@@ -228,10 +228,6 @@ function pullOut(board, pattern, position, direction) {
 
 function swap(board, position1, position2, size = 1) {
 
-    /** 与えられた配列の縦の要素数 */
-    let height = board.height;
-    /** 与えられた配列の横の要素数 */
-    let width = array[0].length;
     /** 値を交換する用の変数 */
     let swap;
 
@@ -242,25 +238,25 @@ function swap(board, position1, position2, size = 1) {
         errorFlag = true;
     }
 
-    if (width < position1[0]) {
+    if (board.width < position1[0]) {
         console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
         errorFlag = true;
     }
-    else if (width < position2[0]) {
+    else if (board.width < position2[0]) {
         console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
         errorFlag = true;
     }
 
-    if (height < position1[1]) {
+    if (board.height < position1[1]) {
         console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
         errorFlag = true;
     }
-    else if (height < position2[1]) {
+    else if (board.height < position2[1]) {
         console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
         errorFlag = true;
     }
     if (errorFlag == true) {
-        return board;
+        return false;
     }
 
     if (position1[0] == position2[0]) {
