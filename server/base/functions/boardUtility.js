@@ -212,18 +212,20 @@ function pullOut(board, pattern, position, direction) {
         }
     }
 
-    let array = [...Array(board.height)].map((_, i) => i++).map(i => pull(i));
+    let array = new Array(board.height).fill(0).map((_, i) => i++).map(i => pull(i));
 
-    if (errorFlag == false) {
-        board.array = array;
-    }
-    else {
+    if (errorFlag == true) {
         console.error("pullOut関数:使用した抜き型の要素に1がなかったため有効な操作になりませんでした");
+        return null;
     }
+
+    let returnBoard=new Board(array);
 
     if (direction % 2 == 1) {
-        board.transpose();
+        returnBoard.transpose();
     }
+
+    return returnBoard;
 }
 
 function swap(board, position1, position2, size = 1) {

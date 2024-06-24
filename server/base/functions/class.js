@@ -1,4 +1,4 @@
-const { makeQuestionBoard, partitionBoard, pullOut } = require("./boardUtility");
+const { makeQuestionBoard, partitionBoard, } = require("./boardUtility");
 const cloneDeep = require("lodash/cloneDeep");
 
 class BoardData {
@@ -222,6 +222,7 @@ class Board {
      *Boardクラスの中の配列の幅
      */
     get width() {
+        console.log(this.array);
         if (this.array[0] == null) {
             return 0;
         }
@@ -244,10 +245,121 @@ class Board {
     }
 }
 
+class History {
+    order = [];
+
+    constructor(array) {
+        this.order.push(new Order(new Board(array), null, null, null));
+        this.turn = 0;
+    }
+
+    add(pattern, position, direction) {
+        console.log(this.order[this.turn]);
+        this.order.push(new Order(this.pullOut(this.order[this.turn].board, pattern, position, direction), pattern, position, direction));
+        this.turn++;
+    }
+
+    /**
+     * 抜き型で指定した座標を抜き、指定した方向に寄せ、隙間を抜いた要素で埋める関数
+     * @param {Board} board　並べ替えたい2次元配列 
+     * @param {Board} pattern　抜き型の配列
+     * @param {number[]} position　座標(x,y)
+     * @param {number} direction 方向(上から時計回りに1~4の数値で割り当て)
+     * @returns 
+     */
+    pullOut(board, pattern, position, direction) {
+
+        console.log(board.array);
+
+        let errorFlag = false;
+        if (position[0] < 0 && pattern.width <= -position[0] || board.width <= position[0]) {
+            console.error("pullOut関数:x座標が不正な値です(抜き型がボードから完全にはみ出しています");
+            errorFlag = true;
+        }
+        if (position[1] < 0 && pattern.height <= -position[1] || board.width <= position[1]) {
+            console.error("pullOut関数:y座標が不正な値です(抜き型がボードから完全にはみ出しています");
+            errorFlag = true
+        }
+        if (errorFlag == true) {
+            return null;
+        }
+
+        let clonePattern = cloneDeep(pattern);
+
+        if (direction % 2 == 1) {
+            board.transpose();
+            clonePattern.transpose();
+            let swap = position[0];
+            position[0] = position[1];
+            position[1] = swap;
+        }
+
+        if (position[1] < 0) {
+            clonePattern.array = clonePattern.array.slice(Math.abs(position[1]));
+            position[1] = 0;
+        }
+        if (position[0] < 0) {
+            clonePattern.array = clonePattern.array.map(array => array.slice(Math.abs(position[0])));
+            position[0] = 0;
+        }
+
+        if (board.width - clonePattern.width - position[0] < 0) {
+            clonePattern.array = clonePattern.array.slice(0, board.height - position[1]).map(array => array.slice(0, board.width - position[0]));
+        }
+
+        errorFlag = true;
+
+        const pull = (i) => {
+            let advancedPattern = [];
+
+            if (position[1] <= i && i < position[1] + clonePattern.height) {
+
+                advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
+                if (advancedPattern.filter((element) => element == 1).length != 0 && errorFlag == true) {
+                    errorFlag = false;
+                }
+
+                let j = 0;
+                let pulledOutArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 1).map(element => element.value);
+                j = 0;
+                let temporaryArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 0).map(element => element.value);
+
+                switch (direction) {
+                    case 1:
+                    case 4:
+                        return temporaryArray.concat(pulledOutArray);
+                    case 2:
+                    case 3:
+                        return pulledOutArray.concat(temporaryArray);
+                }
+            }
+            else {
+                return board.array[i];
+            }
+        }
+
+        let array = new Array(board.height).fill(0).map((_, i) => i++).map(i => pull(i));
+
+        if (errorFlag == true) {
+            console.error("pullOut関数:使用した抜き型の要素に1がなかったため有効な操作になりませんでした");
+            return null;
+        }
+
+        let returnBoard = new Board(array);
+
+        if (direction % 2 == 1) {
+            returnBoard.transpose();
+        }
+
+        return returnBoard;
+    }
+
+}
+
 class Order {
     constructor(array, pattern, position, direction) {
-        this.array = new Board(array);
-        this.pattern = new Board(pattern);
+        this.board = array;
+        this.pattern = pattern;
         this.position = position;
         this.direction = direction;
     }
@@ -256,3 +368,4 @@ class Order {
 module.exports.BoardData = BoardData;
 module.exports.Order = Order;
 module.exports.Board = Board;
+module.exports.History = History;
