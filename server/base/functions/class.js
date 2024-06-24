@@ -222,7 +222,6 @@ class Board {
      *Boardクラスの中の配列の幅
      */
     get width() {
-        console.log(this.array);
         if (this.array[0] == null) {
             return 0;
         }
@@ -245,18 +244,25 @@ class Board {
     }
 }
 
-class History {
+class Answer {
+    /**
+    * 操作手順
+    * @type {Order[]}
+    */
     order = [];
 
     constructor(array) {
-        this.order.push(new Order(new Board(array), null, null, null));
+        this.order[0] = new Order(array, null, null, null);
         this.turn = 0;
     }
 
     add(pattern, position, direction) {
-        console.log(this.order[this.turn]);
-        this.order.push(new Order(this.pullOut(this.order[this.turn].board, pattern, position, direction), pattern, position, direction));
+        this.order.push(new Order(this.#pullOut(this.order[this.turn].board, pattern, position, direction), pattern, position, direction));
         this.turn++;
+    }
+
+    swap(position,size=1){
+        order=new Order(this.order[this.turn].board,);
     }
 
     /**
@@ -267,9 +273,7 @@ class History {
      * @param {number} direction 方向(上から時計回りに1~4の数値で割り当て)
      * @returns 
      */
-    pullOut(board, pattern, position, direction) {
-
-        console.log(board.array);
+    #pullOut(board, pattern, position, direction) {
 
         let errorFlag = false;
         if (position[0] < 0 && pattern.width <= -position[0] || board.width <= position[0]) {
@@ -357,8 +361,12 @@ class History {
 }
 
 class Order {
-    constructor(array, pattern, position, direction) {
-        this.board = array;
+    constructor(board, pattern, position, direction) {
+        /**
+         * 操作手順の内容をボードに記す
+         * @type {Board}
+         */
+        this.board = board;
         this.pattern = pattern;
         this.position = position;
         this.direction = direction;
@@ -368,4 +376,4 @@ class Order {
 module.exports.BoardData = BoardData;
 module.exports.Order = Order;
 module.exports.Board = Board;
-module.exports.History = History;
+module.exports.Answer = Answer;

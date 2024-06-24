@@ -219,7 +219,7 @@ function pullOut(board, pattern, position, direction) {
         return null;
     }
 
-    let returnBoard=new Board(array);
+    let returnBoard = new Board(array);
 
     if (direction % 2 == 1) {
         returnBoard.transpose();
