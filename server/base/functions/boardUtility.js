@@ -68,8 +68,5 @@ function evaluate(questionBoard, currentBoard) {
     return array;
 }
 
-module.exports.makeQuestionBoard = makeQuestionBoard;
 module.exports.partitionBoard = partitionBoard;
-module.exports.pullOut = pullOut;
 module.exports.evaluate = evaluate;
-module.exports.swap = swap
