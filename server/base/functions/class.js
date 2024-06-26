@@ -1,4 +1,3 @@
-const { makeQuestionBoard, partitionBoard, } = require("./boardUtility");
 const cloneDeep = require("lodash/cloneDeep");
 
 class BoardData {
@@ -261,8 +260,81 @@ class Answer {
         this.turn++;
     }
 
-    swap(position,size=1){
-        order=new Order(this.order[this.turn].board,);
+    swap(position1, position2, size = 1) {
+
+        // エラー処理
+        let errorFlag = false;
+        if (position1[0] != position2[0] && position1[1] != position2[1]) {
+            console.error("swap関数:要素同士が直線上に並んでいません");
+            errorFlag = true;
+        }
+
+        if (position1[0] < 0 || this.order[this.turn].board.width - size < position1[0]) {
+            console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
+            errorFlag = true;
+        }
+
+        if (position2[0] < 0 || this.order[this.turn].board.width - size < position2[0]) {
+            console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
+            errorFlag = true;
+        }
+
+        if (position1[1] < 0 || this.order[this.turn].board.height - size < position1[1]) {
+            console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
+            errorFlag = true;
+        }
+
+        if (position2[1] < 0 || this.order[this.turn].board.height - size < position2[1]) {
+            console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
+            errorFlag = true;
+        }
+
+        if (errorFlag == true) {
+            return false;
+        }
+
+        let type = 0;
+        if (position1[0] == position2[0]) {
+            type = 1;
+        }
+
+        if (position1[type] > position2[type]) {
+            let swap = position1[type];
+            position1[type] = position2[type];
+            position1[type] = swap;
+        }
+
+        if (position1[type] + size > position2[type]) {
+            console.error("swap関数:操作するセル同士が重複しています");
+            errorFlag = true;
+        }
+
+
+
+        if ([...Array(size)].map((_, i) => i++).map(i => pull(i)) = [...Array(size)].map((_, i) => i++).map(i => pull(i))) {
+            l
+        }
+
+        const pull = (i) => {
+
+        }
+
+        if (errorFlag == true) {
+            return false;
+        }
+
+        //横列に対する操作
+        if (position1[1] == position2[1]) {
+            let array = this.order[this.turn].board[position1[1]];
+        }
+
+        //縦列に対する操作
+        if (position1[0] == position2[0]) {
+            let array = this.order[this.turn].board.array.map(element => element[position1[0]]);
+        }
+
+
+
     }
 
     /**
