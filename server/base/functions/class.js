@@ -175,7 +175,6 @@ class BoardData {
      * @returns {Board}
      */
     #setFormatPattern(patternNumber) {
-
         //0番目は配列ではないため個別に例外処理を行う
         if (patternNumber == 0) {
             const array = 1;
@@ -264,6 +263,12 @@ class Answer {
     order = [];
 
     /**
+     * この問題で使える一般抜き型の情報
+     * @type {Board[]}
+     */
+    patterns = [];
+
+    /**
      * @param {number[][]} array 
      */
     constructor(array) {
@@ -272,6 +277,10 @@ class Answer {
         this.order[0] = new Order(array, null, null, null);
         /**現在処理しているターン数 */
         this.turn = 0;
+        //こちらにもformatPatternを読み込む
+        for (let i = 0; i < 25; i++) {
+            this.patterns.push(this.#setFormatPattern(i));
+        }
     }
 
     /** 
@@ -284,6 +293,44 @@ class Answer {
     add(pattern, position, direction) {
         this.order.push(new Order(this.#pullOut(this.order[this.turn].board, pattern, position, direction), pattern, position, direction));
         this.turn++;
+    }
+
+    /**
+     * 定型抜き型を作る関数
+     * @param {number} patternNumber 定型抜き型のn番目を表す
+     * @returns {Board}
+     */
+    #setFormatPattern(patternNumber) {
+        //0番目は配列ではないため個別に例外処理を行う
+        if (patternNumber == 0) {
+            const array = 1;
+            return new Board(array);
+        }
+
+        /**
+        * 抜き型の大きさ
+        * @param {number} length
+        */
+        const length = Math.pow(2, Math.floor((patternNumber + 2) / 3));
+        /**
+        * 抜き型のタイプ
+        * @param {number} type
+        */
+        const type = (patternNumber - 1) % 3 + 1;
+
+        let i = 0;
+
+        //それぞれのタイプに対応した配列を返す
+        switch (type) {
+            case 1:
+                return new Board(new Array(length).fill(new Array(length).fill(1)));
+            case 2:
+                i = 0;
+                return new Board(new Array(length).fill(0).map(() => i++ % 2 == 0 ? new Array(length).fill(1) : new Array(length).fill(0)));
+            case 3:
+                i = 0;
+                return new Board(new Array(length).fill(new Array(length).fill(0).map(() => i++ % 2 == 0 ? 1 : 0)));
+        }
     }
 
     /**
@@ -362,7 +409,7 @@ class Answer {
             return result;
         }
 
-        //全ての要素が等しかった場合フラグを上げる
+        //全ての要素が等しかった場合フラグを立てる
         if (evaluate() == size * size) {
             console.error("swap関数:選択した箇所が同じ要素で構成されています");
             errorFlag = true;
@@ -374,17 +421,17 @@ class Answer {
         }
 
         /**操作する配列の左側 */
-        let leftLength=0
+        let leftLength = 0
         /**操作する配列の真ん中 */
         let middleLength = 0
         /**操作する配列の右側 */
         let rightLength = 0;
-        //値の代入を行う
+        //各変数の代入を行う
         switch (type) {
             case 0:
                 leftLength = position1[type];
-                rightLength = this.order[this.turn].board.width - position2[type] - 1;
-                middleLength = this.order[this.turn].board.width - leftLength - rightLength - 2;
+                rightLength = this.order[this.turn].board.width - position2[type] - size;
+                middleLength = this.order[this.turn].board.width - leftLength - rightLength - 2 * size;
                 break;
             case 1:
                 leftLength = position1[type];
@@ -393,7 +440,9 @@ class Answer {
                 break;
         }
 
-        
+        if (middleLength == 0) {
+            this.add(this.patterns[]);
+        }
 
         switch (type) {
             case 0:

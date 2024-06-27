@@ -29,7 +29,7 @@ const answer = new Answer(boardData.board.start);
 console.log(answer.order[0].board.array);
 answer.add(boardData.patterns[5], [1, 1], 1);
 console.log(answer.order[1].board.array);
-answer.swap([0, 2], [5, 2], 1);
+answer.swap([1, 2], [4, 2], 2);
 
 measureFinish();
 
