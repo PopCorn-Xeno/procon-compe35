@@ -249,7 +249,7 @@ class Answer {
     * @param {number} direction 方向指定
     */
     add(patternNumber, position, direction) {
-        this.order.push(new Order(this.#pullOut(this.order[this.turn].board, patternNumber, position, direction),patternNumber, position, direction));
+        this.order.push(new Order(this.#pullOut(this.order[this.turn].board, patternNumber, position, direction), patternNumber, position, direction));
         this.turn++;
     }
 
@@ -301,11 +301,12 @@ class Answer {
         if (position1[0] == position2[0]) {
             type = 1;
         }
+
         //position2の座標の値の方が大きい値になるように変更をする
         if (position1[type] > position2[type]) {
             let swap = position1[type];
             position1[type] = position2[type];
-            position1[type] = swap;
+            position2[type] = swap;
         }
 
         //選択した場所が重なっていないか調べる
@@ -355,23 +356,40 @@ class Answer {
                 break;
             case 1:
                 leftLength = position1[type];
-                rightLength = this.order[this.turn].board.height - position2[type] - 1;
-                middleLength = this.order[this.turn].board.height - leftLength - rightLength - 2;
+                rightLength = this.order[this.turn].board.height - position2[type] - size;
+                middleLength = this.order[this.turn].board.height - leftLength - rightLength - 2 * size;
                 break;
         }
+
+        let position = new Array(2).fill(0);
 
         if (middleLength == 0) {
-            this.add(this.patterns[5]);
+            position[type] = position1[0] - 256;
+            position[Math.abs(type - 1)] = 0;
+            this.add(22, position, 4);
+
         }
 
-        switch (type) {
-            case 0:
-
-                break;
-            case 1:
-
-                break;
-        }
+        //E1-C-E2-R-L(L
+        position[type] = leftLength - 256;
+        position[Math.abs(type - 1)] = 0;
+        this.add(22, position, type == 0 ? 4 : 1);
+        //E2-E1-C-R-L(E2
+        position[type] = size + middleLength;
+        position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+        this.add((size - 1) * 3, position, type == 0 ? 2 : 3);
+        //R-L-E2-E1-C(R-L
+        position[type] = size * 2 + middleLength;
+        position[Math.abs(type - 1)] = 0;
+        this.add(22, position, type == 0 ? 2 : 3);
+        //R-L-E2-C-E1(E1
+        position[type] = rightLength + leftLength + size;
+        position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+        this.add((size - 1) * 3, position, type == 0 ? 4 : 1);
+        //L-E2-C-E1-R(R
+        position[type] = rightLength - 256;
+        position[Math.abs(type - 1)] = 0;
+        this.add(22, position, type == 0 ? 4 : 1);
     }
 
     /**
@@ -438,9 +456,14 @@ class Answer {
 
             //今現在の行が操作すべき行であるか確認する
             if (position[1] <= i && i < position[1] + clonePattern.height) {
-
                 //抜き型についてBoardの横幅に合わせるために空白部分を0で埋める
-                advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
+                if (clonePattern.dimension == 2) {
+                    advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
+                }
+                else {
+                    advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array.concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
+                }
+                //console.log(advancedPattern);
                 //advancedPatternの中に1が一つでもある場合、配列の要素は移動するということなのでフラグを下げる
                 if (advancedPattern.filter((element) => element == 1).length != 0 && errorFlag == true) {
                     errorFlag = false;
@@ -501,40 +524,74 @@ class Board {
      *Boardクラスの中の配列の高さ
      */
     get height() {
-        //1次元配列または配列以外を読み込んだ場合の例外処理
-        if (this.array == 1) {
-            return 1;
+        switch (this.dimension) {
+            //配列の中になにも入ってなかった時の例外処理
+            case null:
+                return 0;
+            //1次元配列または配列以外を読み込んだ場合の例外処理
+            case 0:
+            case 1:
+                return 1;
+            case 2:
+                return this.array.length;
         }
-        return this.array.length;
     }
 
     /**
      *Boardクラスの中の配列の幅
      */
     get width() {
-        //配列の中になにも入ってなかった時の例外処理
-        if (this.array[0] == null) {
-            return 0;
+        switch (this.dimension) {
+            //配列の中になにも入ってなかった時の例外処理
+            case null:
+                return 0;
+            //1次元配列または配列以外を読み込んだ場合の例外処理
+            case 0:
+            case 1:
+                return this.array.length;
+            case 2:
+                return this.array[0].length;
         }
-        //配列以外を読み込んだ場合の例外処理
-        if (this.array == 1) {
-            return 1;
-        }
-        return this.array[0].length;
     }
 
     /**
      * @param {number[][]} array 
      */
     constructor(array) {
-        this.array = array;
+        if (typeof (array) === 'number') {
+            this.array = new Array(1).fill(array);
+            /**配列の次元(0=数値 , 1=1次元配列 , null=値なし) */
+            this.dimension = 0;
+        }
+        else if (array === null || array == undefined) {
+            this.dimension = null;
+            this.array = array;
+        }
+        else if (typeof (array[0]) === 'number') {
+            this.dimension = 1;
+            this.array = array;
+        }
+        else {
+            this.dimension = 2;
+            this.array = array;
+        }
     }
 
     /**
      * Boardが保持している配列の転置行列
      */
     transpose() {
-        this.array = this.array[0].map((col, i) => this.array.map(row => row[i]));
+        //配列の大きさが1の場合を除外する
+        if (this.dimension == 2) {
+            this.array = this.array[0].map((_, i) => this.array.map(row => row[i]));
+            if (typeof (this.array[0]) === 'number') {
+                this.dimension = 1;
+            }
+        }
+        else if (this.dimension == 1) {
+            this.array = this.array.map(element => new Array(1).fill(element));
+            this.dimension = 2;
+        }
     }
 }
 
@@ -567,3 +624,4 @@ class Order {
 }
 
 module.exports.BoardData = BoardData;
+module.exports.Board = Board;

@@ -5,7 +5,7 @@ node main.js
 //ファイルインポート
 const { partitionBoard, evaluate } = require("./functions/boardUtility");
 const { pullOutOld } = require("./functions/legacy");
-const { BoardData } = require("./functions/class");
+const { BoardData, Board } = require("./functions/class");
 
 //計算時間測定関数の定義
 const measureStart = (value = 1000) => {
@@ -26,9 +26,8 @@ measureStart();
 
 const boardData = new BoardData(null, 6, 6);
 console.log(boardData.answer.order[0].board.array);
-boardData.answer.add(5, [1, 1], 1);
-console.log(boardData.answer.order[1].board.array);
-boardData.answer.swap([1, 2], [4, 2], 2);
+boardData.answer.swap([2, 4], [2, 1]);
+console.log(boardData.answer.order[5].board.array);
 
 measureFinish();
 
