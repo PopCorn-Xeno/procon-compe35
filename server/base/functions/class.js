@@ -1,6 +1,11 @@
 const cloneDeep = require("lodash/cloneDeep");
 
 class BoardData {
+    /**
+     * この問題の解答
+     * @type {Answer}
+     */
+    answer
 
     /** ボードの情報 */
     #board = {
@@ -71,6 +76,8 @@ class BoardData {
         for (let i = 0; i < 25; i++) {
             this.#patterns.push(this.#setFormatPattern(i));
         }
+
+        this.answer = new Answer(this.#board.start, this.#patterns);
     }
 
     /**
@@ -208,53 +215,6 @@ class BoardData {
     }
 }
 
-class Board {
-    /**
-     *Boardクラスの中の配列
-     */
-    array = [[]];
-
-    /**
-     *Boardクラスの中の配列の高さ
-     */
-    get height() {
-        //1次元配列または配列以外を読み込んだ場合の例外処理
-        if (this.array == 1) {
-            return 1;
-        }
-        return this.array.length;
-    }
-
-    /**
-     *Boardクラスの中の配列の幅
-     */
-    get width() {
-        //配列の中になにも入ってなかった時の例外処理
-        if (this.array[0] == null) {
-            return 0;
-        }
-        //配列以外を読み込んだ場合の例外処理
-        if (this.array == 1) {
-            return 1;
-        }
-        return this.array[0].length;
-    }
-
-    /**
-     * @param {number[][]} array 
-     */
-    constructor(array) {
-        this.array = array;
-    }
-
-    /**
-     * Boardが保持している配列の転置行列
-     */
-    transpose() {
-        this.array = this.array[0].map((col, i) => this.array.map(row => row[i]));
-    }
-}
-
 class Answer {
     /**
     * 操作手順
@@ -271,66 +231,26 @@ class Answer {
     /**
      * @param {number[][]} array 
      */
-    constructor(array) {
+    constructor(array, patterns) {
         //初期状態はボードの状態だけが保存されることとする
         /**中にOrderクラスが入っている */
         this.order[0] = new Order(array, null, null, null);
         /**現在処理しているターン数 */
         this.turn = 0;
         //こちらにもformatPatternを読み込む
-        for (let i = 0; i < 25; i++) {
-            this.patterns.push(this.#setFormatPattern(i));
-        }
+        this.patterns = patterns;
     }
 
     /** 
     * orderに操作内容をpushし追加で保存する関数
     * (右の条件で操作した後の配列,使用した抜き型の配列,座標,方向)
-    * @param {Board} pattern 抜き型のBoardクラス
+    * @param {number} patternNumber 抜き型の番号
     * @param {number[]} position 座標の値(x,y)
     * @param {number} direction 方向指定
     */
-    add(pattern, position, direction) {
-        this.order.push(new Order(this.#pullOut(this.order[this.turn].board, pattern, position, direction), pattern, position, direction));
+    add(patternNumber, position, direction) {
+        this.order.push(new Order(this.#pullOut(this.order[this.turn].board, patternNumber, position, direction),patternNumber, position, direction));
         this.turn++;
-    }
-
-    /**
-     * 定型抜き型を作る関数
-     * @param {number} patternNumber 定型抜き型のn番目を表す
-     * @returns {Board}
-     */
-    #setFormatPattern(patternNumber) {
-        //0番目は配列ではないため個別に例外処理を行う
-        if (patternNumber == 0) {
-            const array = 1;
-            return new Board(array);
-        }
-
-        /**
-        * 抜き型の大きさ
-        * @param {number} length
-        */
-        const length = Math.pow(2, Math.floor((patternNumber + 2) / 3));
-        /**
-        * 抜き型のタイプ
-        * @param {number} type
-        */
-        const type = (patternNumber - 1) % 3 + 1;
-
-        let i = 0;
-
-        //それぞれのタイプに対応した配列を返す
-        switch (type) {
-            case 1:
-                return new Board(new Array(length).fill(new Array(length).fill(1)));
-            case 2:
-                i = 0;
-                return new Board(new Array(length).fill(0).map(() => i++ % 2 == 0 ? new Array(length).fill(1) : new Array(length).fill(0)));
-            case 3:
-                i = 0;
-                return new Board(new Array(length).fill(new Array(length).fill(0).map(() => i++ % 2 == 0 ? 1 : 0)));
-        }
     }
 
     /**
@@ -441,7 +361,7 @@ class Answer {
         }
 
         if (middleLength == 0) {
-            this.add(this.patterns[]);
+            this.add(this.patterns[5]);
         }
 
         switch (type) {
@@ -457,24 +377,24 @@ class Answer {
     /**
      * 抜き型で指定した座標を抜き、指定した方向に寄せ、隙間を抜いた要素で埋める関数
      * @param {Board} board　並べ替えたい2次元配列 
-     * @param {Board} pattern　抜き型の配列
+     * @param {number} patternNumber　抜き型の配列
      * @param {number[]} position　座標(x,y)
      * @param {number} direction 方向(上から時計回りに1~4の数値で割り当て)
      * @returns 
      */
-    #pullOut(board, pattern, position, direction) {
+    #pullOut(board, patternNumber, position, direction) {
 
         //エラー処理
         /**エラーが起きたか判定する */
         //主にエラー内容が共存できる部分があるので必要である
         let errorFlag = false;
         //座標がx軸についてボードからはみ出しているかどうか判定する
-        if (position[0] < 0 && pattern.width <= -position[0] || board.width <= position[0]) {
+        if (position[0] < 0 && this.patterns[patternNumber].width <= -position[0] || board.width <= position[0]) {
             console.error("pullOut関数:x座標が不正な値です(抜き型がボードから完全にはみ出しています");
             errorFlag = true;
         }
         //座標がy軸についてボードからはみ出しているかどうか判定する
-        if (position[1] < 0 && pattern.height <= -position[1] || board.width <= position[1]) {
+        if (position[1] < 0 && this.patterns[patternNumber].height <= -position[1] || board.width <= position[1]) {
             console.error("pullOut関数:y座標が不正な値です(抜き型がボードから完全にはみ出しています");
             errorFlag = true
         }
@@ -485,7 +405,7 @@ class Answer {
 
         //主な処理内容
         //転置や変形などを行うため配列の内容をコピーする
-        let clonePattern = cloneDeep(pattern);
+        let clonePattern = cloneDeep(this.patterns[patternNumber]);
         //縦方向の操作の場合ボードと抜き型の転置、またx,y座標の交換を行う
         if (direction % 2 == 1) {
             board.transpose();
@@ -571,23 +491,79 @@ class Answer {
     }
 }
 
+class Board {
+    /**
+     *Boardクラスの中の配列
+     */
+    array = [[]];
+
+    /**
+     *Boardクラスの中の配列の高さ
+     */
+    get height() {
+        //1次元配列または配列以外を読み込んだ場合の例外処理
+        if (this.array == 1) {
+            return 1;
+        }
+        return this.array.length;
+    }
+
+    /**
+     *Boardクラスの中の配列の幅
+     */
+    get width() {
+        //配列の中になにも入ってなかった時の例外処理
+        if (this.array[0] == null) {
+            return 0;
+        }
+        //配列以外を読み込んだ場合の例外処理
+        if (this.array == 1) {
+            return 1;
+        }
+        return this.array[0].length;
+    }
+
+    /**
+     * @param {number[][]} array 
+     */
+    constructor(array) {
+        this.array = array;
+    }
+
+    /**
+     * Boardが保持している配列の転置行列
+     */
+    transpose() {
+        this.array = this.array[0].map((col, i) => this.array.map(row => row[i]));
+    }
+}
+
 /**
  * 操作手順の内容を記録するクラス
  */
 class Order {
-    constructor(board, pattern, position, direction) {
+    constructor(board, patternNumber, position, direction) {
         /**
-         * 操作手順の内容をボードに記す
+         * 操作手順の内容
          * @type {Board}
          */
         this.board = board;
-        this.pattern = pattern;
+        /**
+         * 抜き型の番号
+         * @type {number}
+         */
+        this.patternNumber = patternNumber;
+        /**
+         * 抜き型の座標[x,y]
+         * @type {number[]}
+         */
         this.position = position;
+        /**
+         * 方向
+         * @type {number}
+         */
         this.direction = direction;
     }
 }
 
 module.exports.BoardData = BoardData;
-module.exports.Order = Order;
-module.exports.Board = Board;
-module.exports.Answer = Answer;
