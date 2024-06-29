@@ -1,3 +1,4 @@
+const { padStart } = require("lodash");
 const cloneDeep = require("lodash/cloneDeep");
 
 class BoardData {
@@ -228,6 +229,18 @@ class Answer {
      */
     patterns = [];
 
+    get latestOrder() {
+        console.log("現在" + (this.order.length - 1) + "手目");
+        console.log(this.order[this.order.length - 1].board.array);
+    }
+
+    get showAllOrder() {
+        console.log("現在" + (this.order.length - 1) + "手目");
+        for (let i = 1; i < this.order.length; i++) {
+            console.log(this.order[i].board.array)
+        }
+    }
+
     /**
      * @param {number[][]} array 
      */
@@ -258,9 +271,10 @@ class Answer {
      * @param {number[]} position1 1つ目の座標(x,y)
      * @param {number[]} position2 2つ目の座標(x,y)
      * @param {number} size 入れ替える配列の大きさ
+     * @param {number} priorityCell 指定要素が重なっていたときどちらの要素の形を保つか(0=最短手,1=左側,2=右側)
      * @returns
      */
-    swap(position1, position2, size = 1) {
+    swap(position1, position2, size = 1, priorityCell = 0) {
 
         // エラー処理
         /**エラーが起きたか判定する */
@@ -289,6 +303,13 @@ class Answer {
             console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
             errorFlag = true;
         }
+        //サイズが不正な値でないか調べる
+        if (size > 256) {
+            console.error("swap関数:sizeが不正な値です(256より大きいサイズを指定することはできません)");
+        }
+        if (size == 0 ? false : !Number.isInteger(Math.log2(size))) {
+            console.error("swap関数:sizeが不正な値です(2^nの値を指定してください)");
+        }
 
         //下で不正な値を読み込むとエラーを吐くのでここで一旦フラグを調べて関数を中断する
         if (errorFlag == true) {
@@ -307,12 +328,6 @@ class Answer {
             let swap = position1[type];
             position1[type] = position2[type];
             position2[type] = swap;
-        }
-
-        //選択した場所が重なっていないか調べる
-        if (position1[type] + size > position2[type]) {
-            console.error("swap関数:操作するセル同士が重複しています");
-            errorFlag = true;
         }
 
         //選択した場所の要素の値を調べて同じ要素を操作しないか調べる
@@ -361,35 +376,183 @@ class Answer {
                 break;
         }
 
+        /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
+        let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
+        /**サイズに対しての定型抜き型の番号 */
+        let patternType = size == 1 ? 0 : (Math.log2(size) - 1) * 3 + 1;
+        /**pullOutに渡す座標 */
         let position = new Array(2).fill(0);
 
-        if (middleLength == 0) {
-            position[type] = position1[0] - 256;
-            position[Math.abs(type - 1)] = 0;
-            this.add(22, position, 4);
-
+        switch (lengthFlag) {
+            case 111:
+                //L-E1-C-E2-R(5手)
+                //E1-C-E2-R-L(L
+                position[type] = leftLength - 256;
+                position[Math.abs(type - 1)] = 0;
+                this.add(22, position, type == 0 ? 4 : 1);
+                //E2-E1-C-R-L(E2
+                position[type] = size + middleLength;
+                position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                this.add(patternType, position, type == 0 ? 2 : 3);
+                //R-L-E2-E1-C(R-L
+                position[type] = size * 2 + middleLength;
+                position[Math.abs(type - 1)] = 0;
+                this.add(22, position, type == 0 ? 2 : 3);
+                //R-L-E2-C-E1(E1
+                position[type] = rightLength + leftLength + size;
+                position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                this.add(patternType, position, type == 0 ? 4 : 1);
+                //L-E2-C-E1-R(R
+                position[type] = rightLength - 256;
+                position[Math.abs(type - 1)] = 0;
+                this.add(22, position, type == 0 ? 4 : 1);
+                break;
+            case 11:
+                //E1-C-E2-R(4手)
+                //E2-E1-C-R(E2
+                position[type] = size + middleLength;
+                position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                this.add(patternType, position, type == 0 ? 2 : 3);
+                //R-E2-E1-C(R
+                position[type] = size * 2 + middleLength;
+                position[Math.abs(type - 1)] = 0;
+                this.add(22, position, type == 0 ? 2 : 3);
+                //R-E2-C-E1(E1
+                position[type] = rightLength + size;
+                position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                this.add(patternType, position, type == 0 ? 4 : 1);
+                //E2-C-E1-R(R
+                position[type] = rightLength - 256;
+                position[Math.abs(type - 1)] = 0;
+                this.add(22, position, type == 0 ? 4 : 1);
+                break;
+            case 110:
+                //L-E1-C-E2(4手)
+                //L-C-E2-E1(E1
+                position[type] = leftLength;
+                position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                this.add(patternType, position, type == 0 ? 4 : 1);
+                //C-E2-E1-L(L
+                position[type] = leftLength - 256;
+                position[Math.abs(type - 1)] = 0;
+                this.add(22, position, type == 0 ? 4 : 1);
+                //E2-C-E1-L(E2
+                position[type] = middleLength;
+                position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                this.add(patternType, position, type == 0 ? 2 : 3);
+                //L-E2-C-E1(L
+                position[type] = size * 2 + middleLength;
+                position[Math.abs(type - 1)] = 0;
+                this.add(22, position, type == 0 ? 2 : 3);
+                break;
+            case 101:
+                if (priorityCell == 1) {
+                    //L-E1-E2-R(3手)
+                    //R-L-E1-E2(R
+                    position[type] = leftLength + size * 2 + middleLength;
+                    position[Math.abs(type - 1)] = 0;
+                    this.add(22, position, type == 0 ? 2 : 3);
+                    //R-L-E2-E1(E1
+                    position[type] = rightLength + leftLength;
+                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position, type == 0 ? 4 : 1);
+                    //L-E2-E1-R(R
+                    position[type] = rightLength - 256;
+                    position[Math.abs(type - 1)] = 0;
+                    this.add(22, position, type == 0 ? 4 : 1);
+                }
+                else {
+                    //L-E1-E2-R(3手)
+                    //E1-E2-R-L(L
+                    position[type] = leftLength - 256;
+                    position[Math.abs(type - 1)] = 0;
+                    this.add(22, position, type == 0 ? 4 : 1);
+                    //E2-E1-R-L(E2
+                    position[type] = size + middleLength;
+                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position, type == 0 ? 2 : 3);
+                    //L-E2-E1-R(L
+                    position[type] = size * 2 + middleLength + rightLength;
+                    position[Math.abs(type - 1)] = 0;
+                    this.add(22, position, type == 0 ? 2 : 3);
+                }
+                break;
+            case 10:
+                //E1-C-E2(2手)
+                //C-E2-E1(E1
+                position[type] = 0;
+                position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                this.add(patternType, position, type == 0 ? 4 : 1);
+                //E2-C-E1(E2
+                position[type] = middleLength;
+                position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                this.add(patternType, position, type == 0 ? 2 : 3);
+                break;
+            case 100:
+                if (priorityCell == 2) {
+                    //L-E1-E2(3手)
+                    //E1-E2-L(L
+                    position[type] = leftLength - 256;
+                    position[Math.abs(type - 1)] = 0;
+                    this.add(22, position, type == 0 ? 4 : 1);
+                    //E2-E1-L(E2
+                    position[type] = size + middleLength;
+                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position, type == 0 ? 2 : 3);
+                    //L-E2-E1(L
+                    position[type] = size * 2 + middleLength;
+                    position[Math.abs(type - 1)] = 0;
+                    this.add(22, position, type == 0 ? 2 : 3);
+                }
+                else {
+                    //L-E1-E2(1手)
+                    //L-E2-E1(E1
+                    position[type] = leftLength;
+                    position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                    this.add(patternType, position, type == 0 ? 4 : 1);
+                }
+                break;
+            case 1:
+                if (priorityCell == 1) {
+                    //E1-E2-R(3手)
+                    //R-E1-E2(R
+                    position[type] = size * 2 + middleLength;
+                    position[Math.abs(type - 1)] = 0;
+                    this.add(22, position, type == 0 ? 2 : 3);
+                    //R-E2-E1(E1
+                    position[type] = rightLength;
+                    position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                    this.add(patternType, position, type == 0 ? 4 : 1);
+                    //E2-E1-R(R
+                    position[type] = rightLength - 256;
+                    position[Math.abs(type - 1)] = 0;
+                    this.add(22, position, type == 0 ? 4 : 1);
+                }
+                else {
+                    //E1-E2-R(1手)
+                    //E2-E1-R(E2
+                    position[type] = size + middleLength;
+                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position, type == 0 ? 2 : 3);
+                }
+                break;
+            case 0:
+                if (priorityCell == 2) {
+                    //E1-E2(1手)
+                    //E2-E1(E2
+                    position[type] = size + middleLength;
+                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position, type == 0 ? 2 : 3);
+                }
+                else {
+                    //E1-E2(1手)
+                    //E2-E1(E1
+                    position[type] = 0;
+                    position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                    this.add(patternType, position, type == 0 ? 4 : 1);
+                }
+                break;
         }
-
-        //E1-C-E2-R-L(L
-        position[type] = leftLength - 256;
-        position[Math.abs(type - 1)] = 0;
-        this.add(22, position, type == 0 ? 4 : 1);
-        //E2-E1-C-R-L(E2
-        position[type] = size + middleLength;
-        position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-        this.add((size - 1) * 3, position, type == 0 ? 2 : 3);
-        //R-L-E2-E1-C(R-L
-        position[type] = size * 2 + middleLength;
-        position[Math.abs(type - 1)] = 0;
-        this.add(22, position, type == 0 ? 2 : 3);
-        //R-L-E2-C-E1(E1
-        position[type] = rightLength + leftLength + size;
-        position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
-        this.add((size - 1) * 3, position, type == 0 ? 4 : 1);
-        //L-E2-C-E1-R(R
-        position[type] = rightLength - 256;
-        position[Math.abs(type - 1)] = 0;
-        this.add(22, position, type == 0 ? 4 : 1);
     }
 
     /**
@@ -514,6 +677,34 @@ class Answer {
     }
 }
 
+/**
+ * 操作手順の内容を記録するクラス
+ */
+class Order {
+    constructor(board, patternNumber, position, direction) {
+        /**
+         * 操作手順の内容
+         * @type {Board}
+         */
+        this.board = board;
+        /**
+         * 抜き型の番号
+         * @type {number}
+         */
+        this.patternNumber = patternNumber;
+        /**
+         * 抜き型の座標[x,y]
+         * @type {number[]}
+         */
+        this.position = position;
+        /**
+         * 方向
+         * @type {number}
+         */
+        this.direction = direction;
+    }
+}
+
 class Board {
     /**
      *Boardクラスの中の配列
@@ -527,7 +718,7 @@ class Board {
         switch (this.dimension) {
             //配列の中になにも入ってなかった時の例外処理
             case null:
-                return 0;
+                return null;
             //1次元配列または配列以外を読み込んだ場合の例外処理
             case 0:
             case 1:
@@ -544,7 +735,7 @@ class Board {
         switch (this.dimension) {
             //配列の中になにも入ってなかった時の例外処理
             case null:
-                return 0;
+                return null;
             //1次元配列または配列以外を読み込んだ場合の例外処理
             case 0:
             case 1:
@@ -558,14 +749,14 @@ class Board {
      * @param {number[][]} array 
      */
     constructor(array) {
-        if (typeof (array) === 'number') {
+        if (array === null || array == undefined) {
+            console.error("Boardクラス:未定義の値を代入しました");
+            return null;
+        }
+        else if (typeof (array) === 'number') {
             this.array = new Array(1).fill(array);
             /**配列の次元(0=数値 , 1=1次元配列 , null=値なし) */
             this.dimension = 0;
-        }
-        else if (array === null || array == undefined) {
-            this.dimension = null;
-            this.array = array;
         }
         else if (typeof (array[0]) === 'number') {
             this.dimension = 1;
@@ -592,34 +783,6 @@ class Board {
             this.array = this.array.map(element => new Array(1).fill(element));
             this.dimension = 2;
         }
-    }
-}
-
-/**
- * 操作手順の内容を記録するクラス
- */
-class Order {
-    constructor(board, patternNumber, position, direction) {
-        /**
-         * 操作手順の内容
-         * @type {Board}
-         */
-        this.board = board;
-        /**
-         * 抜き型の番号
-         * @type {number}
-         */
-        this.patternNumber = patternNumber;
-        /**
-         * 抜き型の座標[x,y]
-         * @type {number[]}
-         */
-        this.position = position;
-        /**
-         * 方向
-         * @type {number}
-         */
-        this.direction = direction;
     }
 }
 

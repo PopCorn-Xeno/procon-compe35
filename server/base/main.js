@@ -1,7 +1,3 @@
-/*コピペでファイル実行
-cd ./server/base
-node main.js
-*/
 //ファイルインポート
 const { partitionBoard, evaluate } = require("./functions/boardUtility");
 const { pullOutOld } = require("./functions/legacy");
@@ -21,13 +17,18 @@ const measureFinish = () => {
 
 let accuracy = 0, start = 0, result = null;
 
+/*コピペでファイル実行
+cd ./server/base
+node main.js
+*/
+
 //実行内容
 measureStart();
 
 const boardData = new BoardData(null, 6, 6);
 console.log(boardData.answer.order[0].board.array);
-boardData.answer.swap([2, 4], [2, 1]);
-console.log(boardData.answer.order[5].board.array);
+boardData.answer.swap([1, 1], [2, 1],2);
+boardData.answer.latestOrder;
 
 measureFinish();
 
