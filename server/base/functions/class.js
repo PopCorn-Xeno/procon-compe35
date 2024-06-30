@@ -333,125 +333,76 @@ class Answer {
                 return null;
             }
 
-            let position3 = [position2[0], position1[1]];
+            /**3つの座標が合わさった配列 */
+            let position = [position1, position2, [position2[0], position1[1]]];
+            /**要素の交換優先度 */
+            let priority = new Array(2).fill(0);
 
-            /**操作する配列の左側 */
-            let leftLength = position1[0] < position3[0] ? position1[0] : position3[0];
-            /**操作する配列の右側 */
-            let rightLength = this.order[this.turn].board.width - (position1[0] < position3[0] ? position3[0] : position1[0]) - size;
-            /**操作する配列の真ん中 */
-            let middleLength = this.order[this.turn].board.width - leftLength - rightLength - 2 * size;
-            /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
-            let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
+            for (let i = 0; i < 2; i++) {
+                /**操作する配列の左側 */
+                let leftLength = position[i][i] < position[2][i] ? position[i][i] : position[2][i];
+                /**操作する配列の右側 */
+                let rightLength = (i == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - (position[i][i] < position[2][i] ? position[2][i] : position[i][i]) - size;
+                /**操作する配列の真ん中 */
+                let middleLength = (i == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - leftLength - rightLength - 2 * size;
+                /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
+                let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
 
-            /**position1とposition3間での手数の短さ具合 */
-            let priority1 = 0;
-
-            if (size == 1) {
-                switch (lengthFlag) {
-                    case 111:
-                        priority1 = 5;
-                        break;
-                    case 110:
-                    case 11:
-                        priority1 = 4;
-                        break;
-                    case 101:
-                        priority1 = 3;
-                        break;
-                    case 10:
-                        priority1 = 2;
-                        break;
-                    case 100:
-                    case 1:
-                    case 0:
-                        priority1 = 1;
-                        break;
+                if (size == 1) {
+                    switch (lengthFlag) {
+                        case 111:
+                            priority[i] = 5;
+                            break;
+                        case 110:
+                        case 11:
+                            priority[i] = 4;
+                            break;
+                        case 101:
+                            priority[i] = 3;
+                            break;
+                        case 10:
+                            priority[i] = 2;
+                            break;
+                        case 100:
+                        case 1:
+                        case 0:
+                            priority[i] = 1;
+                            break;
+                    }
                 }
+                else {
+                    switch (lengthFlag) {
+                        case 111:
+                            priority[i] = 4;
+                            break;
+                        case 110:
+                        case 11:
+                            priority[i] = 3;
+                            break;
+                        case 10:
+                            priority[i] = 2;
+                            break;
+                        case 101:
+                        case 100:
+                        case 1:
+                        case 0:
+                            priority[i] = 1;
+                            break;
+                    }
+                }
+            }
+
+            if (priority[0] < priority[1]) {
+                this.swap(position[0], position[2], size, size == 1 ? 0 : (position[0][0] < position[2][0] ? 1 : 2), false);
+                this.swap(position[1], position[2], size, 0, false);
+                position2 = position[2];
+                priorityCell = size == 1 ? 0 : (position[0][0] < position[2][0] ? 2 : 1);
             }
             else {
-                switch (lengthFlag) {
-                    case 111:
-                        priority1 = 4;
-                        break;
-                    case 110:
-                    case 11:
-                        priority1 = 3;
-                        break;
-                    case 10:
-                        priority1 = 2;
-                        break;
-                    case 101:
-                    case 100:
-                    case 1:
-                    case 0:
-                        priority1 = 1;
-                        break;
-                }
-            }
-
-            leftLength = position2[1] < position3[1] ? position2[1] : position3[1];
-            rightLength = this.order[this.turn].board.height - (position2[1] < position3[1] ? position3[1] : position2[1]) - size;
-            middleLength = this.order[this.turn].board.height - leftLength - rightLength - 2 * size;
-            lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
-
-            /**position2とposition3間での手数の短さ具合 */
-            let priority2 = 0;
-
-            if (size == 1) {
-                switch (lengthFlag) {
-                    case 111:
-                        priority2 = 5;
-                        break;
-                    case 110:
-                    case 11:
-                        priority2 = 4;
-                        break;
-                    case 101:
-                        priority2 = 3;
-                        break;
-                    case 10:
-                        priority2 = 2;
-                        break;
-                    case 100:
-                    case 1:
-                    case 0:
-                        priority2 = 1;
-                        break;
-                }
-            }
-            else {
-                switch (lengthFlag) {
-                    case 111:
-                        priority2 = 4;
-                        break;
-                    case 110:
-                    case 11:
-                        priority2 = 3;
-                        break;
-                    case 10:
-                        priority2 = 2;
-                        break;
-                    case 101:
-                    case 100:
-                    case 1:
-                    case 0:
-                        priority2 = 1;
-                        break;
-                }
-            }
-
-            if (priority1 < priority2) {
-                this.swap(position1, position3, size, size == 1 ? 0 : (position1[0] < position3[0] ? 1 : 2), false);
-                this.swap(position2, position3, size, 0, false);
-                position2 = position3;
-                priorityCell = size == 1 ? 0 : (position1[0] < position3[0] ? 2 : 1);
-            }
-            else {
-                this.swap(position2, position3, size, size == 1 ? 0 : (position2[1] < position3[1] ? 1 : 2), false);
-                this.swap(position1, position3, size, 0, false);
-                position1 = position3;
-                priorityCell = size == 1 ? 0 : (position2[1] < position3[1]) ? 2 : 1;
+                this.swap(position[1], position[2], size, size == 1 ? 0 : (position[1][1] < position[2][1] ? 1 : 2), false);
+                this.swap(position[0], position[2], size, 0, false);
+                position1 = position[2];
+                priorityCell = size == 1 ? 0 : (position[1][1] < position[2][1]) ? 2 : 1;
             }
         }
 
