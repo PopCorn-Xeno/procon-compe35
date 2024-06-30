@@ -335,10 +335,8 @@ class Answer {
 
             /**3つの座標が合わさった配列 */
             let position = [position1, position2, [position2[0], position1[1]]];
-            /**要素の交換優先度 */
-            let priority = new Array(2).fill(0);
 
-            for (let i = 0; i < 2; i++) {
+            const setPriority = (i) => {
                 /**操作する配列の左側 */
                 let leftLength = position[i][i] < position[2][i] ? position[i][i] : position[2][i];
                 /**操作する配列の右側 */
@@ -351,46 +349,49 @@ class Answer {
                 if (size == 1) {
                     switch (lengthFlag) {
                         case 111:
-                            priority[i] = 5;
+                            i = 5;
                             break;
                         case 110:
                         case 11:
-                            priority[i] = 4;
+                            i = 4;
                             break;
                         case 101:
-                            priority[i] = 3;
+                            i = 3;
                             break;
                         case 10:
-                            priority[i] = 2;
+                            i = 2;
                             break;
                         case 100:
                         case 1:
                         case 0:
-                            priority[i] = 1;
+                            i = 1;
                             break;
                     }
                 }
                 else {
                     switch (lengthFlag) {
                         case 111:
-                            priority[i] = 4;
+                            i = 4;
                             break;
                         case 110:
                         case 11:
-                            priority[i] = 3;
+                            i = 3;
                             break;
                         case 10:
-                            priority[i] = 2;
+                            i = 2;
                             break;
                         case 101:
                         case 100:
                         case 1:
                         case 0:
-                            priority[i] = 1;
+                            i = 1;
                             break;
                     }
                 }
             }
+
+            /**要素の交換優先度 */
+            let priority = [0, 1].map(i => setPriority(i));
 
             if (priority[0] < priority[1]) {
                 this.swap(position[0], position[2], size, size == 1 ? 0 : (position[0][0] < position[2][0] ? 1 : 2), false);
