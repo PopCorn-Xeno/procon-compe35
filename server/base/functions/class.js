@@ -170,8 +170,18 @@ class BoardData {
             regularArray.push(temporaryArray);
         }
 
+        let sample = [];
+        for (let i = 1; i < 7; i++) {
+            let temporary = [];
+            for (let j = 1; j < 7; j++) {
+                temporary.push(j * 10 + i);
+            }
+            sample.push(temporary);
+        }
+
+        this.#board.start = new Board(sample);
         // 2次元配列をランダムに並び替える
-        this.#board.start = new Board(shuffleBoard(regularArray));
+        //this.#board.start = new Board(shuffleBoard(regularArray));
         this.#board.goal = new Board(shuffleBoard(this.#board.start.array));
 
         return this;
@@ -272,109 +282,191 @@ class Answer {
      * @param {number[]} position2 2つ目の座標(x,y)
      * @param {number} size 入れ替える配列の大きさ
      * @param {number} priorityCell 指定要素が重なっていたときどちらの要素の形を保つか(0=最短手,1=左側,2=右側)
+     * @param {boolean} inspection エラー処理を行うかどうか
      * @returns
      */
-    swap(position1, position2, size = 1, priorityCell = 0) {
+    swap(position1, position2, size = 1, priorityCell = 0, inspection = true) {
 
-        // エラー処理
-        /**エラーが起きたか判定する */
-        //主にエラー内容が共存できる部分があるので必要である
-        let errorFlag = false;
+        if (inspection == true) {
+            // エラー処理
+            /**エラーが起きたか判定する */
+            //主にエラー内容が共存できる部分があるので必要である
+            let errorFlag = false;
+            //それぞれのx座標がボードからはみ出していないか調べる
+            if (position1[0] < 0 || this.order[this.turn].board.width - size < position1[0]) {
+                console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
+                errorFlag = true;
+            }
+            if (position2[0] < 0 || this.order[this.turn].board.width - size < position2[0]) {
+                console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
+                errorFlag = true;
+            }
+            //それぞれのy座標がボードからはみ出していないか調べる
+            if (position1[1] < 0 || this.order[this.turn].board.height - size < position1[1]) {
+                console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
+                errorFlag = true;
+            }
+            if (position2[1] < 0 || this.order[this.turn].board.height - size < position2[1]) {
+                console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
+                errorFlag = true;
+            }
+            //サイズが不正な値でないか調べる
+            if (size > 256) {
+                console.error("swap関数:sizeが不正な値です(256より大きいサイズを指定することはできません)");
+            }
+            if (size == 0 ? false : !Number.isInteger(Math.log2(size))) {
+                console.error("swap関数:sizeが不正な値です(2^nの値を指定してください)");
+            }
+
+            //フラグを参照して関数を中断する
+            if (errorFlag == true) {
+                return null;
+            }
+        }
+
         //指定した場所が直線上に並んでいるか調べる
         if (position1[0] != position2[0] && position1[1] != position2[1]) {
-            console.error("swap関数:要素同士が直線上に並んでいません");
-            errorFlag = true;
-        }
-        //それぞれのx座標がボードからはみ出していないか調べる
-        if (position1[0] < 0 || this.order[this.turn].board.width - size < position1[0]) {
-            console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
-            errorFlag = true;
-        }
-        if (position2[0] < 0 || this.order[this.turn].board.width - size < position2[0]) {
-            console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
-            errorFlag = true;
-        }
-        //それぞれのy座標がボードからはみ出していないか調べる
-        if (position1[1] < 0 || this.order[this.turn].board.height - size < position1[1]) {
-            console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
-            errorFlag = true;
-        }
-        if (position2[1] < 0 || this.order[this.turn].board.height - size < position2[1]) {
-            console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
-            errorFlag = true;
-        }
-        //サイズが不正な値でないか調べる
-        if (size > 256) {
-            console.error("swap関数:sizeが不正な値です(256より大きいサイズを指定することはできません)");
-        }
-        if (size == 0 ? false : !Number.isInteger(Math.log2(size))) {
-            console.error("swap関数:sizeが不正な値です(2^nの値を指定してください)");
+
+            //指定した要素同士が重なっていないか調べる
+            if (position1[0] < position2[0] ? position2[0] - position1[0] - size < 0 : position1[0] - position2[0] - size < 0 && position1[1] < position2[1] ? position2[1] - position1[1] - size < 0 : position1[1] - position2[1] - size < 0) {
+                console.error("swap関数:直線的な交換でないのに指定した要素同士が重なっています");
+                return null;
+            }
+
+            let position3 = [position2[0], position1[1]];
+
+            /**操作する配列の左側 */
+            let leftLength = position1[0] < position3[0] ? position1[0] : position3[0];
+            /**操作する配列の右側 */
+            let rightLength = this.order[this.turn].board.width - (position1[0] < position3[0] ? position3[0] : position1[0]) - size;
+            /**操作する配列の真ん中 */
+            let middleLength = this.order[this.turn].board.width - leftLength - rightLength - 2 * size;
+            /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
+            let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
+
+            /**position1とposition3間での手数の短さ具合 */
+            let priority1 = 0;
+
+            if (size == 1) {
+                switch (lengthFlag) {
+                    case 111:
+                        priority1 = 5;
+                        break;
+                    case 110:
+                    case 11:
+                        priority1 = 4;
+                        break;
+                    case 101:
+                        priority1 = 3;
+                        break;
+                    case 10:
+                        priority1 = 2;
+                        break;
+                    case 100:
+                    case 1:
+                    case 0:
+                        priority1 = 1;
+                        break;
+                }
+            }
+            else {
+                switch (lengthFlag) {
+                    case 111:
+                        priority1 = 4;
+                        break;
+                    case 110:
+                    case 11:
+                        priority1 = 3;
+                        break;
+                    case 10:
+                        priority1 = 2;
+                        break;
+                    case 101:
+                    case 100:
+                    case 1:
+                    case 0:
+                        priority1 = 1;
+                        break;
+                }
+            }
+
+            leftLength = position2[1] < position3[1] ? position2[1] : position3[1];
+            rightLength = this.order[this.turn].board.height - (position2[1] < position3[1] ? position3[1] : position2[1]) - size;
+            middleLength = this.order[this.turn].board.height - leftLength - rightLength - 2 * size;
+            lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
+
+            /**position2とposition3間での手数の短さ具合 */
+            let priority2 = 0;
+
+            if (size == 1) {
+                switch (lengthFlag) {
+                    case 111:
+                        priority2 = 5;
+                        break;
+                    case 110:
+                    case 11:
+                        priority2 = 4;
+                        break;
+                    case 101:
+                        priority2 = 3;
+                        break;
+                    case 10:
+                        priority2 = 2;
+                        break;
+                    case 100:
+                    case 1:
+                    case 0:
+                        priority2 = 1;
+                        break;
+                }
+            }
+            else {
+                switch (lengthFlag) {
+                    case 111:
+                        priority2 = 4;
+                        break;
+                    case 110:
+                    case 11:
+                        priority2 = 3;
+                        break;
+                    case 10:
+                        priority2 = 2;
+                        break;
+                    case 101:
+                    case 100:
+                    case 1:
+                    case 0:
+                        priority2 = 1;
+                        break;
+                }
+            }
+
+            if (priority1 < priority2) {
+                this.swap(position1, position3, size, size == 1 ? 0 : (position1[0] < position3[0] ? 1 : 2), false);
+                this.swap(position2, position3, size, 0, false);
+                position2 = position3;
+                priorityCell = size == 1 ? 0 : (position1[0] < position3[0] ? 2 : 1);
+            }
+            else {
+                this.swap(position2, position3, size, size == 1 ? 0 : (position2[1] < position3[1] ? 1 : 2), false);
+                this.swap(position1, position3, size, 0, false);
+                position1 = position3;
+                priorityCell = size == 1 ? 0 : (position2[1] < position3[1]) ? 2 : 1;
+            }
         }
 
-        //下で不正な値を読み込むとエラーを吐くのでここで一旦フラグを調べて関数を中断する
-        if (errorFlag == true) {
-            return null;
-        }
-
-        //すでに縦列操作か横列操作かが分かるのでその値を決める
         /**横列操作=0,縦列操作=1 */
         let type = 0;
         if (position1[0] == position2[0]) {
             type = 1;
         }
 
-        //position2の座標の値の方が大きい値になるように変更をする
-        if (position1[type] > position2[type]) {
-            let swap = position1[type];
-            position1[type] = position2[type];
-            position2[type] = swap;
-        }
-
-        //選択した場所の要素の値を調べて同じ要素を操作しないか調べる
-        const evaluate = () => {
-            let result = 0;
-
-            for (let i = 0; i < size; i++) {
-                for (let j = 0; j < size; j++) {
-                    if (this.order[this.turn].board.array[position1[1] + i][position1[0] + j] == this.order[this.turn].board.array[position2[1] + i][position2[0] + j]) {
-                        result++;
-                    }
-                }
-            }
-
-            return result;
-        }
-
-        //全ての要素が等しかった場合フラグを立てる
-        if (evaluate() == size * size) {
-            console.error("swap関数:選択した箇所が同じ要素で構成されています");
-            errorFlag = true;
-        }
-
-        //フラグの値を調べnullを返す
-        if (errorFlag == true) {
-            return null;
-        }
-
         /**操作する配列の左側 */
-        let leftLength = 0
-        /**操作する配列の真ん中 */
-        let middleLength = 0
+        let leftLength = position1[type] < position2[type] ? position1[type] : position2[type];
         /**操作する配列の右側 */
-        let rightLength = 0;
-        //各変数の代入を行う
-        switch (type) {
-            case 0:
-                leftLength = position1[type];
-                rightLength = this.order[this.turn].board.width - position2[type] - size;
-                middleLength = this.order[this.turn].board.width - leftLength - rightLength - 2 * size;
-                break;
-            case 1:
-                leftLength = position1[type];
-                rightLength = this.order[this.turn].board.height - position2[type] - size;
-                middleLength = this.order[this.turn].board.height - leftLength - rightLength - 2 * size;
-                break;
-        }
+        let rightLength = (type == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - (position1[type] < position2[type] ? position2[type] : position1[type]) - size;
+        /**操作する配列の真ん中 */
+        let middleLength = (type == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - leftLength - rightLength - 2 * size;
 
         /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
         let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);

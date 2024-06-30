@@ -27,7 +27,7 @@ measureStart();
 
 const boardData = new BoardData(null, 6, 6);
 console.log(boardData.answer.order[0].board.array);
-boardData.answer.swap([1, 1], [2, 1],2);
+boardData.answer.swap([0, 2], [4, 3], 2);
 boardData.answer.latestOrder;
 
 measureFinish();
