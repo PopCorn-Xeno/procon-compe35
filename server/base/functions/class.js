@@ -44,9 +44,21 @@ class BoardData {
      * @param {*} height 
      */
     constructor(data = null, width = 0, height = 0) {
-        // 受信データを使用しなかった場合、問題をランダムで作るモードに移行する
+        // 受信データを使用しなかった場合、問題をランダムで作るモードに移行する、また0に指定すると座標を表す数値を出力する
         if (data === null) {
             this.#makeRandom(height, width);
+        }
+        else if (data == 0) {
+            let sample = [];
+            for (let i = 1; i <= height; i++) {
+                let temporary = [];
+                for (let j = 1; j <= width; j++) {
+                    temporary.push(j * 10 + i);
+                }
+                sample.push(temporary);
+            }
+
+            this.#board.start = new Board(sample);
         }
         // 受信データを使用する場合、JSONからデータを取得する
         else {
@@ -78,7 +90,7 @@ class BoardData {
             this.#patterns.push(this.#setFormatPattern(i));
         }
 
-        this.answer = new Answer(this.#board.start, this.#patterns);
+        this.answer = new Answer(this.#board.start, this.#board.goal, this.#patterns);
     }
 
     /**
@@ -170,18 +182,8 @@ class BoardData {
             regularArray.push(temporaryArray);
         }
 
-        let sample = [];
-        for (let i = 1; i < 7; i++) {
-            let temporary = [];
-            for (let j = 1; j < 7; j++) {
-                temporary.push(j * 10 + i);
-            }
-            sample.push(temporary);
-        }
-
-        this.#board.start = new Board(sample);
         // 2次元配列をランダムに並び替える
-        //this.#board.start = new Board(shuffleBoard(regularArray));
+        this.#board.start = new Board(shuffleBoard(regularArray));
         this.#board.goal = new Board(shuffleBoard(this.#board.start.array));
 
         return this;
@@ -239,11 +241,25 @@ class Answer {
      */
     patterns = [];
 
+    get matchBoard() {
+        let board=new Array(this.order[this.order.length - 1].board.height).fill(0).map(array=>new Array(this.order[this.order.length - 1].board.width).fill(0));
+        for(let i=0;i<board.length;i++){
+            for(let j=0;j<board[0].length;j++){
+                if(this.order[this.order.length - 1].board.array[i][j] != this.goal.array[i][j]){
+                    board[i][j]=1;
+                }
+            }
+        }
+        return board;
+    }
+
+    /**一番最後のOrderを表示する */
     get latestOrder() {
         console.log("現在" + (this.order.length - 1) + "手目");
         console.log(this.order[this.order.length - 1].board.array);
     }
 
+    /**全ての手順を表示する */
     get showAllOrder() {
         console.log("現在" + (this.order.length - 1) + "手目");
         for (let i = 1; i < this.order.length; i++) {
@@ -252,12 +268,16 @@ class Answer {
     }
 
     /**
-     * @param {number[][]} array 
+     * @param {Board} start
+     * @param {Board} goal
+     * @param {Board[]} patterns
      */
-    constructor(array, patterns) {
+    constructor(start, goal, patterns) {
         //初期状態はボードの状態だけが保存されることとする
         /**中にOrderクラスが入っている */
-        this.order[0] = new Order(array, null, null, null);
+        this.order[0] = new Order(start, null, null, null);
+        /**問題の完成形 */
+        this.goal = goal;
         /**現在処理しているターン数 */
         this.turn = 0;
         //こちらにもformatPatternを読み込む
@@ -274,6 +294,127 @@ class Answer {
     add(patternNumber, position, direction) {
         this.order.push(new Order(this.#pullOut(this.order[this.turn].board, patternNumber, position, direction), patternNumber, position, direction));
         this.turn++;
+    }
+
+    /**
+    * 抜き型で指定した座標を抜き、指定した方向に寄せ、隙間を抜いた要素で埋める関数
+    * @param {Board} board　並べ替えたい2次元配列 
+    * @param {number} patternNumber　抜き型の配列
+    * @param {number[]} position　座標(x,y)
+    * @param {number} direction 方向(上から時計回りに1~4の数値で割り当て)
+    * @returns 
+    */
+    #pullOut(board, patternNumber, position, direction) {
+
+        //エラー処理
+        /**エラーが起きたか判定する */
+        //主にエラー内容が共存できる部分があるので必要である
+        let errorFlag = false;
+        //座標がx軸についてボードからはみ出しているかどうか判定する
+        if (position[0] < 0 && this.patterns[patternNumber].width <= -position[0] || board.width <= position[0]) {
+            console.error("pullOut関数:x座標が不正な値です(抜き型がボードから完全にはみ出しています");
+            errorFlag = true;
+        }
+        //座標がy軸についてボードからはみ出しているかどうか判定する
+        if (position[1] < 0 && this.patterns[patternNumber].height <= -position[1] || board.width <= position[1]) {
+            console.error("pullOut関数:y座標が不正な値です(抜き型がボードから完全にはみ出しています");
+            errorFlag = true
+        }
+        //エラーが起きた場合nullを返す
+        if (errorFlag == true) {
+            return null;
+        }
+
+        //主な処理内容
+        //転置や変形などを行うため配列の内容をコピーする
+        let clonePattern = cloneDeep(this.patterns[patternNumber]);
+        //縦方向の操作の場合ボードと抜き型の転置、またx,y座標の交換を行う
+        if (direction % 2 == 1) {
+            board.transpose();
+            clonePattern.transpose();
+            let swap = position[0];
+            position[0] = position[1];
+            position[1] = swap;
+        }
+
+        //抜き型がボードからはみ出している場合その部分を切り取る
+        if (position[1] < 0) {
+            clonePattern.array = clonePattern.array.slice(Math.abs(position[1]));
+            position[1] = 0;
+        }
+        if (position[0] < 0) {
+            clonePattern.array = clonePattern.array.map(array => array.slice(Math.abs(position[0])));
+            position[0] = 0;
+        }
+        if (board.width - clonePattern.width - position[0] < 0) {
+            clonePattern.array = clonePattern.array.slice(0, board.height - position[1]).map(array => array.slice(0, board.width - position[0]));
+        }
+
+        //ボードの要素が変更されたか確認するために先にフラグを上げる
+        errorFlag = true;
+
+        /** n行目の配列に対してpullOutを返す関数*/
+        const pull = (i) => {
+            /**変形した後の抜き型 */
+            let advancedPattern = [];
+
+            //今現在の行が操作すべき行であるか確認する
+            if (position[1] <= i && i < position[1] + clonePattern.height) {
+                //抜き型についてBoardの横幅に合わせるために空白部分を0で埋める
+                if (clonePattern.dimension == 2) {
+                    advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
+                }
+                else {
+                    advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array.concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
+                }
+                //console.log(advancedPattern);
+                //advancedPatternの中に1が一つでもある場合、配列の要素は移動するということなのでフラグを下げる
+                if (advancedPattern.filter((element) => element == 1).length != 0 && errorFlag == true) {
+                    errorFlag = false;
+                }
+
+                //連想配列にすることでadvancedPatternとボードの持つ配列の情報を紐づけ、フィルターで必要な値を選択し返すようにする
+                let j = 0;
+                /**抜き型で1の部分を並べた配列 */
+                let pulledOutArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 1).map(element => element.value);
+                j = 0;
+                /**抜き型で0の部分を並べた配列 */
+                let temporaryArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 0).map(element => element.value);
+
+                //寄せ方によって結合する順番を変える
+                switch (direction) {
+                    case 1:
+                    case 4:
+                        return temporaryArray.concat(pulledOutArray);
+                    case 2:
+                    case 3:
+                        return pulledOutArray.concat(temporaryArray);
+                }
+            }
+            //操作すべきでない行はそのままの配列を返す
+            else {
+                return board.array[i];
+            }
+        }
+
+        //pull関数を用いて全ての列に対して操作を行う
+        //0,1,2,.....となるような配列を作り、mapに読み込ませn行目の作業を行う
+        let array = new Array(board.height).fill(0).map((_, i) => i++).map(i => pull(i));
+
+        //一度も要素がしなかった場合エラーを表示しnullを返す
+        if (errorFlag == true) {
+            console.error("pullOut関数:使用した抜き型の要素に1がなかったため有効な操作になりませんでした");
+            return null;
+        }
+
+        let returnBoard = new Board(array);
+
+        //縦方向の操作の場合最後に配列の転置を行う
+        if (direction % 2 == 1) {
+            returnBoard.transpose();
+        }
+
+        return returnBoard;
     }
 
     /**
@@ -600,124 +741,13 @@ class Answer {
     }
 
     /**
-     * 抜き型で指定した座標を抜き、指定した方向に寄せ、隙間を抜いた要素で埋める関数
-     * @param {Board} board　並べ替えたい2次元配列 
-     * @param {number} patternNumber　抜き型の配列
-     * @param {number[]} position　座標(x,y)
-     * @param {number} direction 方向(上から時計回りに1~4の数値で割り当て)
-     * @returns 
+     * 交換すべきペアを見つけ出し交換を行う 
+     * @param {[]} pair ペアを作る数値
      */
-    #pullOut(board, patternNumber, position, direction) {
-
-        //エラー処理
-        /**エラーが起きたか判定する */
-        //主にエラー内容が共存できる部分があるので必要である
-        let errorFlag = false;
-        //座標がx軸についてボードからはみ出しているかどうか判定する
-        if (position[0] < 0 && this.patterns[patternNumber].width <= -position[0] || board.width <= position[0]) {
-            console.error("pullOut関数:x座標が不正な値です(抜き型がボードから完全にはみ出しています");
-            errorFlag = true;
-        }
-        //座標がy軸についてボードからはみ出しているかどうか判定する
-        if (position[1] < 0 && this.patterns[patternNumber].height <= -position[1] || board.width <= position[1]) {
-            console.error("pullOut関数:y座標が不正な値です(抜き型がボードから完全にはみ出しています");
-            errorFlag = true
-        }
-        //エラーが起きた場合nullを返す
-        if (errorFlag == true) {
-            return null;
-        }
-
-        //主な処理内容
-        //転置や変形などを行うため配列の内容をコピーする
-        let clonePattern = cloneDeep(this.patterns[patternNumber]);
-        //縦方向の操作の場合ボードと抜き型の転置、またx,y座標の交換を行う
-        if (direction % 2 == 1) {
-            board.transpose();
-            clonePattern.transpose();
-            let swap = position[0];
-            position[0] = position[1];
-            position[1] = swap;
-        }
-
-        //抜き型がボードからはみ出している場合その部分を切り取る
-        if (position[1] < 0) {
-            clonePattern.array = clonePattern.array.slice(Math.abs(position[1]));
-            position[1] = 0;
-        }
-        if (position[0] < 0) {
-            clonePattern.array = clonePattern.array.map(array => array.slice(Math.abs(position[0])));
-            position[0] = 0;
-        }
-        if (board.width - clonePattern.width - position[0] < 0) {
-            clonePattern.array = clonePattern.array.slice(0, board.height - position[1]).map(array => array.slice(0, board.width - position[0]));
-        }
-
-        //ボードの要素が変更されたか確認するために先にフラグを上げる
-        errorFlag = true;
-
-        /** n行目の配列に対してpullOutを返す関数*/
-        const pull = (i) => {
-            /**変形した後の抜き型 */
-            let advancedPattern = [];
-
-            //今現在の行が操作すべき行であるか確認する
-            if (position[1] <= i && i < position[1] + clonePattern.height) {
-                //抜き型についてBoardの横幅に合わせるために空白部分を0で埋める
-                if (clonePattern.dimension == 2) {
-                    advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
-                }
-                else {
-                    advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array.concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
-                }
-                //console.log(advancedPattern);
-                //advancedPatternの中に1が一つでもある場合、配列の要素は移動するということなのでフラグを下げる
-                if (advancedPattern.filter((element) => element == 1).length != 0 && errorFlag == true) {
-                    errorFlag = false;
-                }
-
-                //連想配列にすることでadvancedPatternとボードの持つ配列の情報を紐づけ、フィルターで必要な値を選択し返すようにする
-                let j = 0;
-                /**抜き型で1の部分を並べた配列 */
-                let pulledOutArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 1).map(element => element.value);
-                j = 0;
-                /**抜き型で0の部分を並べた配列 */
-                let temporaryArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 0).map(element => element.value);
-
-                //寄せ方によって結合する順番を変える
-                switch (direction) {
-                    case 1:
-                    case 4:
-                        return temporaryArray.concat(pulledOutArray);
-                    case 2:
-                    case 3:
-                        return pulledOutArray.concat(temporaryArray);
-                }
-            }
-            //操作すべきでない行はそのままの配列を返す
-            else {
-                return board.array[i];
-            }
-        }
-
-        //pull関数を用いて全ての列に対して操作を行う
-        //0,1,2,.....となるような配列を作り、mapに読み込ませn行目の作業を行う
-        let array = new Array(board.height).fill(0).map((_, i) => i++).map(i => pull(i));
-
-        //一度も要素がしなかった場合エラーを表示しnullを返す
-        if (errorFlag == true) {
-            console.error("pullOut関数:使用した抜き型の要素に1がなかったため有効な操作になりませんでした");
-            return null;
-        }
-
-        let returnBoard = new Board(array);
-
-        //縦方向の操作の場合最後に配列の転置を行う
-        if (direction % 2 == 1) {
-            returnBoard.transpose();
-        }
-
-        return returnBoard;
+    pairAutomatedDiscovery(pair) {
+        let start = new Board(this.order[this.order.length - 1].board.array);
+        let goal = this.goal;
+        start.array = new Array(this.order[this.order.length - 1].board.height).fill(0).map()
     }
 }
 

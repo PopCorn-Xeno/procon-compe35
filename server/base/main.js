@@ -26,9 +26,10 @@ node main.js
 measureStart();
 
 const boardData = new BoardData(null, 6, 6);
-console.log(boardData.answer.order[0].board.array);
-boardData.answer.swap([0, 2], [4, 3], 2);
 boardData.answer.latestOrder;
+console.log(boardData.answer.goal.array);
+console.log(boardData.answer.matchBoard);
+//boardData.answer.pairAutomatedDiscovery([0,1]);
 
 measureFinish();
 
