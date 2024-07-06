@@ -28,8 +28,7 @@ measureStart();
 const boardData = new BoardData(null, 6, 6);
 boardData.answer.latestOrder;
 console.log(boardData.answer.goal.array);
-console.log(boardData.answer.matchBoard);
-//boardData.answer.pairAutomatedDiscovery([0,1]);
+boardData.answer.pairAutomatedDiscovery([0, 1]);
 
 measureFinish();
 

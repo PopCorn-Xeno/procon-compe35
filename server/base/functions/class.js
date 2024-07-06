@@ -241,18 +241,6 @@ class Answer {
      */
     patterns = [];
 
-    get matchBoard() {
-        let board=new Array(this.order[this.order.length - 1].board.height).fill(0).map(array=>new Array(this.order[this.order.length - 1].board.width).fill(0));
-        for(let i=0;i<board.length;i++){
-            for(let j=0;j<board[0].length;j++){
-                if(this.order[this.order.length - 1].board.array[i][j] != this.goal.array[i][j]){
-                    board[i][j]=1;
-                }
-            }
-        }
-        return board;
-    }
-
     /**一番最後のOrderを表示する */
     get latestOrder() {
         console.log("現在" + (this.order.length - 1) + "手目");
@@ -745,9 +733,42 @@ class Answer {
      * @param {[]} pair ペアを作る数値
      */
     pairAutomatedDiscovery(pair) {
-        let start = new Board(this.order[this.order.length - 1].board.array);
-        let goal = this.goal;
-        start.array = new Array(this.order[this.order.length - 1].board.height).fill(0).map()
+        let startBoard=this.order[this.order.length - 1].board;
+        let position = [[],[]];
+        let endPosition=[[],[]];
+        let minority = 0;
+
+        let boardFlag = new Array(startBoard.height).fill(4).map(array => array = new Array(startBoard.width).fill(4));
+        for (let i = 0; i < startBoard.height; i++) {
+            for (let j = 0; j < startBoard.width; j++) {
+                if (startBoard.array[i][j] != this.goal.array[i][j]) {
+                    if (startBoard.array[i][j] == pair[0] && this.goal.array[i][j] == pair[1]) {
+                        if((i==0||i==startBoard.height-1||j==0||startBoard.width-1==j)){
+                            endPosition[0].push([j,i]);
+                        }
+                        else{
+                            position[0].push([j,i]);
+                        }
+                        boardFlag[i][j]=startBoard.array[i][j];
+                        minority++;                        
+                    }
+                    if (startBoard.array[i][j] == pair[1] && this.goal.array[i][j] == pair[0]) {
+                        if((i==0||i==startBoard.height-1||j==0||startBoard.width-1==j)){
+                            endPosition[1].push([j,i]);
+                        }
+                        else{
+                            position[1].push([j,i]);
+                        }
+                        boardFlag[i][j]=startBoard.array[i][j];
+                        minority--;
+                    }
+                }
+            }
+        }
+        minority > 0 ? minority = 0 : minority = 1;
+        console.log(boardFlag);
+        console.log(position);
+        console.log(endPosition);
     }
 }
 
