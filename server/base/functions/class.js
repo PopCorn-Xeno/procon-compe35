@@ -1,4 +1,4 @@
-const { padStart } = require("lodash");
+const { padStart, min } = require("lodash");
 const cloneDeep = require("lodash/cloneDeep");
 
 class BoardData {
@@ -732,43 +732,84 @@ class Answer {
      * 交換すべきペアを見つけ出し交換を行う 
      * @param {[]} pair ペアを作る数値
      */
-    pairAutomatedDiscovery(pair) {
-        let startBoard=this.order[this.order.length - 1].board;
-        let position = [[],[]];
-        let endPosition=[[],[]];
-        let minority = 0;
+    discoverPair(pair) {
+        let startBoard = this.order[this.order.length - 1].board;
+        let positionInfo = [[], []];
 
         let boardFlag = new Array(startBoard.height).fill(4).map(array => array = new Array(startBoard.width).fill(4));
         for (let i = 0; i < startBoard.height; i++) {
             for (let j = 0; j < startBoard.width; j++) {
-                if (startBoard.array[i][j] != this.goal.array[i][j]) {
-                    if (startBoard.array[i][j] == pair[0] && this.goal.array[i][j] == pair[1]) {
-                        if((i==0||i==startBoard.height-1||j==0||startBoard.width-1==j)){
-                            endPosition[0].push([j,i]);
-                        }
-                        else{
-                            position[0].push([j,i]);
-                        }
-                        boardFlag[i][j]=startBoard.array[i][j];
-                        minority++;                        
+                if (startBoard.array[i][j] == pair[0] && this.goal.array[i][j] == pair[1]) {
+                    if (i == 0 || i == startBoard.height - 1 || j == 0 || startBoard.width - 1 == j) {
+                        positionInfo[0].push({ position: [j, i], endFlag: true, selectFlag: false });
                     }
-                    if (startBoard.array[i][j] == pair[1] && this.goal.array[i][j] == pair[0]) {
-                        if((i==0||i==startBoard.height-1||j==0||startBoard.width-1==j)){
-                            endPosition[1].push([j,i]);
-                        }
-                        else{
-                            position[1].push([j,i]);
-                        }
-                        boardFlag[i][j]=startBoard.array[i][j];
-                        minority--;
+                    else {
+                        positionInfo[0].push({ position: [j, i], endFlag: false, selectFlag: false });
+                    }
+                    boardFlag[i][j] = startBoard.array[i][j];
+                }
+                if (startBoard.array[i][j] == pair[1] && this.goal.array[i][j] == pair[0]) {
+                    if (i == 0 || i == startBoard.height - 1 || j == 0 || startBoard.width - 1 == j) {
+                        positionInfo[1].push({ position: [j, i], endFlag: true, selectFlag: false });
+                    }
+                    else {
+                        positionInfo[1].push({ position: [j, i], endFlag: false, selectFlag: false });
+                    }
+                    boardFlag[i][j] = startBoard.array[i][j];
+                }
+            }
+        }
+        console.log(boardFlag);
+        console.log(positionInfo[0]);
+        console.log("-------------");
+        console.log(positionInfo[1]);
+        let priority = [0, 1];
+        if (positionInfo[0].length > positionInfo[1].length) {
+            priority = [1, 0];
+        }
+        let result = [];
+
+        positionInfo[priority[0]] = positionInfo[priority[0]].filter(element => !element.endFlag).concat(positionInfo[priority[0]].filter(element => element.endFlag))
+        positionInfo[priority[1]] = positionInfo[priority[1]].filter(element => element.endFlag).concat(positionInfo[priority[1]].filter(element => !element.endFlag));
+
+        const linking = (position, majority, formula = true, successFlag) => {
+            console.log(majority.selectFlag + "+" + successFlag);
+            if (formula && !majority.selectFlag && !successFlag) {
+                result.push([position, majority.position]);
+                majority.selectFlag = true;
+                return true;
+            }
+        }
+
+        let j = 0, k = 0;
+        let minority = positionInfo[priority[0]];
+        let majority = positionInfo[priority[1]];
+
+        let formula = [
+            (minority[j].position[1] == majority[k].position[1] &&
+                (minority[j].position[0] + 1 == majority[k].position[0] || minority[j].position[0] - 1 == majority[k].position[0])) ||
+            (minority[j].position[0] == majority[k].position[0] &&
+                (minority[j].position[1] + 1 == majority[k].position[1] || minority[j].position[1] - 1 == majority[k].position[1])),
+            minority[j].position[0] == majority[k].position[0] || minority[j].position[1] == majority[k].position[1],
+            minority[j].position[0] + 1 == majority[k].position[0] ||
+            minority[j].position[0] - 1 == majority[k].position[0] ||
+            minority[j].position[1] + 1 == majority[k].position[1] ||
+            minority[j].position[1] - 1 == majority[k].position[1],
+            true
+        ]
+
+        for (let i = 0; i < formula.length; i++) {
+            for (j = 0; j < minority.length; j++) {
+                for (k = 0; k < majority.length; k++) {
+                    if (formula[i] && !minority[j].selectFlag && !majority[k].selectFlag) {
+                        result.push([minority[j].position, majority[k].position]);
+                        minority[j].selectFlag = true;
+                        majority[k].selectFlag = true;
                     }
                 }
             }
         }
-        minority > 0 ? minority = 0 : minority = 1;
-        console.log(boardFlag);
-        console.log(position);
-        console.log(endPosition);
+        console.log(result);
     }
 }
 
