@@ -732,7 +732,7 @@ class Answer {
      * 交換すべきペアを見つけ出し交換を行う 
      * @param {[]} pair ペアを作る数値
      */
-    discoverPair(pair) {
+    pairSort(pair) {
         let startBoard = this.order[this.order.length - 1].board;
         let positionInfo = [[], []];
 
@@ -767,70 +767,32 @@ class Answer {
         }
         let result = [];
 
-        positionInfo[priority[0]] = positionInfo[priority[0]].filter(element => !element.endFlag).concat(positionInfo[priority[0]].filter(element => element.endFlag))
+        positionInfo[priority[0]] = positionInfo[priority[0]].filter(element => !element.endFlag).concat(positionInfo[priority[0]].filter(element => element.endFlag));
         positionInfo[priority[1]] = positionInfo[priority[1]].filter(element => element.endFlag).concat(positionInfo[priority[1]].filter(element => !element.endFlag));
 
-        console.log(positionInfo[0]);
-        console.log("-------------");
-        console.log(positionInfo[1]);
-        
-        for (let i = 0; i < positionInfo[priority[0]].length; i++) {
-            for (let j = 0; j < positionInfo[priority[1]].length; j++) {
-                if (!positionInfo[priority[0]][i].selectFlag && !positionInfo[priority[1]][j].selectFlag) {
-                    if ((positionInfo[priority[0]][i].position[1] == positionInfo[priority[1]][j].position[1] &&
-                        (positionInfo[priority[0]][i].position[0] + 1 == positionInfo[priority[1]][j].position[0] ||
-                            positionInfo[priority[0]][i].position[0] - 1 == positionInfo[priority[1]][j].position[0])) ||
-                    (positionInfo[priority[0]][i].position[0] == positionInfo[priority[1]][j].position[0] &&
-                        (positionInfo[priority[0]][i].position[1] + 1 == positionInfo[priority[1]][j].position[1] ||
-                            positionInfo[priority[0]][i].position[1] - 1 == positionInfo[priority[1]][j].position[1]))) {
-                        console.log(1);
-                        console.log([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
-                        result.push([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
-                        positionInfo[priority[0]][i].selectFlag = true;
-                        positionInfo[priority[1]][j].selectFlag = true;
-                    }
-                }
-            }
-        }
-        
-        for (let i = 0; i < positionInfo[priority[0]].length; i++) {
-            for (let j = 0; j < positionInfo[priority[1]].length; j++) {
-                if (!positionInfo[priority[0]][i].selectFlag && !positionInfo[priority[1]][j].selectFlag) {
-                    if (positionInfo[priority[0]][i].position[0] == positionInfo[priority[1]][j].position[0] || positionInfo[priority[0]][i].position[1] == positionInfo[priority[1]][j].position[1]) {
-                        console.log(2);
-                        console.log([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
-                        result.push([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
-                        positionInfo[priority[0]][i].selectFlag = true;
-                        positionInfo[priority[1]][j].selectFlag = true;
-                    }
-                }
-            }
-        }
+        console.log(positionInfo[priority[0]]);
+        console.log(positionInfo[priority[1]]);
 
-        for (let i = 0; i < positionInfo[priority[0]].length; i++) {
-            for (let j = 0; j < positionInfo[priority[1]].length; j++) {
-                if (!positionInfo[priority[0]][i].selectFlag && !positionInfo[priority[1]][j].selectFlag) {
-                    if (positionInfo[priority[0]][i].position[0] == positionInfo[priority[1]][j].position[0] || positionInfo[priority[0]][i].position[1] == positionInfo[priority[1]][j].position[1],
-                        positionInfo[priority[0]][i].position[0] + 1 == positionInfo[priority[1]][j].position[0] ||
-                        positionInfo[priority[0]][i].position[0] - 1 == positionInfo[priority[1]][j].position[0] ||
-                        positionInfo[priority[0]][i].position[1] + 1 == positionInfo[priority[1]][j].position[1] ||
-                        positionInfo[priority[0]][i].position[1] - 1 == positionInfo[priority[1]][j].position[1]) {
-                        console.log(3);
-                        console.log([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
-                        result.push([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
-                        positionInfo[priority[0]][i].selectFlag = true;
-                        positionInfo[priority[1]][j].selectFlag = true;
+        [(position1, position2) => (position1[1] == position2[1]) && (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) || (position1[0] == position2[0]) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
+        (position1, position2) => position1[0] == position2[0] || position1[1] == position2[1],
+        (position1, position2) => (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
+        (position1, position2) => position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1 || position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1,
+        (position1, position2) => true].map(formula => {
+            positionInfo[priority[0]].filter(element => !element.endFlag).concat(positionInfo[priority[0]].filter(element => element.endFlag)).map(minority => {
+                positionInfo[priority[1]].filter(element => element.endFlag).concat(positionInfo[priority[1]].filter(element => !element.endFlag)).map(majority => {
+                    if (!minority.selectFlag && !majority.selectFlag && formula(minority.position, majority.position)) {
+                        console.log([minority.position,majority.position]);
+                        this.swap(minority.position,majority.position);
+                        console.log(this.order[0].board.array);
+                        this.latestOrder;
+                        minority.selectFlag = true;
+                        majority.selectFlag = true;
                     }
-                }
-            }
-        }
-        
+                })
+            })
+        })
 
-        console.log(result);
-
-        console.log(positionInfo[0]);
-        console.log("-------------");
-        console.log(positionInfo[1]);
+        this.latestOrder;
     }
 }
 
