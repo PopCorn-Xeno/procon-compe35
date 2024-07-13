@@ -25,16 +25,46 @@ node main.js
 //実行内容
 measureStart();
 
+
 const boardData = new BoardData(null, 6, 6);
 console.log(boardData.answer.order[0].board.array);
 console.log(boardData.answer.goal.array);
 
-boardData.answer.swap([2,2],[3,3]);
-boardData.answer.latestOrder;
+let match = 0;
+let boardFlag = new Array(6).fill(4).map(array => array = new Array(6).fill(4));
+for (let i = 0; i < 6; i++) {
+    for (let j = 0; j < 6; j++) {
+        if (boardData.answer.order[0].board.array[i][j] != boardData.answer.goal.array[i][j]) {
+            boardFlag[i][j]=boardData.answer.order[0].board.array[i][j];
+        }
+        else{
+            match++;
+        }
+    }
+}
 
-/*
-boardData.answer.pairSort([0, 1]);
-*/
+console.log("一致数:"+match);
+console.log(boardFlag);
+
+boardData.answer.allPairSort();
+
+match = 0;
+boardFlag = new Array(6).fill(4).map(array => array = new Array(6).fill(4));
+for (let i = 0; i < 6; i++) {
+    for (let j = 0; j < 6; j++) {
+        if (boardData.answer.order[boardData.answer.order.length - 1].board.array[i][j] != boardData.answer.goal.array[i][j]) {
+            boardFlag[i][j]=boardData.answer.order[boardData.answer.order.length - 1].board.array[i][j];
+        }
+        else{
+            match++;
+        }
+    }
+}
+
+console.log("一致数:"+match);
+console.log(boardFlag);
+
+boardData.answer.latestOrder;
 
 measureFinish();
 
