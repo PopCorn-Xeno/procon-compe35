@@ -25,10 +25,25 @@ node main.js
 //実行内容
 measureStart();
 
+/*
+let test = [[4, 5], [4, 4]];
+console.log(test[0][0] + "," + test[0][1] + "+" + test[1][0] + "," + test[1][1]);
+let formula1 = test[0][1] == test[1][1]
+let formula2 = test[0][0] - 1 == test[1][0]
+let formula3 = test[0][0] + 1 == test[1][0]
+let formula4 = test[0][0] == test[1][0]
+let formula5 = test[0][1] - 1 == test[1][1]
+let formula6 = test[0][1] + 1 == test[1][1]
+if ((formula1&&(formula2||formula3))||(formula4&&(formula5||formula6))) {
+    console.log(true);
+}
+*/
+
 const boardData = new BoardData(null, 6, 6);
 boardData.answer.latestOrder;
 console.log(boardData.answer.goal.array);
 boardData.answer.discoverPair([0, 1]);
+
 
 measureFinish();
 

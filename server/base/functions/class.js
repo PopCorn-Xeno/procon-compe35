@@ -760,9 +760,7 @@ class Answer {
             }
         }
         console.log(boardFlag);
-        console.log(positionInfo[0]);
-        console.log("-------------");
-        console.log(positionInfo[1]);
+
         let priority = [0, 1];
         if (positionInfo[0].length > positionInfo[1].length) {
             priority = [1, 0];
@@ -772,44 +770,67 @@ class Answer {
         positionInfo[priority[0]] = positionInfo[priority[0]].filter(element => !element.endFlag).concat(positionInfo[priority[0]].filter(element => element.endFlag))
         positionInfo[priority[1]] = positionInfo[priority[1]].filter(element => element.endFlag).concat(positionInfo[priority[1]].filter(element => !element.endFlag));
 
-        const linking = (position, majority, formula = true, successFlag) => {
-            console.log(majority.selectFlag + "+" + successFlag);
-            if (formula && !majority.selectFlag && !successFlag) {
-                result.push([position, majority.position]);
-                majority.selectFlag = true;
-                return true;
-            }
-        }
-
-        let j = 0, k = 0;
-        let minority = positionInfo[priority[0]];
-        let majority = positionInfo[priority[1]];
-
-        let formula = [
-            (minority[j].position[1] == majority[k].position[1] &&
-                (minority[j].position[0] + 1 == majority[k].position[0] || minority[j].position[0] - 1 == majority[k].position[0])) ||
-            (minority[j].position[0] == majority[k].position[0] &&
-                (minority[j].position[1] + 1 == majority[k].position[1] || minority[j].position[1] - 1 == majority[k].position[1])),
-            minority[j].position[0] == majority[k].position[0] || minority[j].position[1] == majority[k].position[1],
-            minority[j].position[0] + 1 == majority[k].position[0] ||
-            minority[j].position[0] - 1 == majority[k].position[0] ||
-            minority[j].position[1] + 1 == majority[k].position[1] ||
-            minority[j].position[1] - 1 == majority[k].position[1],
-            true
-        ]
-
-        for (let i = 0; i < formula.length; i++) {
-            for (j = 0; j < minority.length; j++) {
-                for (k = 0; k < majority.length; k++) {
-                    if (formula[i] && !minority[j].selectFlag && !majority[k].selectFlag) {
-                        result.push([minority[j].position, majority[k].position]);
-                        minority[j].selectFlag = true;
-                        majority[k].selectFlag = true;
+        console.log(positionInfo[0]);
+        console.log("-------------");
+        console.log(positionInfo[1]);
+        
+        for (let i = 0; i < positionInfo[priority[0]].length; i++) {
+            for (let j = 0; j < positionInfo[priority[1]].length; j++) {
+                if (!positionInfo[priority[0]][i].selectFlag && !positionInfo[priority[1]][j].selectFlag) {
+                    if ((positionInfo[priority[0]][i].position[1] == positionInfo[priority[1]][j].position[1] &&
+                        (positionInfo[priority[0]][i].position[0] + 1 == positionInfo[priority[1]][j].position[0] ||
+                            positionInfo[priority[0]][i].position[0] - 1 == positionInfo[priority[1]][j].position[0])) ||
+                    (positionInfo[priority[0]][i].position[0] == positionInfo[priority[1]][j].position[0] &&
+                        (positionInfo[priority[0]][i].position[1] + 1 == positionInfo[priority[1]][j].position[1] ||
+                            positionInfo[priority[0]][i].position[1] - 1 == positionInfo[priority[1]][j].position[1]))) {
+                        console.log(1);
+                        console.log([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
+                        result.push([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
+                        positionInfo[priority[0]][i].selectFlag = true;
+                        positionInfo[priority[1]][j].selectFlag = true;
                     }
                 }
             }
         }
+        
+        for (let i = 0; i < positionInfo[priority[0]].length; i++) {
+            for (let j = 0; j < positionInfo[priority[1]].length; j++) {
+                if (!positionInfo[priority[0]][i].selectFlag && !positionInfo[priority[1]][j].selectFlag) {
+                    if (positionInfo[priority[0]][i].position[0] == positionInfo[priority[1]][j].position[0] || positionInfo[priority[0]][i].position[1] == positionInfo[priority[1]][j].position[1]) {
+                        console.log(2);
+                        console.log([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
+                        result.push([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
+                        positionInfo[priority[0]][i].selectFlag = true;
+                        positionInfo[priority[1]][j].selectFlag = true;
+                    }
+                }
+            }
+        }
+
+        for (let i = 0; i < positionInfo[priority[0]].length; i++) {
+            for (let j = 0; j < positionInfo[priority[1]].length; j++) {
+                if (!positionInfo[priority[0]][i].selectFlag && !positionInfo[priority[1]][j].selectFlag) {
+                    if (positionInfo[priority[0]][i].position[0] == positionInfo[priority[1]][j].position[0] || positionInfo[priority[0]][i].position[1] == positionInfo[priority[1]][j].position[1],
+                        positionInfo[priority[0]][i].position[0] + 1 == positionInfo[priority[1]][j].position[0] ||
+                        positionInfo[priority[0]][i].position[0] - 1 == positionInfo[priority[1]][j].position[0] ||
+                        positionInfo[priority[0]][i].position[1] + 1 == positionInfo[priority[1]][j].position[1] ||
+                        positionInfo[priority[0]][i].position[1] - 1 == positionInfo[priority[1]][j].position[1]) {
+                        console.log(3);
+                        console.log([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
+                        result.push([positionInfo[priority[0]][i].position, positionInfo[priority[1]][j].position]);
+                        positionInfo[priority[0]][i].selectFlag = true;
+                        positionInfo[priority[1]][j].selectFlag = true;
+                    }
+                }
+            }
+        }
+        
+
         console.log(result);
+
+        console.log(positionInfo[0]);
+        console.log("-------------");
+        console.log(positionInfo[1]);
     }
 }
 
@@ -841,6 +862,9 @@ class Order {
     }
 }
 
+/**
+ * 二次元配列を操作するためのクラス
+ */
 class Board {
     /**
      *Boardクラスの中の配列
