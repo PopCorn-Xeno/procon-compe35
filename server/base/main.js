@@ -1,6 +1,4 @@
 //ファイルインポート
-const { partitionBoard, evaluate } = require("./functions/boardUtility");
-const { pullOutOld } = require("./functions/legacy");
 const { BoardData, Board } = require("./functions/class");
 
 //計算時間測定関数の定義
@@ -27,8 +25,7 @@ measureStart();
 
 
 const boardData = new BoardData(null, 6, 6);
-console.log(boardData.answer.order[0].board.array);
-console.log(boardData.answer.goal.array);
+//console.log(boardData.answer.order[0].board.array);
 
 let match = 0;
 let boardFlag = new Array(6).fill(4).map(array => array = new Array(6).fill(4));
@@ -44,9 +41,8 @@ for (let i = 0; i < 6; i++) {
 }
 
 console.log("一致数:"+match);
-console.log(boardFlag);
 
-boardData.answer.allPairSort();
+boardData.answer.allSort();
 
 match = 0;
 boardFlag = new Array(6).fill(4).map(array => array = new Array(6).fill(4));
@@ -62,9 +58,9 @@ for (let i = 0; i < 6; i++) {
 }
 
 console.log("一致数:"+match);
-console.log(boardFlag);
 
-boardData.answer.latestOrder;
+//console.log(boardData.answer.goal.array);
+//boardData.answer.latestOrder;
 
 measureFinish();
 

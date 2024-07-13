@@ -71,4 +71,43 @@ function pullOutOld(board, pattern, position, direction) {
     }
 }
 
-module.exports.pullOutOld = pullOutOld
+/**
+ * 2次元配列を分割した2次元配列を4次元配列として記憶する配列
+ * @param {Board} board 分割する2次元配列
+ * @param {number} size 1辺をどれくらいの大きさで分割するか
+ */
+function partitionBoard(board, size) {
+    /**
+    * 外側の配列の縦列
+    * @type {number[][][][]}
+    */
+    let regularLargeArray = [];
+    for (let I = 0; I < Math.ceil(board.height / size); I++) {
+        /**外側の配列の横列*/
+        let temporaryLargeArray = [];
+        for (let J = 0; J < Math.ceil(board.width / size); J++) {
+            /** 内側の配列の縦列*/
+            let regularSmallArray = [];
+            for (let i = I * size; i < I * size + size; i++) {
+                /**内側の配列の横列*/
+                let temporarySmallArray = [];
+                for (let j = J * size; j < J * size + size; j++) {
+                    if (i < height && j < width) {
+                        temporarySmallArray.push(board.array[i][j]);
+                    }
+                    else {
+                        temporarySmallArray.push(4);
+                    }
+                }
+                regularSmallArray.push(temporarySmallArray);
+            }
+            temporaryLargeArray.push(regularSmallArray);
+        }
+        regularLargeArray.push(temporaryLargeArray);
+    }
+
+    return regularLargeArray;
+}
+
+module.exports.pullOutOld = pullOutOld;
+module.exports.partitionBoard = partitionBoard;
