@@ -732,7 +732,6 @@ class Answer {
      * 0番目の定型抜き型のみを使ってソートを行う
      */
     allSort() {
-
         let orderLength = this.order.length - 1;
         let currentInfo = new Array(this.goal.height * this.goal.width).fill(0);
         let goalInfo = new Array(this.goal.height * this.goal.width).fill(0);
@@ -823,7 +822,7 @@ class Answer {
                 }
             }
 
-            if (count.filter(count => count.value == 0).length == 0) {
+            if (count.filter(count => count.goal === null).length == 0) {
                 positionInfo[count[0].key].map(first => {
                     if (!first.selectFlag) {
                         first.selectFlag = true;
@@ -858,16 +857,77 @@ class Answer {
             }
         });
 
-        let boardFlag = new Array(this.goal.height).fill(0).map(array => new Array(this.goal.height).fill(4));
-        for (let i = 0; i < this.goal.height; i++) {
-            for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.order.length - 1].board.array[i][j] != this.goal.array[i][j]) {
-                    boardFlag[i][j] = this.order[this.order.length - 1].board.array[i][j];
+        let positionInfo = [[], [], [], []];
+        let goalPattern = [null, null, null, null];
+
+        for (let i = 0; i < currentInfo.length; i++) {
+            if (!currentInfo[i].selectFlag && !goalInfo[i].selectFlag) {
+                if (currentInfo[i].value == 0 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                    positionInfo[0].push(currentInfo[i]);
+                    if (!goalPattern[0]) {
+                        goalPattern[0] = goalInfo[i].value;
+                    }
+                }
+                else if (currentInfo[i].value == 1 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                    positionInfo[1].push(currentInfo[i]);
+                    if (!goalPattern[1]) {
+                        goalPattern[1] = goalInfo[i].value;
+                    }
+                }
+                else if (currentInfo[i].value == 2 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                    positionInfo[2].push(currentInfo[i]);
+                    if (!goalPattern[2]) {
+                        goalPattern[2] = goalInfo[i].value;
+                    }
+                }
+                else if (currentInfo[i].value == 3 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                    positionInfo[3].push(currentInfo[i]);
+                    if (!goalPattern[3]) {
+                        goalPattern[3] = goalInfo[i].value;
+                    }
                 }
             }
         }
 
-        console.log(boardFlag);
+        if (goalPattern.filter(element => element == null).length == 0) {
+            positionInfo[0].map(first => {
+                if (!first.selectFlag) {
+                    first.selectFlag = true;
+                    let successFlag1 = false
+                    formula.map(formula1 => {
+                        positionInfo[1].map(second => {
+                            if (!successFlag1 && !second.selectFlag && formula1(first.position, second.position)) {
+                                second.selectFlag = true;
+                                successFlag1 = true;
+                                let successFlag2 = false;
+                                formula.map(formula2 => {
+                                    positionInfo[2].map(third => {
+                                        if (!successFlag2 && !third.selectFlag && formula2(second.position, third.position)) {
+                                            third.selectFlag = true;
+                                            successFlag2 = true;
+                                            let successFlag3 = false;
+                                            formula.map(formula3 => {
+                                                positionInfo[3].map(fourth => {
+                                                    if (!successFlag3 && !fourth.selectFlag && formula3(third.position, fourth.position)) {
+                                                        fourth.selectFlag = true;
+                                                        successFlag3 = true;
+                                                        let currentPosition = [first.position, second.position, third.position, fourth.position];
+                                                        for (let i = 0; i < 2; i++) {
+                                                            this.swap(currentPosition[i], currentPosition[goalPattern[i]]);
+                                                        }
+                                                        this.swap(currentPosition[2], currentPosition[3]);
+                                                    }
+                                                });
+                                            });
+                                        }
+                                    })
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+        }
     }
 }
 

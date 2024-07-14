@@ -24,13 +24,13 @@ node main.js
 measureStart();
 
 
-const boardData = new BoardData(null, 6, 6);
+const boardData = new BoardData(null, 256, 256);
 //console.log(boardData.answer.order[0].board.array);
 
 let match = 0;
-let boardFlag = new Array(6).fill(4).map(array => array = new Array(6).fill(4));
-for (let i = 0; i < 6; i++) {
-    for (let j = 0; j < 6; j++) {
+let boardFlag = new Array(256).fill(4).map(array => array = new Array(256).fill(4));
+for (let i = 0; i < 256; i++) {
+    for (let j = 0; j < 256; j++) {
         if (boardData.answer.order[0].board.array[i][j] != boardData.answer.goal.array[i][j]) {
             boardFlag[i][j]=boardData.answer.order[0].board.array[i][j];
         }
@@ -43,13 +43,14 @@ for (let i = 0; i < 6; i++) {
 console.log("一致数:"+match);
 
 boardData.answer.allSort();
+boardData.answer.allSort();
 
 match = 0;
-boardFlag = new Array(6).fill(4).map(array => array = new Array(6).fill(4));
-for (let i = 0; i < 6; i++) {
-    for (let j = 0; j < 6; j++) {
-        if (boardData.answer.order[boardData.answer.order.length - 1].board.array[i][j] != boardData.answer.goal.array[i][j]) {
-            boardFlag[i][j]=boardData.answer.order[boardData.answer.order.length - 1].board.array[i][j];
+boardFlag = new Array(256).fill(4).map(array => array = new Array(256).fill(4));
+for (let i = 0; i < 256; i++) {
+    for (let j = 0; j < 256; j++) {
+        if (boardData.answer.order[boardData.answer.order.length-1].board.array[i][j] != boardData.answer.goal.array[i][j]) {
+            boardFlag[i][j]=boardData.answer.order[boardData.answer.order.length-1].board.array[i][j];
         }
         else{
             match++;
@@ -58,9 +59,6 @@ for (let i = 0; i < 6; i++) {
 }
 
 console.log("一致数:"+match);
-
-console.log(boardData.answer.goal.array);
-boardData.answer.latestOrder;
 
 measureFinish();
 
