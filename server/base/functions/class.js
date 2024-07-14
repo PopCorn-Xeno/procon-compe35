@@ -785,33 +785,32 @@ class Answer {
             });
         });
 
-        let boardFlag = new Array(this.goal.height).fill(0).map(array => new Array(this.goal.height).fill(4));
-        for (let i = 0; i < this.goal.height; i++) {
-            for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.order.length - 1].board.array[i][j] != this.goal.array[i][j]) {
-                    boardFlag[i][j] = this.order[this.order.length - 1].board.array[i][j];
-                }
-            }
-        }
-
-        //[[0,1,2],[0,1,3],[0,2,3],[1,2,3]]
-        [[0, 1, 2]].map(trio => {
-            let positionInfo = [];
-            let count = [{ key: 0, value: 0 }, { key: 1, value: 0 }, { key: 2, value: 0 }];
+        [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
+            let positionInfo = [[], [], []];
+            let count = [{ key: 0, value: 0, goal: null }, { key: 1, value: 0, goal: null }, { key: 2, value: 0, goal: null }];
 
             for (let i = 0; i < currentInfo.length; i++) {
                 if (!currentInfo[i].selectFlag && !goalInfo[i].selectFlag) {
                     if (currentInfo[i].value == trio[0] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[1] || goalInfo[i].value == trio[2])) {
                         count[0].value++;
-                        positionInfo.push(currentInfo[i]);
+                        positionInfo[0].push(currentInfo[i]);
+                        if (!count[0].goal) {
+                            count[0].goal = goalInfo[i].value;
+                        }
                     }
                     else if (currentInfo[i].value == trio[1] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[1] || goalInfo[i].value == trio[2])) {
                         count[1].value++;
-                        positionInfo.push(currentInfo[i]);
+                        positionInfo[1].push(currentInfo[i]);
+                        if (!count[1].goal) {
+                            count[1].goal = goalInfo[i].value;
+                        }
                     }
                     else if (currentInfo[i].value == trio[2] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[1] || goalInfo[i].value == trio[2])) {
                         count[2].value++;
-                        positionInfo.push(currentInfo[i]);
+                        positionInfo[2].push(currentInfo[i]);
+                        if (!count[2].goal) {
+                            count[2].goal = goalInfo[i].value;
+                        }
                     }
                 }
             }
@@ -824,39 +823,51 @@ class Answer {
                 }
             }
 
-            let result = [];
-
-            positionInfo.map(first => {
-                if (!first.selectFlag && first.value == count[0].key) {
-                    first.selectFlag = true;
-                    let successFlag1 = false;
-                    formula.map(formula1 => {
-                        positionInfo.map(second => {
-                            if (!successFlag1) {
-                                if (!second.selectFlag && formula1(first.position, second.position)) {
+            if (count.filter(count => count.value == 0).length == 0) {
+                positionInfo[count[0].key].map(first => {
+                    if (!first.selectFlag) {
+                        first.selectFlag = true;
+                        let successFlag1 = false
+                        formula.map(formula1 => {
+                            positionInfo[count[1].key].map(second => {
+                                if (!successFlag1 && !second.selectFlag && formula1(first.position, second.position)) {
                                     second.selectFlag = true;
+                                    successFlag1 = true;
                                     let successFlag2 = false;
-                                    console.log(second.position);
-                                    /*
                                     formula.map(formula2 => {
-                                        positionInfo.map(third=>{
-                                            if(!successFlag2){
-                                                if(!third.selectFlag&&formula2(second.position.third.position)){
-                                                    result.push([first.position,second.position,third.position]);
+                                        positionInfo[count[2].key].map(third => {
+                                            if (!successFlag2 && !third.selectFlag && formula2(second.position, third.position)) {
+                                                third.selectFlag = true;
+                                                successFlag2 = true;
+                                                if (first.value == count[1].goal) {
+                                                    this.swap(first.position, second.position);
+                                                    this.swap(first.position, third.position);
+                                                }
+                                                else {
+                                                    this.swap(first.position, third.position);
+                                                    this.swap(first.position, second.position);
                                                 }
                                             }
                                         })
-                                    });*/
+                                    });
                                 }
-                            }
+                            });
                         });
-                    });
-                }
-            });
-            console.log(positionInfo);
-            console.log(result);
-            //console.log(boardFlag);
+                    }
+                });
+            }
         });
+
+        let boardFlag = new Array(this.goal.height).fill(0).map(array => new Array(this.goal.height).fill(4));
+        for (let i = 0; i < this.goal.height; i++) {
+            for (let j = 0; j < this.goal.width; j++) {
+                if (this.order[this.order.length - 1].board.array[i][j] != this.goal.array[i][j]) {
+                    boardFlag[i][j] = this.order[this.order.length - 1].board.array[i][j];
+                }
+            }
+        }
+
+        console.log(boardFlag);
     }
 }
 

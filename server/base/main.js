@@ -59,8 +59,8 @@ for (let i = 0; i < 6; i++) {
 
 console.log("一致数:"+match);
 
-//console.log(boardData.answer.goal.array);
-//boardData.answer.latestOrder;
+console.log(boardData.answer.goal.array);
+boardData.answer.latestOrder;
 
 measureFinish();
 
