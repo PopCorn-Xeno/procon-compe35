@@ -43,7 +43,6 @@ for (let i = 0; i < 256; i++) {
 console.log("一致数:"+match);
 
 boardData.answer.allSort();
-boardData.answer.allSort();
 
 match = 0;
 boardFlag = new Array(256).fill(4).map(array => array = new Array(256).fill(4));
@@ -59,6 +58,7 @@ for (let i = 0; i < 256; i++) {
 }
 
 console.log("一致数:"+match);
+console.log("現在" + (boardData.answer.order.length - 1) + "手目");
 
 measureFinish();
 

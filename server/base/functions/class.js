@@ -732,6 +732,8 @@ class Answer {
      * 0番目の定型抜き型のみを使ってソートを行う
      */
     allSort() {
+        console.log("allSort開始");
+
         let orderLength = this.order.length - 1;
         let currentInfo = new Array(this.goal.height * this.goal.width).fill(0);
         let goalInfo = new Array(this.goal.height * this.goal.width).fill(0);
@@ -750,6 +752,8 @@ class Answer {
         (position1, position2) => (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
         (position1, position2) => position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1 || position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1,
         (position1, position2) => true];
+
+        console.log("pairSort開始");
 
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
             let positionInfo = [[], []];
@@ -784,6 +788,8 @@ class Answer {
             });
         });
 
+        console.log("trioSort開始");
+        
         [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
             let positionInfo = [[], [], []];
             let count = [{ key: 0, value: 0, goal: null }, { key: 1, value: 0, goal: null }, { key: 2, value: 0, goal: null }];
@@ -857,6 +863,8 @@ class Answer {
             }
         });
 
+        console.log("quartetSort開始");
+        
         let positionInfo = [[], [], [], []];
         let goalPattern = [null, null, null, null];
 
@@ -928,6 +936,9 @@ class Answer {
                 }
             });
         }
+        
+        console.log("allSort完了");
+    
     }
 }
 
