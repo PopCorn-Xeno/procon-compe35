@@ -734,15 +734,14 @@ class Answer {
     allSort() {
         console.log("allSort開始");
 
-        let orderLength = this.order.length - 1;
         let currentInfo = new Array(this.goal.height * this.goal.width).fill(0);
         let goalInfo = new Array(this.goal.height * this.goal.width).fill(0);
         let count = 0;
 
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
-                currentInfo[count] = { value: this.order[orderLength].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false };
-                goalInfo[count] = { value: this.goal.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false };
+                currentInfo[count] = { value: this.order[this.order.length - 1].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.order.length - 1].board.array[i][j] == this.goal.array[i][j] ? true : false };
+                goalInfo[count] = { value: this.goal.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.order.length - 1].board.array[i][j] == this.goal.array[i][j] ? true : false };
                 count++;
             }
         }
@@ -757,13 +756,26 @@ class Answer {
 
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
             let positionInfo = [[], []];
+            let count = [0, 0];
 
             for (let i = 0; i < currentInfo.length; i++) {
                 if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
-                    positionInfo[0].push(currentInfo[i]);
+                    count[0]++;
                 }
                 if (currentInfo[i].value == pair[1] && goalInfo[i].value == pair[0]) {
-                    positionInfo[1].push(goalInfo[i]);
+                    count[1]++;
+                }
+            }
+
+            positionInfo[0] = new Array(count[0]);
+            positionInfo[1] = new Array(count[1]);
+
+            for (let i = 0; i < currentInfo.length; i++) {
+                if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
+                    positionInfo[0][i]=currentInfo[i];
+                }
+                if (currentInfo[i].value == pair[1] && goalInfo[i].value == pair[0]) {
+                    positionInfo[1][i]=goalInfo[i];
                 }
             }
 
@@ -789,7 +801,7 @@ class Answer {
         });
 
         console.log("trioSort開始");
-        
+
         [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
             let positionInfo = [[], [], []];
             let count = [{ key: 0, value: 0, goal: null }, { key: 1, value: 0, goal: null }, { key: 2, value: 0, goal: null }];
@@ -864,7 +876,7 @@ class Answer {
         });
 
         console.log("quartetSort開始");
-        
+
         let positionInfo = [[], [], [], []];
         let goalPattern = [null, null, null, null];
 
@@ -936,9 +948,9 @@ class Answer {
                 }
             });
         }
-        
+
         console.log("allSort完了");
-    
+
     }
 }
 
