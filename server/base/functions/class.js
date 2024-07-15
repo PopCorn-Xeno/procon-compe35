@@ -241,18 +241,20 @@ class Answer {
      */
     patterns = [];
 
-    /**一番最後のOrderを表示する */
-    get latestOrder() {
-        console.log("現在" + (this.order.length - 1) + "手目");
-        console.log(this.order[this.order.length - 1].board.array);
+    get orderLength() {
+        return this.order.length - 1;
     }
 
-    /**全ての手順を表示する */
-    get showAllOrder() {
-        console.log("現在" + (this.order.length - 1) + "手目");
-        for (let i = 1; i < this.order.length; i++) {
-            console.log(this.order[i].board.array)
+    get matchValue() {
+        let match = 0;
+        for (let i = 0; i < this.goal.height; i++) {
+            for (let j = 0; j < this.goal.width; j++) {
+                if (this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j]) {
+                    match++;
+                }
+            }
         }
+        return match;
     }
 
     /**
@@ -270,6 +272,29 @@ class Answer {
         this.turn = 0;
         //こちらにもformatPatternを読み込む
         this.patterns = patterns;
+    }
+
+    /**一番最後のOrderを表示する */
+    latestOrder() {
+        console.log("現在" + (this.orderLength) + "手目");
+        console.log(this.order[this.orderLength].board.array);
+    }
+
+    match() {
+        let match = 0;
+        let boardFlag = new Array(this.goal.height).fill(0).map(array => array = new Array(this.goal.width).fill(4));
+        for (let i = 0; i < this.goal.height; i++) {
+            for (let j = 0; j < this.goal.width; j++) {
+                if (this.order[this.orderLength].board.array[i][j] != this.goal.array[i][j]) {
+                    boardFlag[i][j] = this.order[this.orderLength].board.array[i][j];
+                }
+                else {
+                    match++;
+                }
+            }
+        }
+        console.log("一致数:" + match);
+        console.log(boardFlag);
     }
 
     /** 
@@ -740,8 +765,8 @@ class Answer {
 
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
-                currentInfo[count] = { value: this.order[this.order.length - 1].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.order.length - 1].board.array[i][j] == this.goal.array[i][j] ? true : false };
-                goalInfo[count] = { value: this.goal.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.order.length - 1].board.array[i][j] == this.goal.array[i][j] ? true : false };
+                currentInfo[count] = { value: this.order[this.orderLength].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false };
+                goalInfo[count] = { value: this.goal.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false };
                 count++;
             }
         }
@@ -772,10 +797,10 @@ class Answer {
 
             for (let i = 0; i < currentInfo.length; i++) {
                 if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
-                    positionInfo[0][i]=currentInfo[i];
+                    positionInfo[0][i] = currentInfo[i];
                 }
                 if (currentInfo[i].value == pair[1] && goalInfo[i].value == pair[0]) {
-                    positionInfo[1][i]=goalInfo[i];
+                    positionInfo[1][i] = goalInfo[i];
                 }
             }
 
@@ -909,11 +934,20 @@ class Answer {
             }
         }
 
+        for (let i = 1; i < 4; i++) {
+            if (goalPattern[i] == 0) {
+                let swap = positionInfo[1];
+                positionInfo[1] = positionInfo[i];
+                positionInfo[i] = swap;
+                break;
+            }
+        }
+
         if (goalPattern.filter(element => element == null).length == 0) {
             positionInfo[0].map(first => {
                 if (!first.selectFlag) {
                     first.selectFlag = true;
-                    let successFlag1 = false
+                    let successFlag1 = false;
                     formula.map(formula1 => {
                         positionInfo[1].map(second => {
                             if (!successFlag1 && !second.selectFlag && formula1(first.position, second.position)) {
@@ -931,11 +965,17 @@ class Answer {
                                                     if (!successFlag3 && !fourth.selectFlag && formula3(third.position, fourth.position)) {
                                                         fourth.selectFlag = true;
                                                         successFlag3 = true;
-                                                        let currentPosition = [first.position, second.position, third.position, fourth.position];
-                                                        for (let i = 0; i < 2; i++) {
-                                                            this.swap(currentPosition[i], currentPosition[goalPattern[i]]);
+                                                        this.swap(first.position, second.position);
+                                                        if (second.value == first.value) {
+                                                            this.swap(second.position, first.position);
                                                         }
-                                                        this.swap(currentPosition[2], currentPosition[3]);
+                                                        if (second.value == third.value) {
+                                                            this.swap(second.position, third.position);
+                                                        }
+                                                        if (second.value == fourth.value) {
+                                                            this.swap(second.position, fourth.position);
+                                                        }
+                                                        this.swap(third.position, fourth.position);
                                                     }
                                                 });
                                             });
