@@ -1,6 +1,4 @@
 //ファイルインポート
-const { partitionBoard, evaluate } = require("./functions/boardUtility");
-const { pullOutOld } = require("./functions/legacy");
 const { BoardData, Board } = require("./functions/class");
 
 //計算時間測定関数の定義
@@ -25,25 +23,42 @@ node main.js
 //実行内容
 measureStart();
 
-/*
-let test = [[4, 5], [4, 4]];
-console.log(test[0][0] + "," + test[0][1] + "+" + test[1][0] + "," + test[1][1]);
-let formula1 = test[0][1] == test[1][1]
-let formula2 = test[0][0] - 1 == test[1][0]
-let formula3 = test[0][0] + 1 == test[1][0]
-let formula4 = test[0][0] == test[1][0]
-let formula5 = test[0][1] - 1 == test[1][1]
-let formula6 = test[0][1] + 1 == test[1][1]
-if ((formula1&&(formula2||formula3))||(formula4&&(formula5||formula6))) {
-    console.log(true);
+
+const boardData = new BoardData(null, 256, 256);
+//console.log(boardData.answer.order[0].board.array);
+
+let match = 0;
+let boardFlag = new Array(256).fill(4).map(array => array = new Array(256).fill(4));
+for (let i = 0; i < 256; i++) {
+    for (let j = 0; j < 256; j++) {
+        if (boardData.answer.order[0].board.array[i][j] != boardData.answer.goal.array[i][j]) {
+            boardFlag[i][j]=boardData.answer.order[0].board.array[i][j];
+        }
+        else{
+            match++;
+        }
+    }
 }
-*/
 
-const boardData = new BoardData(null, 6, 6);
-boardData.answer.latestOrder;
-console.log(boardData.answer.goal.array);
-boardData.answer.discoverPair([0, 1]);
+console.log("一致数:"+match);
 
+boardData.answer.allSort();
+
+match = 0;
+boardFlag = new Array(256).fill(4).map(array => array = new Array(256).fill(4));
+for (let i = 0; i < 256; i++) {
+    for (let j = 0; j < 256; j++) {
+        if (boardData.answer.order[boardData.answer.order.length-1].board.array[i][j] != boardData.answer.goal.array[i][j]) {
+            boardFlag[i][j]=boardData.answer.order[boardData.answer.order.length-1].board.array[i][j];
+        }
+        else{
+            match++;
+        }
+    }
+}
+
+console.log("一致数:"+match);
+console.log("現在" + (boardData.answer.order.length - 1) + "手目");
 
 measureFinish();
 
