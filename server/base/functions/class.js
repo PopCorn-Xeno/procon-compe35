@@ -1,4 +1,4 @@
-const { padStart, min, values, first } = require("lodash");
+const { padStart, min, values, first, result } = require("lodash");
 const cloneDeep = require("lodash/cloneDeep");
 
 class BoardData {
@@ -294,6 +294,22 @@ class Answer {
             }
         }
         console.log("一致数:" + match);
+        console.log(boardFlag);
+    }
+
+    goalMatch(){
+        let match = 0;
+        let boardFlag = new Array(this.goal.height).fill(0).map(array => array = new Array(this.goal.width).fill(4));
+        for (let i = 0; i < this.goal.height; i++) {
+            for (let j = 0; j < this.goal.width; j++) {
+                if (this.order[this.orderLength].board.array[i][j] != this.goal.array[i][j]) {
+                    boardFlag[i][j] = this.goal.array[i][j];
+                }
+                else {
+                    match++;
+                }
+            }
+        }
         console.log(boardFlag);
     }
 
@@ -758,11 +774,12 @@ class Answer {
      */
     allSort() {
         console.log("allSort開始");
+        this.latestOrder;
+        console.log(this.goal.array);
 
         let currentInfo = new Array(this.goal.height * this.goal.width).fill(0);
         let goalInfo = new Array(this.goal.height * this.goal.width).fill(0);
         let count = 0;
-
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
                 currentInfo[count] = { value: this.order[this.orderLength].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false };
@@ -771,83 +788,97 @@ class Answer {
             }
         }
 
+        for (let i = 0; i < currentInfo.length; i++) {
+            console.log("--------------");
+            console.log(currentInfo[i]);
+            console.log(goalInfo[i]);
+            console.log("--------------");
+        }
+
         const formula = [(position1, position2) => (position1[1] == position2[1]) && (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) || (position1[0] == position2[0]) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
         (position1, position2) => position1[0] == position2[0] || position1[1] == position2[1],
         (position1, position2) => (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
         (position1, position2) => position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1 || position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1,
         (position1, position2) => true];
 
+        const sort = (positionInfo, func) => {
+            for (let i = 0; i < positionInfo[0].length; i++) {
+                let result = new Array(positionInfo.length).fill(0);
+                result[0] = positionInfo[0][i].position;
+                for (let j = 1; j < positionInfo.length; j++) {
+                    for (let k = 0; k < formula.length; k++) {
+                        for (let l = 0; l < positionInfo[j].length; l++) {
+                            if (!positionInfo[j][l].selectFlag && formula[k](result[j - 1], positionInfo[j][l].position)) {
+                                positionInfo[j][l].selectFlag = true;
+                                result[j] = positionInfo[j][l].position;
+                                break;
+                            }
+                        }
+                        if (result[j] != 0) {
+                            break;
+                        }
+                    }
+                };
+                func(result);
+                this.match();
+            };
+        };
+
         console.log("pairSort開始");
 
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
             let positionInfo = [[], []];
-            let count = [0, 0];
 
             for (let i = 0; i < currentInfo.length; i++) {
-                if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
-                    count[0]++;
-                }
-                if (currentInfo[i].value == pair[1] && goalInfo[i].value == pair[0]) {
-                    count[1]++;
+                if (!currentInfo[i].selectFlag && !goalInfo[i].selectFlag) {
+                    if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
+                        positionInfo[0].push(currentInfo[i]);
+                    }
+                    if (currentInfo[i].value == pair[1] && goalInfo[i].value == pair[0]) {
+                        positionInfo[1].push(currentInfo[i]);
+                    }
                 }
             }
 
-            positionInfo[0] = new Array(count[0]);
-            positionInfo[1] = new Array(count[1]);
-
-            for (let i = 0; i < currentInfo.length; i++) {
-                if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
-                    positionInfo[0][i] = currentInfo[i];
-                }
-                if (currentInfo[i].value == pair[1] && goalInfo[i].value == pair[0]) {
-                    positionInfo[1][i] = goalInfo[i];
-                }
-            }
-
-            let priority = [0, 1];
             if (positionInfo[0].length > positionInfo[1].length) {
-                priority = [1, 0];
+                let swap = positionInfo[0];
+                positionInfo[0] = positionInfo[1];
+                positionInfo[1] = swap;
             }
 
-            positionInfo[priority[0]] = positionInfo[priority[0]].filter(element => !element.endFlag).concat(positionInfo[priority[0]].filter(element => element.endFlag));
-            positionInfo[priority[1]] = positionInfo[priority[1]].filter(element => element.endFlag).concat(positionInfo[priority[1]].filter(element => !element.endFlag));
+            const pairSort = (result) => {
+                this.swap(result[0], result[1]);
+            }
 
-            formula.map(formula => {
-                positionInfo[priority[0]].filter(element => !element.endFlag).concat(positionInfo[priority[0]].filter(element => element.endFlag)).map(minority => {
-                    positionInfo[priority[1]].filter(element => element.endFlag).concat(positionInfo[priority[1]].filter(element => !element.endFlag)).map(majority => {
-                        if (!minority.selectFlag && !majority.selectFlag && formula(minority.position, majority.position)) {
-                            this.swap(minority.position, majority.position);
-                            minority.selectFlag = true;
-                            majority.selectFlag = true;
-                        }
-                    });
-                });
-            });
+            sort(positionInfo, pairSort);
         });
 
+        this.match();
+        this.goalMatch();
+        
         console.log("trioSort開始");
 
         [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
             let positionInfo = [[], [], []];
-            let count = [{ key: 0, value: 0, goal: null }, { key: 1, value: 0, goal: null }, { key: 2, value: 0, goal: null }];
+            let count = [{ key: trio[0], value: 0, goal: null }, { key: trio[1], value: 0, goal: null }, { key: trio[2], value: 0, goal: null }];
 
             for (let i = 0; i < currentInfo.length; i++) {
                 if (!currentInfo[i].selectFlag && !goalInfo[i].selectFlag) {
-                    if (currentInfo[i].value == trio[0] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[1] || goalInfo[i].value == trio[2])) {
+                    if (currentInfo[i].value == trio[0] && (goalInfo[i].value == trio[1] || goalInfo[i].value == trio[2])) {
                         count[0].value++;
                         positionInfo[0].push(currentInfo[i]);
                         if (!count[0].goal) {
                             count[0].goal = goalInfo[i].value;
                         }
                     }
-                    else if (currentInfo[i].value == trio[1] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[1] || goalInfo[i].value == trio[2])) {
+                    if (currentInfo[i].value == trio[1] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[2])) {
                         count[1].value++;
                         positionInfo[1].push(currentInfo[i]);
                         if (!count[1].goal) {
                             count[1].goal = goalInfo[i].value;
                         }
                     }
-                    else if (currentInfo[i].value == trio[2] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[1] || goalInfo[i].value == trio[2])) {
+                    if (currentInfo[i].value == trio[2] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[1])) {
                         count[2].value++;
                         positionInfo[2].push(currentInfo[i]);
                         if (!count[2].goal) {
@@ -857,48 +888,39 @@ class Answer {
                 }
             }
 
-            for (let i = 2; 0 < i; i--) {
-                if (count[i - 1].value > count[i].value) {
-                    let swap = count[i - 1];
-                    count[i - 1] = count[i];
-                    count[i] = swap;
-                }
-            }
+            console.log(count);
 
             if (count.filter(count => count.goal === null).length == 0) {
-                positionInfo[count[0].key].map(first => {
-                    if (!first.selectFlag) {
-                        first.selectFlag = true;
-                        let successFlag1 = false
-                        formula.map(formula1 => {
-                            positionInfo[count[1].key].map(second => {
-                                if (!successFlag1 && !second.selectFlag && formula1(first.position, second.position)) {
-                                    second.selectFlag = true;
-                                    successFlag1 = true;
-                                    let successFlag2 = false;
-                                    formula.map(formula2 => {
-                                        positionInfo[count[2].key].map(third => {
-                                            if (!successFlag2 && !third.selectFlag && formula2(second.position, third.position)) {
-                                                third.selectFlag = true;
-                                                successFlag2 = true;
-                                                if (first.value == count[1].goal) {
-                                                    this.swap(first.position, second.position);
-                                                    this.swap(first.position, third.position);
-                                                }
-                                                else {
-                                                    this.swap(first.position, third.position);
-                                                    this.swap(first.position, second.position);
-                                                }
-                                            }
-                                        })
-                                    });
-                                }
-                            });
-                        });
+                let min = 2;
+                for (let i = 0; i < 2; i++) {
+                    if (count[i].value < count[min].value) {
+                        min = i;
                     }
-                });
+                }
+                let swap = positionInfo[0];
+                positionInfo[0] = positionInfo[min];
+                positionInfo[min] = swap;
+                swap = count[0];
+                count[0] = count[min];
+                count[min] = swap;
+
+                const trioSort = (result) => {
+                    if (count[1].key == count[0].goal) {
+                        this.swap(result[0], result[1]);
+                        this.swap(result[1], result[2]);
+                    }
+                    else {
+                        this.swap(result[1], result[2]);
+                        this.swap(result[0], result[1]);
+                    }
+                };
+
+                sort(positionInfo, trioSort);
             }
         });
+
+        this.match();
+        this.goalMatch();
 
         console.log("quartetSort開始");
 
@@ -907,25 +929,25 @@ class Answer {
 
         for (let i = 0; i < currentInfo.length; i++) {
             if (!currentInfo[i].selectFlag && !goalInfo[i].selectFlag) {
-                if (currentInfo[i].value == 0 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                if (currentInfo[i].value == 0 && (goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
                     positionInfo[0].push(currentInfo[i]);
                     if (!goalPattern[0]) {
                         goalPattern[0] = goalInfo[i].value;
                     }
                 }
-                else if (currentInfo[i].value == 1 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                if (currentInfo[i].value == 1 && (goalInfo[i].value == 0 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
                     positionInfo[1].push(currentInfo[i]);
                     if (!goalPattern[1]) {
                         goalPattern[1] = goalInfo[i].value;
                     }
                 }
-                else if (currentInfo[i].value == 2 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                if (currentInfo[i].value == 2 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 3)) {
                     positionInfo[2].push(currentInfo[i]);
                     if (!goalPattern[2]) {
                         goalPattern[2] = goalInfo[i].value;
                     }
                 }
-                else if (currentInfo[i].value == 3 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                if (currentInfo[i].value == 3 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2)) {
                     positionInfo[3].push(currentInfo[i]);
                     if (!goalPattern[3]) {
                         goalPattern[3] = goalInfo[i].value;
@@ -934,59 +956,49 @@ class Answer {
             }
         }
 
-        for (let i = 1; i < 4; i++) {
-            if (goalPattern[i] == 0) {
-                let swap = positionInfo[1];
-                positionInfo[1] = positionInfo[i];
-                positionInfo[i] = swap;
-                break;
+        if (goalPattern.filter(element => element == null).length == 0) {
+            console.log(goalPattern);
+
+            for (let i = 1; i < 4; i++) {
+                if (goalPattern[i] == 0) {
+                    let swap = positionInfo[0];
+                    positionInfo[0] = positionInfo[i];
+                    positionInfo[i] = swap;
+                    swap = goalPattern[0];
+                    goalPattern[0] = goalPattern[i];
+                    goalPattern[i] = swap;
+                    break;
+                }
             }
+
+            console.log(positionInfo[0]);
+            console.log(positionInfo[1]);
+            console.log(positionInfo[2]);
+            console.log(positionInfo[3]);
+            console.log(goalPattern);
+
+            const quartetSort = (result) => {
+                this.swap(result[0], result[1]);
+                if (goalPattern[1] == positionInfo[0][0].value) {
+                    this.swap(result[1], result[0]);
+                }
+                else if (goalPattern[1] == positionInfo[2][0].value) {
+                    this.swap(result[1], result[2]);
+                }
+                else if (goalPattern[1] == positionInfo[3][0].value) {
+                    this.swap(result[1], result[3]);
+                }
+                this.swap(result[2], result[3]);
+            };
+
+            sort(positionInfo, quartetSort);
         }
 
-        if (goalPattern.filter(element => element == null).length == 0) {
-            positionInfo[0].map(first => {
-                if (!first.selectFlag) {
-                    first.selectFlag = true;
-                    let successFlag1 = false;
-                    formula.map(formula1 => {
-                        positionInfo[1].map(second => {
-                            if (!successFlag1 && !second.selectFlag && formula1(first.position, second.position)) {
-                                second.selectFlag = true;
-                                successFlag1 = true;
-                                let successFlag2 = false;
-                                formula.map(formula2 => {
-                                    positionInfo[2].map(third => {
-                                        if (!successFlag2 && !third.selectFlag && formula2(second.position, third.position)) {
-                                            third.selectFlag = true;
-                                            successFlag2 = true;
-                                            let successFlag3 = false;
-                                            formula.map(formula3 => {
-                                                positionInfo[3].map(fourth => {
-                                                    if (!successFlag3 && !fourth.selectFlag && formula3(third.position, fourth.position)) {
-                                                        fourth.selectFlag = true;
-                                                        successFlag3 = true;
-                                                        this.swap(first.position, second.position);
-                                                        if (second.value == first.value) {
-                                                            this.swap(second.position, first.position);
-                                                        }
-                                                        if (second.value == third.value) {
-                                                            this.swap(second.position, third.position);
-                                                        }
-                                                        if (second.value == fourth.value) {
-                                                            this.swap(second.position, fourth.position);
-                                                        }
-                                                        this.swap(third.position, fourth.position);
-                                                    }
-                                                });
-                                            });
-                                        }
-                                    })
-                                });
-                            }
-                        });
-                    });
-                }
-            });
+        for (let i = 0; i < currentInfo.length; i++) {
+            console.log("--------------");
+            console.log(currentInfo[i]);
+            console.log(goalInfo[i]);
+            console.log("--------------");
         }
 
         console.log("allSort完了");
