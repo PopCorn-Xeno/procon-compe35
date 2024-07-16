@@ -297,7 +297,7 @@ class Answer {
         console.log(boardFlag);
     }
 
-    goalMatch(){
+    goalMatch() {
         let match = 0;
         let boardFlag = new Array(this.goal.height).fill(0).map(array => array = new Array(this.goal.width).fill(4));
         for (let i = 0; i < this.goal.height; i++) {
@@ -774,8 +774,6 @@ class Answer {
      */
     allSort() {
         console.log("allSort開始");
-        this.latestOrder;
-        console.log(this.goal.array);
 
         let currentInfo = new Array(this.goal.height * this.goal.width).fill(0);
         let goalInfo = new Array(this.goal.height * this.goal.width).fill(0);
@@ -788,13 +786,6 @@ class Answer {
             }
         }
 
-        for (let i = 0; i < currentInfo.length; i++) {
-            console.log("--------------");
-            console.log(currentInfo[i]);
-            console.log(goalInfo[i]);
-            console.log("--------------");
-        }
-
         const formula = [(position1, position2) => (position1[1] == position2[1]) && (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) || (position1[0] == position2[0]) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
         (position1, position2) => position1[0] == position2[0] || position1[1] == position2[1],
         (position1, position2) => (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
@@ -804,6 +795,7 @@ class Answer {
         const sort = (positionInfo, func) => {
             for (let i = 0; i < positionInfo[0].length; i++) {
                 let result = new Array(positionInfo.length).fill(0);
+                positionInfo[0][i].selectFlag = true;
                 result[0] = positionInfo[0][i].position;
                 for (let j = 1; j < positionInfo.length; j++) {
                     for (let k = 0; k < formula.length; k++) {
@@ -820,7 +812,6 @@ class Answer {
                     }
                 };
                 func(result);
-                this.match();
             };
         };
 
@@ -853,74 +844,78 @@ class Answer {
             sort(positionInfo, pairSort);
         });
 
-        this.match();
-        this.goalMatch();
-        
         console.log("trioSort開始");
 
         [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
-            let positionInfo = [[], [], []];
-            let count = [{ key: trio[0], value: 0, goal: null }, { key: trio[1], value: 0, goal: null }, { key: trio[2], value: 0, goal: null }];
+                console.log(trio);
+                let positionInfo = [[], [], []];
+                let count = [{ key: trio[0], value: 0, goal: null }, { key: trio[1], value: 0, goal: null }, { key: trio[2], value: 0, goal: null }];
 
-            for (let i = 0; i < currentInfo.length; i++) {
-                if (!currentInfo[i].selectFlag && !goalInfo[i].selectFlag) {
-                    if (currentInfo[i].value == trio[0] && (goalInfo[i].value == trio[1] || goalInfo[i].value == trio[2])) {
-                        count[0].value++;
-                        positionInfo[0].push(currentInfo[i]);
-                        if (!count[0].goal) {
-                            count[0].goal = goalInfo[i].value;
+                for (let j = 0; j < currentInfo.length; j++) {
+                    if (!currentInfo[j].selectFlag && !goalInfo[j].selectFlag) {
+                        if (currentInfo[j].value == trio[0] && (goalInfo[j].value == trio[1]||goalInfo[j].value == trio[2])) {
+                            count[0].value++;
+                            positionInfo[0].push(currentInfo[j]);
+                            if (!count[0].goal) {
+                                count[0].goal = goalInfo[j].value;
+                            }
                         }
-                    }
-                    if (currentInfo[i].value == trio[1] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[2])) {
-                        count[1].value++;
-                        positionInfo[1].push(currentInfo[i]);
-                        if (!count[1].goal) {
-                            count[1].goal = goalInfo[i].value;
+                        if (currentInfo[j].value == trio[1] && (goalInfo[j].value == trio[0]||goalInfo[j].value == trio[2])) {
+                            count[1].value++;
+                            positionInfo[1].push(currentInfo[j]);
+                            if (!count[1].goal) {
+                                count[1].goal = goalInfo[j].value;
+                            }
                         }
-                    }
-                    if (currentInfo[i].value == trio[2] && (goalInfo[i].value == trio[0] || goalInfo[i].value == trio[1])) {
-                        count[2].value++;
-                        positionInfo[2].push(currentInfo[i]);
-                        if (!count[2].goal) {
-                            count[2].goal = goalInfo[i].value;
+                        if (currentInfo[j].value == trio[2] && (goalInfo[j].value == trio[0]||goalInfo[j].value == trio[1])) {
+                            count[2].value++;
+                            positionInfo[2].push(currentInfo[j]);
+                            if (!count[2].goal) {
+                                count[2].goal = goalInfo[j].value;
+                            }
                         }
                     }
                 }
-            }
 
-            console.log(count);
+                if (count.filter(count => count.goal === null).length == 0) {
+                    console.log(count);
+                    console.log(positionInfo[0]);
+                    console.log(positionInfo[1]);
+                    console.log(positionInfo[2]);
 
-            if (count.filter(count => count.goal === null).length == 0) {
-                let min = 2;
-                for (let i = 0; i < 2; i++) {
-                    if (count[i].value < count[min].value) {
-                        min = i;
+                    let min = 2;
+                    for (let i = 0; i < 2; i++) {
+                        if (count[i].value < count[min].value) {
+                            min = i;
+                        }
                     }
+                    let swap = positionInfo[0];
+                    positionInfo[0] = positionInfo[min];
+                    positionInfo[min] = swap;
+                    swap = count[0];
+                    count[0] = count[min];
+                    count[min] = swap;
+
+                    const trioSort = (result) => {
+                        if (count[1].key == count[0].goal) {
+                            this.match();
+                            this.swap(result[0], result[1]);
+                            this.match();
+                            this.swap(result[1], result[2]);
+                            this.match();
+                        }
+                        else {
+                            this.match();
+                            this.swap(result[1], result[2]);
+                            this.match();
+                            this.swap(result[0], result[1]);
+                            this.match();
+                        }
+                    };
+
+                    sort(positionInfo, trioSort);
                 }
-                let swap = positionInfo[0];
-                positionInfo[0] = positionInfo[min];
-                positionInfo[min] = swap;
-                swap = count[0];
-                count[0] = count[min];
-                count[min] = swap;
-
-                const trioSort = (result) => {
-                    if (count[1].key == count[0].goal) {
-                        this.swap(result[0], result[1]);
-                        this.swap(result[1], result[2]);
-                    }
-                    else {
-                        this.swap(result[1], result[2]);
-                        this.swap(result[0], result[1]);
-                    }
-                };
-
-                sort(positionInfo, trioSort);
-            }
         });
-
-        this.match();
-        this.goalMatch();
 
         console.log("quartetSort開始");
 
@@ -957,8 +952,6 @@ class Answer {
         }
 
         if (goalPattern.filter(element => element == null).length == 0) {
-            console.log(goalPattern);
-
             for (let i = 1; i < 4; i++) {
                 if (goalPattern[i] == 0) {
                     let swap = positionInfo[0];
@@ -970,12 +963,6 @@ class Answer {
                     break;
                 }
             }
-
-            console.log(positionInfo[0]);
-            console.log(positionInfo[1]);
-            console.log(positionInfo[2]);
-            console.log(positionInfo[3]);
-            console.log(goalPattern);
 
             const quartetSort = (result) => {
                 this.swap(result[0], result[1]);
@@ -994,15 +981,7 @@ class Answer {
             sort(positionInfo, quartetSort);
         }
 
-        for (let i = 0; i < currentInfo.length; i++) {
-            console.log("--------------");
-            console.log(currentInfo[i]);
-            console.log(goalInfo[i]);
-            console.log("--------------");
-        }
-
         console.log("allSort完了");
-
     }
 }
 

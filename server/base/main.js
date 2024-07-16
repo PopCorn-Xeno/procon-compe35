@@ -33,11 +33,9 @@ boardData.answer.allSort();
 
 measureFinish();
 
-console.log("一致数:"+boardData.answer.matchValue);
+boardData.answer.match();
 
-boardData.answer.latestOrder();
-
-console.log(boardData.answer.goal.array);
+boardData.answer.goalMatch();
 
 //測定結果表示
 console.log("計算時間=" + result + "秒");
