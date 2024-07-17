@@ -495,8 +495,8 @@ class Answer {
         }
 
         //指定した場所が直線上に並んでいるか調べる
+        //直線上に並んでいなかったら斜めの交換用に処理を変える
         if (position1[0] != position2[0] && position1[1] != position2[1]) {
-
             //指定した要素同士が重なっていないか調べる
             if ((position1[0] < position2[0] ? position2[0] - position1[0] < size : position1[0] - position2[0] < size) && (position1[1] < position2[1] ? position2[1] - position1[1] < size : position1[1] - position2[1] < size)) {
                 console.error("swap関数:直線的な交換でないのに指定した要素同士が重なっています");
@@ -515,7 +515,7 @@ class Answer {
                 let middleLength = (i == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - leftLength - rightLength - 2 * size;
                 /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
                 let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
-
+                //lengthFlagの値から優先度を設定する
                 if (size == 1) {
                     switch (lengthFlag) {
                         case 111:
@@ -563,6 +563,7 @@ class Answer {
             /**要素の交換優先度 */
             let priority = [0, 1].map(i => setPriority(i));
 
+            //優先度の値によって交換の仕方を変える(関数の再帰を行っている)
             if (priority[0] < priority[1]) {
                 this.swap(position[0], position[2], size, size == 1 ? 0 : (position[0][0] < position[2][0] ? 1 : 2), false);
                 this.swap(position[1], position[2], size, 0, false);
@@ -596,7 +597,7 @@ class Answer {
         let patternType = size == 1 ? 0 : (Math.log2(size) - 1) * 3 + 1;
         /**pullOutに渡す座標 */
         let position = new Array(2).fill(0);
-
+        //lengthFlagから交換の仕方を決める
         switch (lengthFlag) {
             case 111:
                 //L-E1-C-E2-R(5手)
@@ -775,9 +776,18 @@ class Answer {
     allSort() {
         console.log("allSort開始");
 
+        /**
+         * 現在の配列の情報
+         * @type {object[]}
+         */
         let currentInfo = new Array(this.goal.height * this.goal.width).fill(0);
+        /**
+         * 正解の配列の情報
+         * @type {object[]}
+         */
         let goalInfo = new Array(this.goal.height * this.goal.width).fill(0);
         let count = 0;
+        //現在と正解の配列の情報を取得する
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
                 currentInfo[count] = { value: this.order[this.orderLength].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false };
@@ -786,20 +796,42 @@ class Answer {
             }
         }
 
+        /**
+         * 2つの座標を紐づけするための条件式
+         * @type {boolean[]}
+         */
+        /* 
+        1.指定した要素から上下左右4マスにターゲットがあるか
+        2.指定した要素から十字方向にターゲットがあるか
+        3.指定した要素から右上左上右下左下にターゲットがあるか
+        4.指定した要素から太さ3マスの十字方向にターゲットがあるか
+        5.条件なし
+        上から順に交換に必要な手順が少ない
+        */
         const formula = [(position1, position2) => (position1[1] == position2[1]) && (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) || (position1[0] == position2[0]) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
         (position1, position2) => position1[0] == position2[0] || position1[1] == position2[1],
         (position1, position2) => (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
         (position1, position2) => position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1 || position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1,
         (position1, position2) => true];
 
+        /**
+         * ここにpositionInfoと交換手順を記した関数を渡すとソートが行われる
+         * @param {*} positionInfo 
+         * @param {*} func 
+         */
         const sort = (positionInfo, func) => {
+            //一個目の座標を順番に選択するためのfor文
             for (let i = 0; i < positionInfo[0].length; i++) {
                 let result = new Array(positionInfo.length).fill(0);
                 positionInfo[0][i].selectFlag = true;
                 result[0] = positionInfo[0][i].position;
+                //要素の数値を順番に選択するためのfor文
                 for (let j = 1; j < positionInfo.length; j++) {
+                    //順番に条件式が当てはまるか調べるためのfor文
                     for (let k = 0; k < formula.length; k++) {
+                        //座標を選択するためのfor文
                         for (let l = 0; l < positionInfo[j].length; l++) {
+                            //選択されていない座標と条件式に当てはまる座標同士を交換する
                             if (!positionInfo[j][l].selectFlag && formula[k](result[j - 1], positionInfo[j][l].position)) {
                                 positionInfo[j][l].selectFlag = true;
                                 result[j] = positionInfo[j][l].position;
@@ -819,7 +851,7 @@ class Answer {
 
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
             let positionInfo = [[], []];
-
+            //ペアの交換になる座標を配列にまとめる
             for (let i = 0; i < currentInfo.length; i++) {
                 if (!currentInfo[i].selectFlag) {
                     if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
@@ -831,20 +863,25 @@ class Answer {
                 }
             }
 
+            //配列の中にどちらも要素があれば交換を実行する
             if (positionInfo[0].length != 0 && positionInfo[1].length != 0) {
+                //長さが短い方を0に持ってくる
                 if (positionInfo[0].length > positionInfo[1].length) {
                     let swap = positionInfo[0];
                     positionInfo[0] = positionInfo[1];
                     positionInfo[1] = swap;
                 }
 
+                //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
                 positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
                 positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
 
+                //ペアのソートの交換の仕方
                 const pairSort = (result) => {
                     this.swap(result[0], result[1]);
                 }
 
+                //ソートを行う
                 sort(positionInfo, pairSort);
             }
         });
@@ -853,8 +890,14 @@ class Answer {
 
         [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
             let positionInfo = [[], [], []];
+            /*
+            key=現在の座標の要素の数値
+            value=選択された回数
+            goal=正解の座標の要素の数値
+            */
             let count = [{ key: trio[0], value: 0, goal: null }, { key: trio[1], value: 0, goal: null }, { key: trio[2], value: 0, goal: null }];
 
+            //トリオの交換になる座標を配列にまとめる
             for (let j = 0; j < currentInfo.length; j++) {
                 if (!currentInfo[j].selectFlag) {
                     if (currentInfo[j].value == trio[0] && (goalInfo[j].value == trio[1] || goalInfo[j].value == trio[2])) {
@@ -882,7 +925,8 @@ class Answer {
             }
 
             if (count.filter(count => count.goal === null).length == 0) {
-                let min = 2;
+                //1番目と2番目、2番目と3番目の交換を行うと揃うようにいい感じに要素を入れ替える
+                let min = 2;                
                 for (let i = 0; i < 2; i++) {
                     if (count[i].value < count[min].value) {
                         min = i;
@@ -895,10 +939,12 @@ class Answer {
                 count[0] = count[min];
                 count[min] = swap;
 
+                //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
                 positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
                 positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
                 positionInfo[2] = positionInfo[2].filter(element => !element.endFlag).concat(positionInfo[2].filter(element => element.endFlag));
 
+                //トリオの交換の仕方
                 const trioSort = (result) => {
                     if (count[1].key == count[0].goal) {
                         this.swap(result[0], result[1]);
@@ -910,6 +956,7 @@ class Answer {
                     }
                 };
 
+                //ソートを行う
                 sort(positionInfo, trioSort);
             }
         });
@@ -918,7 +965,8 @@ class Answer {
 
         let positionInfo = [[], [], [], []];
         let goalPattern = [null, null, null, null];
-
+        
+        //カルテットの交換になる座標を配列にまとめる
         for (let i = 0; i < currentInfo.length; i++) {
             if (!currentInfo[i].selectFlag) {
                 if (currentInfo[i].value == 0 && (goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
@@ -949,6 +997,7 @@ class Answer {
         }
 
         if (goalPattern.filter(element => element == null).length == 0) {
+            //sort関数のformulaで評価した座標同士を使いたいので1番目,2番目の要素同士、3番目,4番目の要素同士を交換したら揃うように値をいい感じに入れ替える
             if (goalPattern[2] == 0) {
                 let swap = positionInfo[1];
                 positionInfo[1] = positionInfo[2];
@@ -967,11 +1016,13 @@ class Answer {
 
             }
 
+            //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
             positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
             positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
             positionInfo[2] = positionInfo[2].filter(element => !element.endFlag).concat(positionInfo[2].filter(element => element.endFlag));
             positionInfo[3] = positionInfo[3].filter(element => element.endFlag).concat(positionInfo[3].filter(element => !element.endFlag));
 
+            //カルテットの交換の仕方
             const quartetSort = (result) => {
                 this.swap(result[0], result[1]);
                 if (goalPattern[0] == positionInfo[2][0].value) {
@@ -983,6 +1034,7 @@ class Answer {
                 this.swap(result[2], result[3]);
             };
 
+            //ソートを行う
             sort(positionInfo, quartetSort);
         }
 

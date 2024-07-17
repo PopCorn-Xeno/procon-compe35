@@ -26,7 +26,7 @@ node main.js
 
 //実行内容
 
-const boardData = new BoardData(null, 120, 120);
+const boardData = new BoardData(null, 150, 150);
 //console.log(boardData.answer.order[0].board.array);
 
 console.log("一致数:"+boardData.answer.matchValue);
