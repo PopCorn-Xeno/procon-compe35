@@ -780,19 +780,20 @@ class Answer {
          * 現在の配列の情報
          * @type {object[]}
          */
-        let currentInfo = new Array(this.goal.height * this.goal.width).fill(0);
+        let currentInfo = [];
         /**
          * 正解の配列の情報
          * @type {object[]}
          */
-        let goalInfo = new Array(this.goal.height * this.goal.width).fill(0);
+        let goalInfo = [];
         let count = 0;
         //現在と正解の配列の情報を取得する
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
-                currentInfo[count] = { value: this.order[this.orderLength].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false };
-                goalInfo[count] = { value: this.goal.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false };
-                count++;
+                if (this.order[this.orderLength].board.array[i][j] != this.goal.array[i][j]) {
+                    currentInfo.push({ value: this.order[this.orderLength].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false });
+                    goalInfo.push({ value: this.goal.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false });
+                }
             }
         }
 
@@ -847,6 +848,13 @@ class Answer {
             };
         };
 
+        const memoryRelease = () => {
+            console.log(currentInfo);
+            currentInfo = currentInfo.filter(element => !element.selectFlag);
+            goalInfo = goalInfo.filter(element => !element.selectFlag);
+            console.log(currentInfo);
+        };
+
         console.log("pairSort開始");
 
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
@@ -881,8 +889,12 @@ class Answer {
                     this.swap(result[0], result[1]);
                 }
 
+                console.log(positionInfo[0].length);
+                console.log(currentInfo.length);
                 //ソートを行う
                 sort(positionInfo, pairSort);
+                memoryRelease();
+                console.log(currentInfo.length);
             }
         });
 
@@ -926,7 +938,7 @@ class Answer {
 
             if (count.filter(count => count.goal === null).length == 0) {
                 //1番目と2番目、2番目と3番目の交換を行うと揃うようにいい感じに要素を入れ替える
-                let min = 2;                
+                let min = 2;
                 for (let i = 0; i < 2; i++) {
                     if (count[i].value < count[min].value) {
                         min = i;
@@ -965,7 +977,7 @@ class Answer {
 
         let positionInfo = [[], [], [], []];
         let goalPattern = [null, null, null, null];
-        
+
         //カルテットの交換になる座標を配列にまとめる
         for (let i = 0; i < currentInfo.length; i++) {
             if (!currentInfo[i].selectFlag) {
