@@ -26,10 +26,10 @@ node main.js
 
 //実行内容
 
-const boardData = new BoardData(null, 10, 10);
+const boardData = new BoardData(null, 150, 150);
 //console.log(boardData.answer.order[0].board.array);
 
-console.log("一致数:"+boardData.answer.matchValue);
+console.log("一致数:" + boardData.answer.matchValue());
 
 measureStart();
 
@@ -37,9 +37,9 @@ boardData.answer.allSort();
 
 measureFinish();
 
-console.log("一致数:"+boardData.answer.matchValue);
+console.log("一致数:" + boardData.answer.matchValue());
 
-console.log("合計手数:"+boardData.answer.orderLength);
+console.log("合計手数:" + boardData.answer.orderLength);
 
 //測定結果表示
 console.log("計算時間=" + result + "秒");

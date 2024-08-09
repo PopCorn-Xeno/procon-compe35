@@ -241,20 +241,10 @@ class Answer {
      */
     patterns = [];
 
+    terminationFlag = false;
+
     get orderLength() {
         return this.order.length - 1;
-    }
-
-    get matchValue() {
-        let match = 0;
-        for (let i = 0; i < this.goal.height; i++) {
-            for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j]) {
-                    match++;
-                }
-            }
-        }
-        return match;
     }
 
     /**
@@ -311,6 +301,18 @@ class Answer {
             }
         }
         console.log(boardFlag);
+    }
+
+    matchValue(value = 0) {
+        let match = 0;
+        for (let i = 0; i < this.goal.height; i++) {
+            for (let j = 0; j < this.goal.width; j++) {
+                if (this.order[this.orderLength - value].board.array[i][j] == this.goal.array[i][j]) {
+                    match++;
+                }
+            }
+        }
+        return match;
     }
 
     /** 
@@ -786,7 +788,6 @@ class Answer {
          * @type {object[]}
          */
         let goalInfo = [];
-        let count = 0;
         //現在と正解の配列の情報を取得する
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
@@ -848,206 +849,244 @@ class Answer {
             };
         };
 
+        /**
+         * 交換済みの座標を削除する
+         */
         const memoryRelease = () => {
-            console.log(currentInfo);
+            for (let i = 0; i < currentInfo.length; i++) {
+                if (currentInfo[i].selectFlag) {
+                    goalInfo[i].selectFlag = true;
+                }
+            }
             currentInfo = currentInfo.filter(element => !element.selectFlag);
             goalInfo = goalInfo.filter(element => !element.selectFlag);
-            console.log(currentInfo);
         };
+
+        const forcedTermination = (value) => {
+            if (this.order.length > 30000) {
+                let length = this.order.length;
+                while (length > 30000) {
+                    console.log(this.order.length);
+                    let i = 0;
+                    console.log("--------")
+                    console.log(this.matchValue());
+                    while (true) {
+                        console.log(i);
+                        //console.log(this.matchValue(i));
+                        if (this.matchValue(i) == this.matchValue() - value) {
+                            console.log(true);
+                            this.order = this.order.slice(0, -i);
+                            break;
+                        }
+                        i++;
+                    }
+                    length = this.order.length
+                }
+                this.terminationFlag = true;
+            }
+        }
 
         console.log("pairSort開始");
 
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
-            let positionInfo = [[], []];
-            //ペアの交換になる座標を配列にまとめる
-            for (let i = 0; i < currentInfo.length; i++) {
-                if (!currentInfo[i].selectFlag) {
-                    if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
-                        positionInfo[0].push(currentInfo[i]);
+            if (!this.terminationFlag) {
+                let positionInfo = [[], []];
+                //ペアの交換になる座標を配列にまとめる
+                for (let i = 0; i < currentInfo.length; i++) {
+                    if (!currentInfo[i].selectFlag) {
+                        if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
+                            positionInfo[0].push(currentInfo[i]);
+                        }
+                        else if (currentInfo[i].value == pair[1] && goalInfo[i].value == pair[0]) {
+                            positionInfo[1].push(currentInfo[i]);
+                        }
                     }
-                    else if (currentInfo[i].value == pair[1] && goalInfo[i].value == pair[0]) {
-                        positionInfo[1].push(currentInfo[i]);
+                }
+
+                //配列の中にどちらも要素があれば交換を実行する
+                if (positionInfo[0].length != 0 && positionInfo[1].length != 0) {
+                    //長さが短い方を0に持ってくる
+                    if (positionInfo[0].length > positionInfo[1].length) {
+                        let swap = positionInfo[0];
+                        positionInfo[0] = positionInfo[1];
+                        positionInfo[1] = swap;
                     }
+
+                    //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
+                    positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
+                    positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
+
+                    //ペアのソートの交換の仕方
+                    const pairSort = (result) => {
+                        this.swap(result[0], result[1]);
+                    }
+
+                    //ソートを行う
+                    sort(positionInfo, pairSort);
+                    memoryRelease();
+                    forcedTermination(2);
                 }
-            }
-
-            //配列の中にどちらも要素があれば交換を実行する
-            if (positionInfo[0].length != 0 && positionInfo[1].length != 0) {
-                //長さが短い方を0に持ってくる
-                if (positionInfo[0].length > positionInfo[1].length) {
-                    let swap = positionInfo[0];
-                    positionInfo[0] = positionInfo[1];
-                    positionInfo[1] = swap;
-                }
-
-                //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
-                positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
-                positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
-
-                //ペアのソートの交換の仕方
-                const pairSort = (result) => {
-                    this.swap(result[0], result[1]);
-                }
-
-                console.log(positionInfo[0].length);
-                console.log(currentInfo.length);
-                //ソートを行う
-                sort(positionInfo, pairSort);
-                memoryRelease();
-                console.log(currentInfo.length);
             }
         });
 
         console.log("trioSort開始");
 
         [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
-            let positionInfo = [[], [], []];
-            /*
-            key=現在の座標の要素の数値
-            value=選択された回数
-            goal=正解の座標の要素の数値
-            */
-            let count = [{ key: trio[0], value: 0, goal: null }, { key: trio[1], value: 0, goal: null }, { key: trio[2], value: 0, goal: null }];
+            if (!this.terminationFlag) {
+                let positionInfo = [[], [], []];
+                /*
+                key=現在の座標の要素の数値
+                value=選択された回数
+                goal=正解の座標の要素の数値
+                */
+                let count = [{ key: trio[0], value: 0, goal: null }, { key: trio[1], value: 0, goal: null }, { key: trio[2], value: 0, goal: null }];
 
-            //トリオの交換になる座標を配列にまとめる
-            for (let j = 0; j < currentInfo.length; j++) {
-                if (!currentInfo[j].selectFlag) {
-                    if (currentInfo[j].value == trio[0] && (goalInfo[j].value == trio[1] || goalInfo[j].value == trio[2])) {
-                        count[0].value++;
-                        positionInfo[0].push(currentInfo[j]);
-                        if (!count[0].goal) {
-                            count[0].goal = goalInfo[j].value;
+                //トリオの交換になる座標を配列にまとめる
+                for (let j = 0; j < currentInfo.length; j++) {
+                    if (!currentInfo[j].selectFlag) {
+                        if (currentInfo[j].value == trio[0] && (goalInfo[j].value == trio[1] || goalInfo[j].value == trio[2])) {
+                            count[0].value++;
+                            positionInfo[0].push(currentInfo[j]);
+                            if (!count[0].goal) {
+                                count[0].goal = goalInfo[j].value;
+                            }
                         }
-                    }
-                    else if (currentInfo[j].value == trio[1] && (goalInfo[j].value == trio[0] || goalInfo[j].value == trio[2])) {
-                        count[1].value++;
-                        positionInfo[1].push(currentInfo[j]);
-                        if (!count[1].goal) {
-                            count[1].goal = goalInfo[j].value;
+                        else if (currentInfo[j].value == trio[1] && (goalInfo[j].value == trio[0] || goalInfo[j].value == trio[2])) {
+                            count[1].value++;
+                            positionInfo[1].push(currentInfo[j]);
+                            if (!count[1].goal) {
+                                count[1].goal = goalInfo[j].value;
+                            }
                         }
-                    }
-                    else if (currentInfo[j].value == trio[2] && (goalInfo[j].value == trio[0] || goalInfo[j].value == trio[1])) {
-                        count[2].value++;
-                        positionInfo[2].push(currentInfo[j]);
-                        if (!count[2].goal) {
-                            count[2].goal = goalInfo[j].value;
+                        else if (currentInfo[j].value == trio[2] && (goalInfo[j].value == trio[0] || goalInfo[j].value == trio[1])) {
+                            count[2].value++;
+                            positionInfo[2].push(currentInfo[j]);
+                            if (!count[2].goal) {
+                                count[2].goal = goalInfo[j].value;
+                            }
                         }
                     }
                 }
-            }
 
-            if (count.filter(count => count.goal === null).length == 0) {
-                //1番目と2番目、2番目と3番目の交換を行うと揃うようにいい感じに要素を入れ替える
-                let min = 2;
-                for (let i = 0; i < 2; i++) {
-                    if (count[i].value < count[min].value) {
-                        min = i;
+                if (count.filter(count => count.goal === null).length == 0) {
+                    //1番目と2番目、2番目と3番目の交換を行うと揃うようにいい感じに要素を入れ替える
+                    let min = 2;
+                    for (let i = 0; i < 2; i++) {
+                        if (count[i].value < count[min].value) {
+                            min = i;
+                        }
                     }
+                    let swap = positionInfo[0];
+                    positionInfo[0] = positionInfo[min];
+                    positionInfo[min] = swap;
+                    swap = count[0];
+                    count[0] = count[min];
+                    count[min] = swap;
+
+                    //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
+                    positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
+                    positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
+                    positionInfo[2] = positionInfo[2].filter(element => !element.endFlag).concat(positionInfo[2].filter(element => element.endFlag));
+
+                    //トリオの交換の仕方
+                    const trioSort = (result) => {
+                        if (count[1].key == count[0].goal) {
+                            this.swap(result[0], result[1]);
+                            this.swap(result[1], result[2]);
+                        }
+                        else {
+                            this.swap(result[1], result[2]);
+                            this.swap(result[0], result[1]);
+                        }
+                    };
+
+                    //ソートを行う
+                    sort(positionInfo, trioSort);
+                    memoryRelease();
+                    forcedTermination(3);
                 }
-                let swap = positionInfo[0];
-                positionInfo[0] = positionInfo[min];
-                positionInfo[min] = swap;
-                swap = count[0];
-                count[0] = count[min];
-                count[min] = swap;
-
-                //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
-                positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
-                positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
-                positionInfo[2] = positionInfo[2].filter(element => !element.endFlag).concat(positionInfo[2].filter(element => element.endFlag));
-
-                //トリオの交換の仕方
-                const trioSort = (result) => {
-                    if (count[1].key == count[0].goal) {
-                        this.swap(result[0], result[1]);
-                        this.swap(result[1], result[2]);
-                    }
-                    else {
-                        this.swap(result[1], result[2]);
-                        this.swap(result[0], result[1]);
-                    }
-                };
-
-                //ソートを行う
-                sort(positionInfo, trioSort);
             }
         });
 
         console.log("quartetSort開始");
 
-        let positionInfo = [[], [], [], []];
-        let goalPattern = [null, null, null, null];
+        if (!this.terminationFlag) {
+            let positionInfo = [[], [], [], []];
+            let goalPattern = [null, null, null, null];
 
-        //カルテットの交換になる座標を配列にまとめる
-        for (let i = 0; i < currentInfo.length; i++) {
-            if (!currentInfo[i].selectFlag) {
-                if (currentInfo[i].value == 0 && (goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
-                    positionInfo[0].push(currentInfo[i]);
-                    if (!goalPattern[0]) {
-                        goalPattern[0] = goalInfo[i].value;
+            //カルテットの交換になる座標を配列にまとめる
+            for (let i = 0; i < currentInfo.length; i++) {
+                if (!currentInfo[i].selectFlag) {
+                    if (currentInfo[i].value == 0 && (goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                        positionInfo[0].push(currentInfo[i]);
+                        if (!goalPattern[0]) {
+                            goalPattern[0] = goalInfo[i].value;
+                        }
                     }
-                }
-                else if (currentInfo[i].value == 1 && (goalInfo[i].value == 0 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
-                    positionInfo[1].push(currentInfo[i]);
-                    if (!goalPattern[1]) {
-                        goalPattern[1] = goalInfo[i].value;
+                    else if (currentInfo[i].value == 1 && (goalInfo[i].value == 0 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                        positionInfo[1].push(currentInfo[i]);
+                        if (!goalPattern[1]) {
+                            goalPattern[1] = goalInfo[i].value;
+                        }
                     }
-                }
-                else if (currentInfo[i].value == 2 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 3)) {
-                    positionInfo[2].push(currentInfo[i]);
-                    if (!goalPattern[2]) {
-                        goalPattern[2] = goalInfo[i].value;
+                    else if (currentInfo[i].value == 2 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 3)) {
+                        positionInfo[2].push(currentInfo[i]);
+                        if (!goalPattern[2]) {
+                            goalPattern[2] = goalInfo[i].value;
+                        }
                     }
-                }
-                else if (currentInfo[i].value == 3 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2)) {
-                    positionInfo[3].push(currentInfo[i]);
-                    if (!goalPattern[3]) {
-                        goalPattern[3] = goalInfo[i].value;
+                    else if (currentInfo[i].value == 3 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2)) {
+                        positionInfo[3].push(currentInfo[i]);
+                        if (!goalPattern[3]) {
+                            goalPattern[3] = goalInfo[i].value;
+                        }
                     }
                 }
             }
-        }
 
-        if (goalPattern.filter(element => element == null).length == 0) {
-            //sort関数のformulaで評価した座標同士を使いたいので1番目,2番目の要素同士、3番目,4番目の要素同士を交換したら揃うように値をいい感じに入れ替える
-            if (goalPattern[2] == 0) {
-                let swap = positionInfo[1];
-                positionInfo[1] = positionInfo[2];
-                positionInfo[2] = swap;
-                swap = goalPattern[1];
-                goalPattern[1] = goalPattern[2];
-                goalPattern[2] = swap;
-            }
-            else if (goalPattern[3] == 0) {
-                let swap = positionInfo[1];
-                positionInfo[1] = positionInfo[3];
-                positionInfo[3] = swap;
-                swap = goalPattern[1];
-                goalPattern[1] = goalPattern[3];
-                goalPattern[3] = swap;
-
-            }
-
-            //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
-            positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
-            positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
-            positionInfo[2] = positionInfo[2].filter(element => !element.endFlag).concat(positionInfo[2].filter(element => element.endFlag));
-            positionInfo[3] = positionInfo[3].filter(element => element.endFlag).concat(positionInfo[3].filter(element => !element.endFlag));
-
-            //カルテットの交換の仕方
-            const quartetSort = (result) => {
-                this.swap(result[0], result[1]);
-                if (goalPattern[0] == positionInfo[2][0].value) {
-                    this.swap(result[0], result[2]);
+            if (goalPattern.filter(element => element == null).length == 0) {
+                //sort関数のformulaで評価した座標同士を使いたいので1番目,2番目の要素同士、3番目,4番目の要素同士を交換したら揃うように値をいい感じに入れ替える
+                if (goalPattern[2] == 0) {
+                    let swap = positionInfo[1];
+                    positionInfo[1] = positionInfo[2];
+                    positionInfo[2] = swap;
+                    swap = goalPattern[1];
+                    goalPattern[1] = goalPattern[2];
+                    goalPattern[2] = swap;
                 }
-                else if (goalPattern[0] == positionInfo[3][0].value) {
-                    this.swap(result[0], result[3]);
-                }
-                this.swap(result[2], result[3]);
-            };
+                else if (goalPattern[3] == 0) {
+                    let swap = positionInfo[1];
+                    positionInfo[1] = positionInfo[3];
+                    positionInfo[3] = swap;
+                    swap = goalPattern[1];
+                    goalPattern[1] = goalPattern[3];
+                    goalPattern[3] = swap;
 
-            //ソートを行う
-            sort(positionInfo, quartetSort);
+                }
+
+                //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
+                positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
+                positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
+                positionInfo[2] = positionInfo[2].filter(element => !element.endFlag).concat(positionInfo[2].filter(element => element.endFlag));
+                positionInfo[3] = positionInfo[3].filter(element => element.endFlag).concat(positionInfo[3].filter(element => !element.endFlag));
+
+                //カルテットの交換の仕方
+                const quartetSort = (result) => {
+                    this.swap(result[0], result[1]);
+                    if (goalPattern[0] == positionInfo[2][0].value) {
+                        this.swap(result[0], result[2]);
+                    }
+                    else if (goalPattern[0] == positionInfo[3][0].value) {
+                        this.swap(result[0], result[3]);
+                    }
+                    this.swap(result[2], result[3]);
+                    forcedTermination(4);
+                };
+
+                //ソートを行う
+                sort(positionInfo, quartetSort);
+                forcedTermination(4);
+            }
         }
 
         console.log("allSort完了");
