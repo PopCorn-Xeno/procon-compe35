@@ -862,27 +862,20 @@ class Answer {
             goalInfo = goalInfo.filter(element => !element.selectFlag);
         };
 
-        const forcedTermination = (value) => {
+        const forcedTermination = () => {
             if (this.order.length > 30000) {
-                let length = this.order.length;
-                while (length > 30000) {
-                    console.log(this.order.length);
-                    let i = 0;
-                    console.log("--------")
-                    console.log(this.matchValue());
-                    while (true) {
-                        console.log(i);
-                        //console.log(this.matchValue(i));
-                        if (this.matchValue(i) == this.matchValue() - value) {
-                            console.log(true);
-                            this.order = this.order.slice(0, -i);
-                            break;
-                        }
-                        i++;
+                this.order = this.order.slice(0, 30000);
+                let max = this.matchValue();
+                let maxTurn = this.order.length;
+                for (let i = 0; i < 20; i++) {
+                    if (this.matchValue(i) > max) {
+                        max = this.matchValue(i);
+                        maxTurn = -i;
                     }
-                    length = this.order.length
                 }
+                this.order = this.order.slice(0, maxTurn);
                 this.terminationFlag = true;
+                console.log("許容手数量を超えたためプログラムを終了します");
             }
         }
 
@@ -918,13 +911,15 @@ class Answer {
 
                     //ペアのソートの交換の仕方
                     const pairSort = (result) => {
-                        this.swap(result[0], result[1]);
+                        if (!this.terminationFlag) {
+                            this.swap(result[0], result[1]);
+                            forcedTermination();
+                        }
                     }
 
                     //ソートを行う
                     sort(positionInfo, pairSort);
                     memoryRelease();
-                    forcedTermination(2);
                 }
             }
         });
@@ -990,20 +985,22 @@ class Answer {
 
                     //トリオの交換の仕方
                     const trioSort = (result) => {
-                        if (count[1].key == count[0].goal) {
-                            this.swap(result[0], result[1]);
-                            this.swap(result[1], result[2]);
-                        }
-                        else {
-                            this.swap(result[1], result[2]);
-                            this.swap(result[0], result[1]);
+                        if (!this.terminationFlag) {
+                            if (count[1].key == count[0].goal) {
+                                this.swap(result[0], result[1]);
+                                this.swap(result[1], result[2]);
+                            }
+                            else {
+                                this.swap(result[1], result[2]);
+                                this.swap(result[0], result[1]);
+                            }
+                            forcedTermination();
                         }
                     };
 
                     //ソートを行う
                     sort(positionInfo, trioSort);
                     memoryRelease();
-                    forcedTermination(3);
                 }
             }
         });
@@ -1072,20 +1069,21 @@ class Answer {
 
                 //カルテットの交換の仕方
                 const quartetSort = (result) => {
-                    this.swap(result[0], result[1]);
-                    if (goalPattern[0] == positionInfo[2][0].value) {
-                        this.swap(result[0], result[2]);
+                    if (!this.terminationFlag) {
+                        this.swap(result[0], result[1]);
+                        if (goalPattern[0] == positionInfo[2][0].value) {
+                            this.swap(result[0], result[2]);
+                        }
+                        else if (goalPattern[0] == positionInfo[3][0].value) {
+                            this.swap(result[0], result[3]);
+                        }
+                        this.swap(result[2], result[3]);
+                        forcedTermination();
                     }
-                    else if (goalPattern[0] == positionInfo[3][0].value) {
-                        this.swap(result[0], result[3]);
-                    }
-                    this.swap(result[2], result[3]);
-                    forcedTermination(4);
                 };
 
                 //ソートを行う
                 sort(positionInfo, quartetSort);
-                forcedTermination(4);
             }
         }
 
