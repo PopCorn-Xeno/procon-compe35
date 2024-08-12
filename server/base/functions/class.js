@@ -1,5 +1,6 @@
 const { padStart, min, values, first, result } = require("lodash");
 const cloneDeep = require("lodash/cloneDeep");
+const fs = require('fs');
 
 class BoardData {
     /**
@@ -776,8 +777,6 @@ class Answer {
      * 0番目の定型抜き型のみを使ってソートを行う
      */
     allSort() {
-        console.log("allSort開始");
-
         /**
          * 現在の配列の情報
          * @type {object[]}
@@ -849,37 +848,40 @@ class Answer {
             };
         };
 
-        /**
-         * 交換済みの座標を削除する
-         */
+        /** 交換済みの座標を削除する*/
         const memoryRelease = () => {
+            //現在の一致情報しか操作されていないので、ゴールの一致情報のフラグも上げる
             for (let i = 0; i < currentInfo.length; i++) {
                 if (currentInfo[i].selectFlag) {
                     goalInfo[i].selectFlag = true;
                 }
             }
+            //filterメソッドによって選択済みの要素を削除する
             currentInfo = currentInfo.filter(element => !element.selectFlag);
             goalInfo = goalInfo.filter(element => !element.selectFlag);
         };
 
+        /** 許容手数量を超えたら一致数を最大値まで遡って強制終了させる関数*/
         const forcedTermination = () => {
+            //許容手数量を超えているか検知する
             if (this.order.length > 30000) {
+                //三万手までカットする
                 this.order = this.order.slice(0, 30000);
                 let max = this.matchValue();
                 let maxTurn = this.order.length;
+                //手数の後ろから比較して一致数の最大値を決める(swap関数の性質上15手以上のスワップはないので安牌を取って20まで遡ったら比較をやめる)
                 for (let i = 0; i < 20; i++) {
                     if (this.matchValue(i) > max) {
                         max = this.matchValue(i);
                         maxTurn = -i;
                     }
                 }
+                //最大値の手までカットする
                 this.order = this.order.slice(0, maxTurn);
                 this.terminationFlag = true;
                 console.log("許容手数量を超えたためプログラムを終了します");
             }
         }
-
-        console.log("pairSort開始");
 
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
             if (!this.terminationFlag) {
@@ -923,8 +925,6 @@ class Answer {
                 }
             }
         });
-
-        console.log("trioSort開始");
 
         [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
             if (!this.terminationFlag) {
@@ -1005,8 +1005,6 @@ class Answer {
             }
         });
 
-        console.log("quartetSort開始");
-
         if (!this.terminationFlag) {
             let positionInfo = [[], [], [], []];
             let goalPattern = [null, null, null, null];
@@ -1086,8 +1084,6 @@ class Answer {
                 sort(positionInfo, quartetSort);
             }
         }
-
-        console.log("allSort完了");
     }
 }
 
