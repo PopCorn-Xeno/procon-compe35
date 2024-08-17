@@ -773,30 +773,31 @@ class Answer {
      * 0番目以外の定型抜き型を使ってソートを行う
      */
     allSortAdvanced() {
-        [128, 64, 32, 16, 8, 4].map(size => {
-            console.log("size" + size);
-            let boardInfo = [];
-            for (let i = (this.order[this.orderLength].board.height % size == 0 ? 0 : 1); i <= this.order[this.orderLength].board.height - size; i += size) {
-                for (let j = (this.order[this.orderLength].board.width % size == 0 ? 0 : 1); j <= this.order[this.orderLength].board.width - size; j += size) {
-                    boardInfo.push({ position: [j, i], matchValue: 0, currentArray: new Array(size).fill(0), goalArray: new Array(size).fill(0), selectFlag: false });
-                }
-            }
-
-            if (boardInfo.length > 1) {
-                boardInfo.map(element => {
-                    for (let i = 0; i < size; i++) {
-                        let temporaryArray = [new Array(size).fill(0), new Array(size).fill(0)];
-                        for (let j = 0; j < size; j++) {
-                            temporaryArray[0][j] = this.order[this.orderLength].board.array[element.position[1] + i][element.position[0] + j];
-                            temporaryArray[1][j] = this.goal.array[element.position[1] + i][element.position[0] + j];
-                            if (this.order[this.orderLength].board.array[element.position[1] + i][element.position[0] + j] == this.goal.array[element.position[1] + i][element.position[0] + j]) {
-                                element.matchValue++;
+        [128, 64, 32, 16, 8, 4, 2].map(size => {
+            if (this.order[this.orderLength].board.height / size >= 2 && this.order[this.orderLength].board.width / size >= 2) {
+                console.log("size" + size);
+                let boardInfo = new Array(Math.floor(this.order[this.orderLength].board.height / size)).fill(0);
+                let ofsetI = this.order[this.orderLength].board.height % size == 0 ? 0 : 1;
+                for (let i = 0; i < Math.floor(this.order[this.orderLength].board.height / size); i++) {
+                    let temporaryArray = new Array(Math.floor(this.order[this.orderLength].board.width / size));
+                    let ofsetJ = this.order[this.orderLength].board.width % size == 0 ? 0 : 1;
+                    for (let j = 0; j < Math.floor(this.order[this.orderLength].board.width / size); j++) {
+                        temporaryArray[j] = { position: [j * size + ofsetJ, i * size + ofsetI], matchValue: 0, currentArray: new Array(size).fill(0), goalArray: new Array(size).fill(0), selectFlag: false };
+                        for (let k = 0; k < size; k++) {
+                            let temporaryArray2 = [new Array(size).fill(0), new Array(size).fill(0)];
+                            for (let l = 0; l < size; l++) {
+                                temporaryArray2[0][l] = this.order[this.orderLength].board.array[k + temporaryArray[j].position[1]][l + temporaryArray[j].position[0]];
+                                temporaryArray2[1][l] = this.goal.array[k + temporaryArray[j].position[1]][l + temporaryArray[j].position[0]];
+                                if (this.order[this.orderLength].board.array[k + temporaryArray[j].position[1]][l + temporaryArray[j].position[0]] == this.goal.array[k + temporaryArray[j].position[1]][l + temporaryArray[j].position[0]]) {
+                                    temporaryArray[j].matchValue++;
+                                }
                             }
+                            temporaryArray[j].currentArray[k] = temporaryArray2[0];
+                            temporaryArray[j].goalArray[k] = temporaryArray2[1];
                         }
-                        element.currentArray[i] = temporaryArray[0];
-                        element.goalArray[i] = temporaryArray[1];
                     }
-                });
+                    boardInfo[i] = temporaryArray;
+                }
 
                 const evaluate = (array, targetArray) => {
                     let matchValue = 0;
@@ -811,23 +812,28 @@ class Answer {
                 }
 
                 for (let i = 0; i < boardInfo.length; i++) {
-                    boardInfo[i].selectFlag = true;
-                    let max = size * size * 2 / 3;
-                    let maxPosition = false;
-                    for (let j = 0; j < boardInfo.length; j++) {
-                        if (!boardInfo[j].selectFlag) {
-                            let swapedMatchValue = evaluate(boardInfo[i].goalArray, boardInfo[j].currentArray);
-                            let targetSwapedMatchValue = evaluate(boardInfo[j].goalArray, boardInfo[i].currentArray);
-                            if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > max) {
-                                max = swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue;
-                                maxPosition = j;
+                    for (let j = 0; j < boardInfo[0].length; j++) {
+                        if (!boardInfo[i][j].selectFlag) {
+                            boardInfo[i][j].selectFlag = true;
+                            let max = size * size / 2;
+                            let maxPosition = false;
+                            for (let k = 0; k < boardInfo.length; k++) {
+                                for (let l = 0; l < boardInfo[0].length; l++) {
+                                    if (!boardInfo[k][l].selectFlag && (i == k || j == l)) {
+                                        let swapedMatchValue = evaluate(boardInfo[i][j].goalArray, boardInfo[k][l].currentArray);
+                                        let targetSwapedMatchValue = evaluate(boardInfo[k][l].goalArray, boardInfo[i][j].currentArray);
+                                        if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i][j].matchValue - boardInfo[k][l].matchValue) > max) {
+                                            max = swapedMatchValue + targetSwapedMatchValue - boardInfo[i][j].matchValue - boardInfo[k][l].matchValue;
+                                            maxPosition = [l, k];
+                                        }
+                                    }
+                                }
+                            }
+                            if (maxPosition) {
+                                boardInfo[maxPosition[1]][maxPosition[0]].selectFlag = true;
+                                this.swap(boardInfo[i][j].position, boardInfo[maxPosition[1]][maxPosition[0]].position, size);
                             }
                         }
-                    }
-                    if (maxPosition) {
-                        console.log(max);
-                        boardInfo[maxPosition].selectFlag = true;
-                        this.swap(boardInfo[i].position, boardInfo[maxPosition].position, size);
                     }
                 }
             }

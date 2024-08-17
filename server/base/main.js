@@ -48,7 +48,7 @@ node main.js
 
 //measurePerformance();
 
-const boardData = new BoardData(null, 120, 120);
+const boardData = new BoardData(null, 256, 256);
 
 console.log("一致数:" + boardData.answer.matchValue());
 
