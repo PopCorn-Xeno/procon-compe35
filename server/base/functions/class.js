@@ -773,12 +773,12 @@ class Answer {
      * 0番目以外の定型抜き型を使ってソートを行う
      */
     allSortAdvanced() {
-        [128, 64, 32, 16, 8, 4, 2].map(size => {
-            console.log(size);
+        [128, 64, 32, 16, 8, 4].map(size => {
+            console.log("size" + size);
             let boardInfo = [];
             for (let i = (this.order[this.orderLength].board.height % size == 0 ? 0 : 1); i <= this.order[this.orderLength].board.height - size; i += size) {
                 for (let j = (this.order[this.orderLength].board.width % size == 0 ? 0 : 1); j <= this.order[this.orderLength].board.width - size; j += size) {
-                    boardInfo.push({ position: [j, i], matchValue: 0, currentArray: new Array(size).fill(0), goalArray: new Array(size).fill(0) });
+                    boardInfo.push({ position: [j, i], matchValue: 0, currentArray: new Array(size).fill(0), goalArray: new Array(size).fill(0), selectFlag: false });
                 }
             }
 
@@ -810,29 +810,25 @@ class Answer {
                     return matchValue;
                 }
 
-                let count=0;
                 for (let i = 0; i < boardInfo.length; i++) {
-                    let swapFlag = true;
-                    while (swapFlag) {
-                        swapFlag = false;
-                        for (let j = 0; j < boardInfo.length; j++) {
-                            if (i != j) {
-                                let swapedMatchValue = evaluate(boardInfo[i].goalArray, boardInfo[j].currentArray);
-                                let targetSwapedMatchValue = evaluate(boardInfo[j].goalArray, boardInfo[i].currentArray);
-                                if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > size * size / 2) {
-                                    this.swap(boardInfo[i].position, boardInfo[j].position, size);
-                                    count++;
-                                    let swap = boardInfo[i].currentArray;
-                                    boardInfo[i].currentArray = boardInfo[j].currentArray;
-                                    boardInfo[j].currentArray = swap;
-                                    boardInfo[i].matchValue = swapedMatchValue;
-                                    boardInfo[j].matchValue = targetSwapedMatchValue;
-                                    swapFlag = true;
-                                }
+                    boardInfo[i].selectFlag = true;
+                    let max = size * size * 2 / 3;
+                    let maxPosition = false;
+                    for (let j = 0; j < boardInfo.length; j++) {
+                        if (!boardInfo[j].selectFlag) {
+                            let swapedMatchValue = evaluate(boardInfo[i].goalArray, boardInfo[j].currentArray);
+                            let targetSwapedMatchValue = evaluate(boardInfo[j].goalArray, boardInfo[i].currentArray);
+                            if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > max) {
+                                max = swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue;
+                                maxPosition = j;
                             }
                         }
                     }
-                    if(size==2){console.log(count)}
+                    if (maxPosition) {
+                        console.log(max);
+                        boardInfo[maxPosition].selectFlag = true;
+                        this.swap(boardInfo[i].position, boardInfo[maxPosition].position, size);
+                    }
                 }
             }
         });

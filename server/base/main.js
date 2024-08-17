@@ -56,6 +56,12 @@ measureStart();
 
 boardData.answer.allSortAdvanced();
 
+console.log("一致数:" + boardData.answer.matchValue());
+
+console.log("合計手数:" + boardData.answer.orderLength);
+
+boardData.answer.allSort();
+
 measureFinish();
 
 console.log("一致数:" + boardData.answer.matchValue());
