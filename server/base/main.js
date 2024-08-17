@@ -11,7 +11,7 @@ const measureStart = (value = 10000) => {
 }
 
 const measureFinish = () => {
-    const end = performance.now();
+    let end = performance.now();
     result = (Math.round((end - start) * accuracy) / (1000 * accuracy));
 }
 
@@ -19,7 +19,7 @@ const measureFinish = () => {
 const measurePerformance = () => {
     let measureResult = [];
     let measureOrderLength = [];
-    for (let i = 2; i < 256; i++) {
+    for (let i = 70; i < 125; i++) {
         console.log(i);
         let boardData = new BoardData(null, i, i);
 
@@ -31,8 +31,8 @@ const measurePerformance = () => {
         measureResult.push(result);
         measureOrderLength.push(boardData.answer.order.length);
     }
-    fs.writeFile('./functions/text/performance.txt', JSON.stringify(measureResult, undefined, ' '), 'utf-8', (err) => { });
-    fs.writeFile('./functions/text/orderLength.txt', JSON.stringify(measureOrderLength, undefined, ' '), 'utf-8', (err) => { });
+    fs.writeFile('./functions/log/performance.txt', JSON.stringify(measureResult, undefined, ' '), 'utf-8', (err) => { });
+    fs.writeFile('./functions/log/orderLength.txt', JSON.stringify(measureOrderLength, undefined, ' '), 'utf-8', (err) => { });
 }
 
 /* メモリ強化版
@@ -46,23 +46,21 @@ node main.js
 
 //実行内容
 
-measurePerformance();
+//measurePerformance();
 
-/*
-const boardData = new BoardData(null, 6, 6);
+const boardData = new BoardData(null, 120, 120);
 
 console.log("一致数:" + boardData.answer.matchValue());
 
 measureStart();
 
-boardData.answer.allSort();
+boardData.answer.allSortAdvanced();
 
 measureFinish();
 
 console.log("一致数:" + boardData.answer.matchValue());
 
 console.log("合計手数:" + boardData.answer.orderLength);
-*/
 
 //測定結果表示
 console.log("計算時間=" + result + "秒");

@@ -276,16 +276,12 @@ class Answer {
         let boardFlag = new Array(this.goal.height).fill(0).map(array => array = new Array(this.goal.width).fill(4));
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength].board.array[i][j] != this.goal.array[i][j]) {
-                    boardFlag[i][j] = this.order[this.orderLength].board.array[i][j];
-                }
-                else {
+                if (this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j]) {
                     match++;
                 }
             }
         }
         console.log("一致数:" + match);
-        console.log(boardFlag);
     }
 
     goalMatch() {
@@ -771,6 +767,75 @@ class Answer {
                 }
                 break;
         }
+    }
+
+    /**
+     * 0番目以外の定型抜き型を使ってソートを行う
+     */
+    allSortAdvanced() {
+        [128, 64, 32, 16, 8, 4, 2].map(size => {
+            console.log(size);
+            let boardInfo = [];
+            for (let i = (this.order[this.orderLength].board.height % size == 0 ? 0 : 1); i <= this.order[this.orderLength].board.height - size; i += size) {
+                for (let j = (this.order[this.orderLength].board.width % size == 0 ? 0 : 1); j <= this.order[this.orderLength].board.width - size; j += size) {
+                    boardInfo.push({ position: [j, i], matchValue: 0, currentArray: new Array(size).fill(0), goalArray: new Array(size).fill(0) });
+                }
+            }
+
+            if (boardInfo.length > 1) {
+                boardInfo.map(element => {
+                    for (let i = 0; i < size; i++) {
+                        let temporaryArray = [new Array(size).fill(0), new Array(size).fill(0)];
+                        for (let j = 0; j < size; j++) {
+                            temporaryArray[0][j] = this.order[this.orderLength].board.array[element.position[1] + i][element.position[0] + j];
+                            temporaryArray[1][j] = this.goal.array[element.position[1] + i][element.position[0] + j];
+                            if (this.order[this.orderLength].board.array[element.position[1] + i][element.position[0] + j] == this.goal.array[element.position[1] + i][element.position[0] + j]) {
+                                element.matchValue++;
+                            }
+                        }
+                        element.currentArray[i] = temporaryArray[0];
+                        element.goalArray[i] = temporaryArray[1];
+                    }
+                });
+
+                const evaluate = (array, targetArray) => {
+                    let matchValue = 0;
+                    for (let i = 0; i < size; i++) {
+                        for (let j = 0; j < size; j++) {
+                            if (array[i][j] == targetArray[i][j]) {
+                                matchValue++;
+                            }
+                        }
+                    }
+                    return matchValue;
+                }
+
+                let count=0;
+                for (let i = 0; i < boardInfo.length; i++) {
+                    let swapFlag = true;
+                    while (swapFlag) {
+                        swapFlag = false;
+                        for (let j = 0; j < boardInfo.length; j++) {
+                            if (i != j) {
+                                let swapedMatchValue = evaluate(boardInfo[i].goalArray, boardInfo[j].currentArray);
+                                let targetSwapedMatchValue = evaluate(boardInfo[j].goalArray, boardInfo[i].currentArray);
+                                if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > size * size / 2) {
+                                    this.swap(boardInfo[i].position, boardInfo[j].position, size);
+                                    count++;
+                                    let swap = boardInfo[i].currentArray;
+                                    boardInfo[i].currentArray = boardInfo[j].currentArray;
+                                    boardInfo[j].currentArray = swap;
+                                    boardInfo[i].matchValue = swapedMatchValue;
+                                    boardInfo[j].matchValue = targetSwapedMatchValue;
+                                    swapFlag = true;
+                                }
+                            }
+                        }
+                    }
+                    if(size==2){console.log(count)}
+                }
+            }
+        });
     }
 
     /**
