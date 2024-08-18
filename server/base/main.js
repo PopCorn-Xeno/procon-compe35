@@ -1,19 +1,43 @@
 //ファイルインポート
 const { BoardData, Board } = require("./functions/class");
+const fs = require('fs');
+
+let accuracy = 0, start = 0, result = 0;
 
 //計算時間測定関数の定義
-const measureStart = (value = 1000) => {
-    console.log("測定を開始します");
+const measureStart = (value = 10000) => {
     accuracy = value;
-    const start = performance.now();
+    start = performance.now();
 }
 
 const measureFinish = () => {
-    const end = performance.now();
+    let end = performance.now();
     result = (Math.round((end - start) * accuracy) / (1000 * accuracy));
 }
 
-let accuracy = 0, start = 0, result = null;
+//allSort関数の計算速度の計測
+const measurePerformance = () => {
+    let measureResult = [];
+    let measureOrderLength = [];
+    for (let i = 70; i < 125; i++) {
+        console.log(i);
+        let boardData = new BoardData(null, i, i);
+
+        measureStart();
+
+        boardData.answer.allSort();
+
+        measureFinish();
+        measureResult.push(result);
+        measureOrderLength.push(boardData.answer.order.length);
+    }
+    fs.writeFile('./functions/log/performance.txt', JSON.stringify(measureResult, undefined, ' '), 'utf-8', (err) => { });
+    fs.writeFile('./functions/log/orderLength.txt', JSON.stringify(measureOrderLength, undefined, ' '), 'utf-8', (err) => { });
+}
+
+/* メモリ強化版
+ * node --max-old-space-size=32000 main.js
+ */
 
 /*コピペでファイル実行
 cd ./server/base
@@ -21,46 +45,28 @@ node main.js
 */
 
 //実行内容
-measureStart();
 
+//measurePerformance();
 
 const boardData = new BoardData(null, 256, 256);
-//console.log(boardData.answer.order[0].board.array);
 
-let match = 0;
-let boardFlag = new Array(256).fill(4).map(array => array = new Array(256).fill(4));
-for (let i = 0; i < 256; i++) {
-    for (let j = 0; j < 256; j++) {
-        if (boardData.answer.order[0].board.array[i][j] != boardData.answer.goal.array[i][j]) {
-            boardFlag[i][j]=boardData.answer.order[0].board.array[i][j];
-        }
-        else{
-            match++;
-        }
-    }
-}
+console.log("一致数:" + boardData.answer.matchValue());
 
-console.log("一致数:"+match);
+measureStart();
+
+boardData.answer.allSortAdvanced();
+
+console.log("一致数:" + boardData.answer.matchValue());
+
+console.log("合計手数:" + boardData.answer.orderLength);
 
 boardData.answer.allSort();
 
-match = 0;
-boardFlag = new Array(256).fill(4).map(array => array = new Array(256).fill(4));
-for (let i = 0; i < 256; i++) {
-    for (let j = 0; j < 256; j++) {
-        if (boardData.answer.order[boardData.answer.order.length-1].board.array[i][j] != boardData.answer.goal.array[i][j]) {
-            boardFlag[i][j]=boardData.answer.order[boardData.answer.order.length-1].board.array[i][j];
-        }
-        else{
-            match++;
-        }
-    }
-}
-
-console.log("一致数:"+match);
-console.log("現在" + (boardData.answer.order.length - 1) + "手目");
-
 measureFinish();
+
+console.log("一致数:" + boardData.answer.matchValue());
+
+console.log("合計手数:" + boardData.answer.orderLength);
 
 //測定結果表示
 console.log("計算時間=" + result + "秒");
