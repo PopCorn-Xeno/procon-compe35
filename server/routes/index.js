@@ -5,12 +5,12 @@ let datas = [];
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express', contents: datas.length > 0 ? datas : "" });
+  res.render('index', { datas: datas.length > 0 ? datas : "" });
 });
 
 router.post("/", (req, res, next) => {
-  console.log(req.body);
-  datas.push(JSON.stringify(req.body));
+  console.log(req.body.array);
+  datas.push(req.body);
   res.redirect("/");
 })
 
