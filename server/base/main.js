@@ -48,17 +48,11 @@ node main.js
 
 //measurePerformance();
 
-const boardData = new BoardData(null, 256, 256);
+const boardData = new BoardData(null, 140, 140);
 
 console.log("一致数:" + boardData.answer.matchValue());
 
 measureStart();
-
-boardData.answer.allSortAdvanced();
-
-console.log("一致数:" + boardData.answer.matchValue());
-
-console.log("合計手数:" + boardData.answer.orderLength);
 
 boardData.answer.allSort();
 
