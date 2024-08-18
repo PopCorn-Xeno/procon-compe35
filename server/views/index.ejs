@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= title %></title>
+    <title>Board Process Orders</title>
     <link rel='stylesheet' href='/stylesheets/style.css' />
   </head>
   <body>
-    <h1><%= title %></h1>
-    <p>Welcome to <%= contents %></p>
+    <h1>Board Process Orders</h1>
+    <% for (let i = 0; i < datas[0]?.array?.length; i++) { %>
+      <p><%= datas[0]?.array[i] %></p>
+    <% } %>
   </body>
 </html>
