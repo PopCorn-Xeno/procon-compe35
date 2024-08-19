@@ -245,10 +245,6 @@ class Answer {
 
     terminationFlag = false;
 
-    get orderLength() {
-        return this.order.length - 1;
-    }
-
     /**
      * @param {Board} start
      * @param {Board} goal
@@ -266,46 +262,21 @@ class Answer {
         this.patterns = patterns;
     }
 
+    get latestOrder() {
+        return this.order[this.turn].board;
+    }
+
     /**一番最後のOrderを表示する */
-    latestOrder() {
-        console.log("現在" + (this.orderLength) + "手目");
-        console.log(this.order[this.orderLength].board.array);
+    showLatestOrder() {
+        console.log("現在" + (this.turn) + "手目");
+        console.log(this.order[this.turn].board.array);
     }
 
-    match() {
+    matchValue(array1 = this.order[this.turn].board.array, array2 = this.goal.array) {
         let match = 0;
-        let boardFlag = new Array(this.goal.height).fill(0).map(array => array = new Array(this.goal.width).fill(4));
-        for (let i = 0; i < this.goal.height; i++) {
-            for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j]) {
-                    match++;
-                }
-            }
-        }
-        console.log("一致数:" + match);
-    }
-
-    goalMatch() {
-        let match = 0;
-        let boardFlag = new Array(this.goal.height).fill(0).map(array => array = new Array(this.goal.width).fill(4));
-        for (let i = 0; i < this.goal.height; i++) {
-            for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength].board.array[i][j] != this.goal.array[i][j]) {
-                    boardFlag[i][j] = this.goal.array[i][j];
-                }
-                else {
-                    match++;
-                }
-            }
-        }
-        console.log(boardFlag);
-    }
-
-    matchValue(value = 0) {
-        let match = 0;
-        for (let i = 0; i < this.goal.height; i++) {
-            for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength - value].board.array[i][j] == this.goal.array[i][j]) {
+        for (let i = 0; i < array1.length; i++) {
+            for (let j = 0; j < array1[0].length; j++) {
+                if (array1[i][j] == array2[i][j]) {
                     match++;
                 }
             }
@@ -783,26 +754,27 @@ class Answer {
         { size: 4, max: 4, limit: true },
         { size: 2, max: 2, limit: true },
         ].map(element => {
-            let calcMatchValue = this.matchValue();
-            let calcLength = this.orderLength;
-
             //分割できるか調べる
-            if (this.order[this.orderLength].board.height / element.size >= 2 && this.order[this.orderLength].board.width / element.size >= 2) {
+            if (this.order[this.turn].board.height / element.size >= 2 && this.order[this.turn].board.width / element.size >= 2) {
+                /*
+                let calcMatchValue = this.matchValue();
+                let calcLength = this.turn;
                 console.log("size" + element.size);
-                let boardInfo = new Array(Math.floor(this.order[this.orderLength].board.height / element.size) * Math.floor(this.order[this.orderLength].board.width / element.size)).fill(0);
-                
+                */
+                let boardInfo = new Array(Math.floor(this.order[this.turn].board.height / element.size) * Math.floor(this.order[this.turn].board.width / element.size)).fill(0);
+
                 //分割したボードの情報を整理する
                 const initialization = (boardInfo) => {
                     let count = 0;
-                    for (let i = 0; i < Math.floor(this.order[this.orderLength].board.height / element.size); i++) {
-                        for (let j = 0; j < Math.floor(this.order[this.orderLength].board.width / element.size); j++) {
+                    for (let i = 0; i < Math.floor(this.order[this.turn].board.height / element.size); i++) {
+                        for (let j = 0; j < Math.floor(this.order[this.turn].board.width / element.size); j++) {
                             boardInfo[count] = { position: [j * element.size, i * element.size], matchValue: 0, currentArray: new Array(element.size).fill(0), goalArray: new Array(element.size).fill(0), selectFlag: false };
                             for (let k = 0; k < element.size; k++) {
                                 let temporaryArray = [new Array(element.size).fill(0), new Array(element.size).fill(0)];
                                 for (let l = 0; l < element.size; l++) {
-                                    temporaryArray[0][l] = this.order[this.orderLength].board.array[k + i * element.size][l + j * element.size];
+                                    temporaryArray[0][l] = this.order[this.turn].board.array[k + i * element.size][l + j * element.size];
                                     temporaryArray[1][l] = this.goal.array[k + i * element.size][l + j * element.size];
-                                    if (this.order[this.orderLength].board.array[k + i * element.size][l + j * element.size] == this.goal.array[k + i * element.size][l + j * element.size]) {
+                                    if (this.order[this.turn].board.array[k + i * element.size][l + j * element.size] == this.goal.array[k + i * element.size][l + j * element.size]) {
                                         boardInfo[count].matchValue++;
                                     }
                                 }
@@ -812,19 +784,6 @@ class Answer {
                             count++;
                         }
                     }
-                }
-
-                //二つの配列の一致数を計算する
-                const evaluate = (array, targetArray) => {
-                    let matchValue = 0;
-                    for (let i = 0; i < array.length; i++) {
-                        for (let j = 0; j < array[0].length; j++) {
-                            if (array[i][j] == targetArray[i][j]) {
-                                matchValue++;
-                            }
-                        }
-                    }
-                    return matchValue;
                 }
 
                 //一つの分割領域に対して有効でなくなるまで交換し続ける交換方法
@@ -837,8 +796,8 @@ class Answer {
                             for (let j = 0; j < boardInfo.length; j++) {
                                 //limitが有効になっている場合直線的な交換しか行わないようになる(手順が短くなる)
                                 if ((i != j) && (limit ? (boardInfo[i].position[0] == boardInfo[j].position[0] || boardInfo[i].position[1] == boardInfo[j].position[1]) : true)) {
-                                    let swapedMatchValue = evaluate(boardInfo[i].goalArray, boardInfo[j].currentArray);
-                                    let targetSwapedMatchValue = evaluate(boardInfo[j].goalArray, boardInfo[i].currentArray);
+                                    let swapedMatchValue = this.matchValue(boardInfo[i].goalArray, boardInfo[j].currentArray);
+                                    let targetSwapedMatchValue = this.matchValue(boardInfo[j].goalArray, boardInfo[i].currentArray);
                                     if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > max) {
                                         this.swap(boardInfo[i].position, boardInfo[j].position, element.size);
                                         let swap = boardInfo[i].currentArray;
@@ -864,8 +823,8 @@ class Answer {
                             for (let j = 0; j < boardInfo.length; j++) {
                                 //limitが有効になっている場合直線的な交換しか行わないようになる(手順が短くなる)
                                 if (!boardInfo[j].selectFlag && (limit ? (boardInfo[i].position[0] == boardInfo[j].position[0] || boardInfo[i].position[1] == boardInfo[j].position[1]) : true)) {
-                                    let swapedMatchValue = evaluate(boardInfo[i].goalArray, boardInfo[j].currentArray);
-                                    let targetSwapedMatchValue = evaluate(boardInfo[j].goalArray, boardInfo[i].currentArray);
+                                    let swapedMatchValue = this.matchValue(boardInfo[i].goalArray, boardInfo[j].currentArray);
+                                    let targetSwapedMatchValue = this.matchValue(boardInfo[j].goalArray, boardInfo[i].currentArray);
                                     if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > max) {
                                         max = swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue;
                                         maxPosition = j;
@@ -880,8 +839,6 @@ class Answer {
                     }
                 }
                 //loopSwapの方が交換回数が多くより厳密な交換ができるんじゃないかなぁ～と思ったので、両方作って組み合わせている
-
-                console.log(boardInfo.length);
 
                 initialization(boardInfo);
 
@@ -901,10 +858,12 @@ class Answer {
                     injectionSwap(boardInfo, true);
                 }
 
+                /*
                 console.log("一致数変化" + (this.matchValue() - calcMatchValue));
-                console.log("手数変化" + (this.orderLength - calcLength));
-                console.log("効率:" + (this.matchValue() - calcMatchValue) / (this.orderLength - calcLength));
+                console.log("手数変化" + (this.turn - calcLength));
+                console.log("効率:" + (this.matchValue() - calcMatchValue) / (this.turn - calcLength));
                 console.log("-------------");
+                */
             }
         });
 
@@ -917,8 +876,8 @@ class Answer {
         //現在と正解の配列の情報を取得する
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength].board.array[i][j] != this.goal.array[i][j]) {
-                    currentInfo.push({ value: this.order[this.orderLength].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false });
+                if (this.order[this.turn].board.array[i][j] != this.goal.array[i][j]) {
+                    currentInfo.push({ value: this.order[this.turn].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.turn].board.array[i][j] == this.goal.array[i][j] ? true : false });
                 }
             }
         }
@@ -977,19 +936,21 @@ class Answer {
         /** 許容手数量を超えたら一致数を最大値まで遡って強制終了させる関数*/
         const forcedTermination = () => {
             //許容手数量を超えているか検知する
-            if (this.order.length > 30000) {
+            if (this.turn >= 30000) {
                 //三万手までカットする
-                this.order = this.order.slice(0, 30000);
+                this.order = this.order.slice(0, 30001);
+                this.turn = 30000;
                 let max = this.matchValue();
-                let maxTurn = this.order.length;
+                let maxTurn = 30000;
                 //手数の後ろから比較して一致数の最大値を決める(swap関数の性質上15手以上のスワップはないので安牌を取って20まで遡ったら比較をやめる)
                 for (let i = 0; i < 20; i++) {
-                    if (this.matchValue(i) > max) {
-                        max = this.matchValue(i);
+                    if (this.matchValue(this.order[this.turn - i].board.array) > max) {
+                        max = this.matchValue(this.order[this.turn - i].board.array);
                         maxTurn = -i;
                     }
                 }
                 //最大値の手までカットする
+                this.turn = this.turn + maxTurn;
                 this.order = this.order.slice(0, maxTurn);
                 this.terminationFlag = true;
                 console.log("許容手数量を超えたためプログラムを終了します");
