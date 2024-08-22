@@ -48,15 +48,21 @@ node main.js
 
 //measurePerformance();
 
-const boardData = new BoardData(null, 150, 150);
+const boardData = new BoardData(null, 6, 6);
 
 console.log("一致数:" + boardData.answer.matchValue());
 
 measureStart();
 
+console.log(boardData.answer.order[0].board.array);
+
 boardData.answer.allSort();
 
 measureFinish();
+
+for(let i=0;i<boardData.answer.order.length;i++){
+    console.log(boardData.answer.order[i].board.array);
+}
 
 console.log("一致数:" + boardData.answer.matchValue());
 
