@@ -251,9 +251,8 @@ class Answer {
      * @param {Board[]} patterns
      */
     constructor(start, goal, patterns) {
-        //初期状態はボードの状態だけが保存されることとする
-        /**中にOrderクラスが入っている */
-        this.order[0] = new Order(start, null, null, null);
+        /**現在のボード */
+        this.current = start;
         /**問題の完成形 */
         this.goal = goal;
         /**現在処理しているターン数 */
@@ -263,16 +262,16 @@ class Answer {
     }
 
     get latestOrder() {
-        return this.order[this.turn].board;
+        return this.this.current;
     }
 
     /**一番最後のOrderを表示する */
     showLatestOrder() {
         console.log("現在" + (this.turn) + "手目");
-        console.log(this.order[this.turn].board.array);
+        console.log(this.current.array);
     }
 
-    matchValue(array1 = this.order[this.turn].board.array, array2 = this.goal.array) {
+    matchValue(array1 = this.current.array, array2 = this.goal.array) {
         let match = 0;
         for (let i = 0; i < array1.length; i++) {
             for (let j = 0; j < array1[0].length; j++) {
@@ -320,7 +319,12 @@ class Answer {
                 for (let i = 0 < position[0] ? position[0] : 0; i < Math.min(board.width, this.patterns[patternNumber].width + position[0]); i++) {
                     let line = new Array(board.height).fill(0);
                     for (let j = 0; j < board.height; j++) {
-                        line[j] = { value: board.array[j][i], key: this.patterns[patternNumber].array[j - position[1]] ? this.patterns[patternNumber].array[j - position[1]][i - position[0]] ?? 0 : 0 };
+                        if (patternNumber == 0) {
+                            line[j] = { value: board.array[j][i], key: j - position[1] == 0 ? 1 : 0 };
+                        }
+                        else {
+                            line[j] = { value: board.array[j][i], key: this.patterns[patternNumber].array[j - position[1]] ? this.patterns[patternNumber].array[j - position[1]][i - position[0]] ?? 0 : 0 };
+                        }
                     }
 
                     if (line.filter(element => element.key == 1).length != 0) {
@@ -338,8 +342,6 @@ class Answer {
                     }
                 }
                 if (errorFlag) {
-                    console.log("現在" + this.turn);
-                    console.log(patternNumber + "+" + position + "+" + direction);
                     console.log("操作された要素がありません");
                 }
                 return board;
@@ -348,10 +350,17 @@ class Answer {
                 for (let i = 0 < position[1] ? position[1] : 0; i < Math.min(board.width, this.patterns[patternNumber].width + position[1]); i++) {
                     let line = new Array(board.width).fill(0);
                     for (let j = 0; j < board.width; j++) {
-                        line[j] = { value: board.array[i][j], key: this.patterns[patternNumber].array[i - position[1]] ? this.patterns[patternNumber].array[i - position[1]][j - position[0]] ?? 0 : 0 };
+                        if (patternNumber == 0) {
+                            line[j] = { value: board.array[i][j], key: j - position[0] == 0 ? 1 : 0 };
+                        }
+                        else {
+                            line[j] = { value: board.array[i][j], key: this.patterns[patternNumber].array[i - position[1]] ? this.patterns[patternNumber].array[i - position[1]][j - position[0]] ?? 0 : 0 };
+                        }
                     }
 
-                    if (!line.filter(element => element.key == 1).length) { errorFlag = false };
+                    if (line.filter(element => element.key == 1).length != 0) {
+                        errorFlag = false;
+                    }
 
                     if (direction == 4) {
                         line = line.filter(element => element.key == 0).concat(line.filter(element => element.key == 1)).map(element => element.value);
@@ -362,8 +371,6 @@ class Answer {
                     board.array[i] = line;
                 }
                 if (errorFlag) {
-                    console.log("現在" + this.turn);
-                    console.log(patternNumber + "+" + position + "+" + direction);
                     console.log("操作された要素がありません");
                 }
                 return board;
@@ -378,7 +385,8 @@ class Answer {
     * @param {number} direction 方向指定
     */
     add(patternNumber, position, direction) {
-        this.order.push(new Order(this.#pullOut(this.order[this.turn].board, patternNumber, position, direction), patternNumber, position, direction));
+        this.order.push(new Order(patternNumber, position, direction));
+        this.current = this.#pullOut(this.current, patternNumber, position, direction);
         this.turn++;
     }
 
@@ -392,6 +400,11 @@ class Answer {
      * @returns
      */
     swap(position1, position2, size = 1, priorityCell = 0, inspection = true) {
+        if(this.turn>=29995){
+            console.log("許容手数量を超えたためプログラムを終了します");
+            this.terminationFlag=true;
+            return 0;
+        }
 
         if (inspection == true) {
             // エラー処理
@@ -399,20 +412,20 @@ class Answer {
             //主にエラー内容が共存できる部分があるので必要である
             let errorFlag = false;
             //それぞれのx座標がボードからはみ出していないか調べる
-            if (position1[0] < 0 || this.order[this.turn].board.width - size < position1[0]) {
+            if (position1[0] < 0 || this.current.width - size < position1[0]) {
                 console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
-            if (position2[0] < 0 || this.order[this.turn].board.width - size < position2[0]) {
+            if (position2[0] < 0 || this.current.width - size < position2[0]) {
                 console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
             //それぞれのy座標がボードからはみ出していないか調べる
-            if (position1[1] < 0 || this.order[this.turn].board.height - size < position1[1]) {
+            if (position1[1] < 0 || this.current.height - size < position1[1]) {
                 console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
-            if (position2[1] < 0 || this.order[this.turn].board.height - size < position2[1]) {
+            if (position2[1] < 0 || this.current.height - size < position2[1]) {
                 console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
@@ -446,9 +459,9 @@ class Answer {
                 /**操作する配列の左側 */
                 let leftLength = position[i][i] < position[2][i] ? position[i][i] : position[2][i];
                 /**操作する配列の右側 */
-                let rightLength = (i == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - (position[i][i] < position[2][i] ? position[2][i] : position[i][i]) - size;
+                let rightLength = (i == 0 ? this.current.width : this.current.height) - (position[i][i] < position[2][i] ? position[2][i] : position[i][i]) - size;
                 /**操作する配列の真ん中 */
-                let middleLength = (i == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - leftLength - rightLength - 2 * size;
+                let middleLength = (i == 0 ? this.current.width : this.current.height) - leftLength - rightLength - 2 * size;
                 /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
                 let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
                 //lengthFlagの値から優先度を設定する
@@ -523,9 +536,9 @@ class Answer {
         /**操作する配列の左側 */
         let leftLength = position1[type] < position2[type] ? position1[type] : position2[type];
         /**操作する配列の右側 */
-        let rightLength = (type == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - (position1[type] < position2[type] ? position2[type] : position1[type]) - size;
+        let rightLength = (type == 0 ? this.current.width : this.current.height) - (position1[type] < position2[type] ? position2[type] : position1[type]) - size;
         /**操作する配列の真ん中 */
-        let middleLength = (type == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - leftLength - rightLength - 2 * size;
+        let middleLength = (type == 0 ? this.current.width : this.current.height) - leftLength - rightLength - 2 * size;
 
         /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
         let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
@@ -720,26 +733,26 @@ class Answer {
         { size: 2, max: 2, limit: true },
         ].map(element => {
             //分割できるか調べる
-            if (this.order[this.turn].board.height / element.size >= 2 && this.order[this.turn].board.width / element.size >= 2) {
+            if (this.current.height / element.size >= 2 && this.current.width / element.size >= 2) {
                 /*
                 let calcMatchValue = this.matchValue();
                 let calcLength = this.turn;
                 console.log("size" + element.size);
                 */
-                let boardInfo = new Array(Math.floor(this.order[this.turn].board.height / element.size) * Math.floor(this.order[this.turn].board.width / element.size)).fill(0);
+                let boardInfo = new Array(Math.floor(this.current.height / element.size) * Math.floor(this.current.width / element.size)).fill(0);
 
                 //分割したボードの情報を整理する
                 const initialization = (boardInfo) => {
                     let count = 0;
-                    for (let i = 0; i < Math.floor(this.order[this.turn].board.height / element.size); i++) {
-                        for (let j = 0; j < Math.floor(this.order[this.turn].board.width / element.size); j++) {
+                    for (let i = 0; i < Math.floor(this.current.height / element.size); i++) {
+                        for (let j = 0; j < Math.floor(this.current.width / element.size); j++) {
                             boardInfo[count] = { position: [j * element.size, i * element.size], matchValue: 0, currentArray: new Array(element.size).fill(0), goalArray: new Array(element.size).fill(0), selectFlag: false };
                             for (let k = 0; k < element.size; k++) {
                                 let temporaryArray = [new Array(element.size).fill(0), new Array(element.size).fill(0)];
                                 for (let l = 0; l < element.size; l++) {
-                                    temporaryArray[0][l] = this.order[this.turn].board.array[k + i * element.size][l + j * element.size];
+                                    temporaryArray[0][l] = this.current.array[k + i * element.size][l + j * element.size];
                                     temporaryArray[1][l] = this.goal.array[k + i * element.size][l + j * element.size];
-                                    if (this.order[this.turn].board.array[k + i * element.size][l + j * element.size] == this.goal.array[k + i * element.size][l + j * element.size]) {
+                                    if (this.current.array[k + i * element.size][l + j * element.size] == this.goal.array[k + i * element.size][l + j * element.size]) {
                                         boardInfo[count].matchValue++;
                                     }
                                 }
@@ -841,8 +854,8 @@ class Answer {
         //現在と正解の配列の情報を取得する
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.turn].board.array[i][j] != this.goal.array[i][j]) {
-                    currentInfo.push({ value: this.order[this.turn].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.turn].board.array[i][j] == this.goal.array[i][j] ? true : false });
+                if (this.current.array[i][j] != this.goal.array[i][j]) {
+                    currentInfo.push({ value: this.current.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.current.array[i][j] == this.goal.array[i][j] ? true : false });
                 }
             }
         }
@@ -898,30 +911,6 @@ class Answer {
             };
         };
 
-        /** 許容手数量を超えたら一致数を最大値まで遡って強制終了させる関数*/
-        const forcedTermination = () => {
-            //許容手数量を超えているか検知する
-            if (this.turn >= 30000) {
-                //三万手までカットする
-                this.order = this.order.slice(0, 30001);
-                this.turn = 30000;
-                let max = this.matchValue();
-                let maxTurn = 30000;
-                //手数の後ろから比較して一致数の最大値を決める(swap関数の性質上15手以上のスワップはないので安牌を取って20まで遡ったら比較をやめる)
-                for (let i = 0; i < 20; i++) {
-                    if (this.matchValue(this.order[this.turn - i].board.array) > max) {
-                        max = this.matchValue(this.order[this.turn - i].board.array);
-                        maxTurn = -i;
-                    }
-                }
-                //最大値の手までカットする
-                this.turn = this.turn + maxTurn;
-                this.order = this.order.slice(0, maxTurn);
-                this.terminationFlag = true;
-                console.log("許容手数量を超えたためプログラムを終了します");
-            }
-        }
-
         //ペアのソート
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
             if (!this.terminationFlag) {
@@ -961,7 +950,6 @@ class Answer {
                     //ソートを行う
                     sort(positionInfo, pairSort);
                     currentInfo = currentInfo.filter(element => !element.selectFlag);
-                    forcedTermination();
                 }
             }
         });
@@ -1041,7 +1029,6 @@ class Answer {
                     //ソートを行う
                     sort(positionInfo, trioSort);
                     currentInfo = currentInfo.filter(element => !element.selectFlag);
-                    forcedTermination();
                 }
             }
         });
@@ -1123,7 +1110,6 @@ class Answer {
 
                 //ソートを行う
                 sort(positionInfo, quartetSort);
-                forcedTermination();
             }
         }
     }
@@ -1133,12 +1119,7 @@ class Answer {
  * 操作手順の内容を記録するクラス
  */
 class Order {
-    constructor(board, patternNumber, position, direction) {
-        /**
-         * 操作手順の内容
-         * @type {Board}
-         */
-        this.board = board;
+    constructor(patternNumber, position, direction) {
         /**
          * 抜き型の番号
          * @type {number}
