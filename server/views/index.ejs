@@ -5,9 +5,42 @@
     <link rel='stylesheet' href='/stylesheets/style.css' />
   </head>
   <body>
-    <h1>Board Process Orders</h1>
+    <!-- <h1>Board Process Orders</h1>
     <% for (let i = 0; i < datas[0]?.array?.length; i++) { %>
       <p><%= datas[0]?.array[i] %></p>
-    <% } %>
+    <% } %> -->
+      <button id="start">start</button>
+      <p id="log"><%= log %></p>
   </body>
+
+  <script>
+    const startButton = document.getElementById("start");
+    const logArea = document.getElementById("log");
+    startButton.addEventListener("click", () => {
+      logArea.textContent = "";
+      // main.js の実行を開始する
+      fetch("/start")
+        .then(response => {
+          // 送信されるストリームを読み込むリーダー
+          const reader = response.body.getReader();
+          // バイナリのテキストを変換するデコーダー
+          const decoder = new TextDecoder();
+          // 送信されたテキストを読み込む
+          return reader.read().then(
+            // 読み込んだテキストデータを処理する
+            function processText(result) {
+              // ストリームの読み取りが完了していれば終了する（再帰用の処理）
+              if (result.done) return;
+              // 読み込んでいないデータチャンクがあれば
+              // テキストデータをデコードする
+              logArea.textContent += decoder.decode(result.value);
+              // 再帰してストリームが終了するまで再度デコードする
+              return reader.read().then(processText);
+            }
+          );
+
+        })
+        .catch(err => console.error("Fetch failed.", err));
+    });
+  </script>
 </html>
