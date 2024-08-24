@@ -1,6 +1,7 @@
 const { padStart, min, values, first, result } = require("lodash");
 const cloneDeep = require("lodash/cloneDeep");
 const fs = require('fs');
+const { count } = require("console");
 
 class BoardData {
     /**
@@ -244,19 +245,14 @@ class Answer {
 
     terminationFlag = false;
 
-    get orderLength() {
-        return this.order.length - 1;
-    }
-
     /**
      * @param {Board} start
      * @param {Board} goal
      * @param {Board[]} patterns
      */
     constructor(start, goal, patterns) {
-        //初期状態はボードの状態だけが保存されることとする
-        /**中にOrderクラスが入っている */
-        this.order[0] = new Order(start, null, null, null);
+        /**現在のボード */
+        this.current = start;
         /**問題の完成形 */
         this.goal = goal;
         /**現在処理しているターン数 */
@@ -265,63 +261,26 @@ class Answer {
         this.patterns = patterns;
     }
 
+    get latestOrder() {
+        return this.this.current;
+    }
+
     /**一番最後のOrderを表示する */
-    latestOrder() {
-        console.log("現在" + (this.orderLength) + "手目");
-        console.log(this.order[this.orderLength].board.array);
+    showLatestOrder() {
+        console.log("現在" + (this.turn) + "手目");
+        console.log(this.current.array);
     }
 
-    match() {
+    matchValue(array1 = this.current.array, array2 = this.goal.array) {
         let match = 0;
-        let boardFlag = new Array(this.goal.height).fill(0).map(array => array = new Array(this.goal.width).fill(4));
-        for (let i = 0; i < this.goal.height; i++) {
-            for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j]) {
-                    match++;
-                }
-            }
-        }
-        console.log("一致数:" + match);
-    }
-
-    goalMatch() {
-        let match = 0;
-        let boardFlag = new Array(this.goal.height).fill(0).map(array => array = new Array(this.goal.width).fill(4));
-        for (let i = 0; i < this.goal.height; i++) {
-            for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength].board.array[i][j] != this.goal.array[i][j]) {
-                    boardFlag[i][j] = this.goal.array[i][j];
-                }
-                else {
-                    match++;
-                }
-            }
-        }
-        console.log(boardFlag);
-    }
-
-    matchValue(value = 0) {
-        let match = 0;
-        for (let i = 0; i < this.goal.height; i++) {
-            for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength - value].board.array[i][j] == this.goal.array[i][j]) {
+        for (let i = 0; i < array1.length; i++) {
+            for (let j = 0; j < array1[0].length; j++) {
+                if (array1[i][j] == array2[i][j]) {
                     match++;
                 }
             }
         }
         return match;
-    }
-
-    /** 
-    * orderに操作内容をpushし追加で保存する関数
-    * (右の条件で操作した後の配列,使用した抜き型の配列,座標,方向)
-    * @param {number} patternNumber 抜き型の番号
-    * @param {number[]} position 座標の値(x,y)
-    * @param {number} direction 方向指定
-    */
-    add(patternNumber, position, direction) {
-        this.order.push(new Order(this.#pullOut(this.order[this.turn].board, patternNumber, position, direction), patternNumber, position, direction));
-        this.turn++;
     }
 
     /**
@@ -333,7 +292,6 @@ class Answer {
     * @returns 
     */
     #pullOut(board, patternNumber, position, direction) {
-
         //エラー処理
         /**エラーが起きたか判定する */
         //主にエラー内容が共存できる部分があるので必要である
@@ -353,96 +311,83 @@ class Answer {
             return null;
         }
 
-        //主な処理内容
-        //転置や変形などを行うため配列の内容をコピーする
-        let clonePattern = cloneDeep(this.patterns[patternNumber]);
-        //縦方向の操作の場合ボードと抜き型の転置、またx,y座標の交換を行う
-        if (direction % 2 == 1) {
-            board.transpose();
-            clonePattern.transpose();
-            let swap = position[0];
-            position[0] = position[1];
-            position[1] = swap;
-        }
-
-        //抜き型がボードからはみ出している場合その部分を切り取る
-        if (position[1] < 0) {
-            clonePattern.array = clonePattern.array.slice(Math.abs(position[1]));
-            position[1] = 0;
-        }
-        if (position[0] < 0) {
-            clonePattern.array = clonePattern.array.map(array => array.slice(Math.abs(position[0])));
-            position[0] = 0;
-        }
-        if (board.width - clonePattern.width - position[0] < 0) {
-            clonePattern.array = clonePattern.array.slice(0, board.height - position[1]).map(array => array.slice(0, board.width - position[0]));
-        }
-
-        //ボードの要素が変更されたか確認するために先にフラグを上げる
         errorFlag = true;
 
-        /** n行目の配列に対してpullOutを返す関数*/
-        const pull = (i) => {
-            /**変形した後の抜き型 */
-            let advancedPattern = [];
+        switch (direction) {
+            case 1:
+            case 3:
+                for (let i = 0 < position[0] ? position[0] : 0; i < Math.min(board.width, this.patterns[patternNumber].width + position[0]); i++) {
+                    let line = new Array(board.height).fill(0);
+                    for (let j = 0; j < board.height; j++) {
+                        if (patternNumber == 0) {
+                            line[j] = { value: board.array[j][i], key: j - position[1] == 0 ? 1 : 0 };
+                        }
+                        else {
+                            line[j] = { value: board.array[j][i], key: this.patterns[patternNumber].array[j - position[1]] ? this.patterns[patternNumber].array[j - position[1]][i - position[0]] ?? 0 : 0 };
+                        }
+                    }
 
-            //今現在の行が操作すべき行であるか確認する
-            if (position[1] <= i && i < position[1] + clonePattern.height) {
-                //抜き型についてBoardの横幅に合わせるために空白部分を0で埋める
-                if (clonePattern.dimension == 2) {
-                    advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array[i - position[1]].concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
-                }
-                else {
-                    advancedPattern = new Array(position[0]).fill(0).concat(clonePattern.array.concat(new Array(board.width - clonePattern.width - position[0]).fill(0)));
-                }
-                //console.log(advancedPattern);
-                //advancedPatternの中に1が一つでもある場合、配列の要素は移動するということなのでフラグを下げる
-                if (advancedPattern.filter((element) => element == 1).length != 0 && errorFlag == true) {
-                    errorFlag = false;
-                }
+                    if (line.filter(element => element.key == 1).length != 0) {
+                        errorFlag = false;
+                    }
 
-                //連想配列にすることでadvancedPatternとボードの持つ配列の情報を紐づけ、フィルターで必要な値を選択し返すようにする
-                let j = 0;
-                /**抜き型で1の部分を並べた配列 */
-                let pulledOutArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 1).map(element => element.value);
-                j = 0;
-                /**抜き型で0の部分を並べた配列 */
-                let temporaryArray = advancedPattern.map(element => element = { 'key': element, 'value': board.array[i][j++] }).filter(element => element.key == 0).map(element => element.value);
-
-                //寄せ方によって結合する順番を変える
-                switch (direction) {
-                    case 1:
-                    case 4:
-                        return temporaryArray.concat(pulledOutArray);
-                    case 2:
-                    case 3:
-                        return pulledOutArray.concat(temporaryArray);
+                    if (direction == 1) {
+                        line = line.filter(element => element.key == 0).concat(line.filter(element => element.key == 1));
+                    }
+                    else {
+                        line = line.filter(element => element.key == 1).concat(line.filter(element => element.key == 0));
+                    }
+                    for (let j = 0; j < board.height; j++) {
+                        board.array[j][i] = line[j].value;
+                    }
                 }
-            }
-            //操作すべきでない行はそのままの配列を返す
-            else {
-                return board.array[i];
-            }
+                if (errorFlag) {
+                    console.log("操作された要素がありません");
+                }
+                return board;
+            case 2:
+            case 4:
+                for (let i = 0 < position[1] ? position[1] : 0; i < Math.min(board.width, this.patterns[patternNumber].width + position[1]); i++) {
+                    let line = new Array(board.width).fill(0);
+                    for (let j = 0; j < board.width; j++) {
+                        if (patternNumber == 0) {
+                            line[j] = { value: board.array[i][j], key: j - position[0] == 0 ? 1 : 0 };
+                        }
+                        else {
+                            line[j] = { value: board.array[i][j], key: this.patterns[patternNumber].array[i - position[1]] ? this.patterns[patternNumber].array[i - position[1]][j - position[0]] ?? 0 : 0 };
+                        }
+                    }
+
+                    if (line.filter(element => element.key == 1).length != 0) {
+                        errorFlag = false;
+                    }
+
+                    if (direction == 4) {
+                        line = line.filter(element => element.key == 0).concat(line.filter(element => element.key == 1)).map(element => element.value);
+                    }
+                    else {
+                        line = line.filter(element => element.key == 1).concat(line.filter(element => element.key == 0)).map(element => element.value);
+                    }
+                    board.array[i] = line;
+                }
+                if (errorFlag) {
+                    console.log("操作された要素がありません");
+                }
+                return board;
         }
+    }
 
-        //pull関数を用いて全ての列に対して操作を行う
-        //0,1,2,.....となるような配列を作り、mapに読み込ませn行目の作業を行う
-        let array = new Array(board.height).fill(0).map((_, i) => i++).map(i => pull(i));
-
-        //一度も要素がしなかった場合エラーを表示しnullを返す
-        if (errorFlag == true) {
-            console.error("pullOut関数:使用した抜き型の要素に1がなかったため有効な操作になりませんでした");
-            return null;
-        }
-
-        let returnBoard = new Board(array);
-
-        //縦方向の操作の場合最後に配列の転置を行う
-        if (direction % 2 == 1) {
-            returnBoard.transpose();
-        }
-
-        return returnBoard;
+    /** 
+    * orderに操作内容をpushし追加で保存する関数
+    * (右の条件で操作した後の配列,使用した抜き型の配列,座標,方向)
+    * @param {number} patternNumber 抜き型の番号
+    * @param {number[]} position 座標の値(x,y)
+    * @param {number} direction 方向指定
+    */
+    add(patternNumber, position, direction) {
+        this.order.push(new Order(patternNumber, position, direction));
+        this.current = this.#pullOut(this.current, patternNumber, position, direction);
+        this.turn++;
     }
 
     /**
@@ -455,6 +400,11 @@ class Answer {
      * @returns
      */
     swap(position1, position2, size = 1, priorityCell = 0, inspection = true) {
+        if(this.turn>=29995){
+            console.log("許容手数量を超えたためプログラムを終了します");
+            this.terminationFlag=true;
+            return 0;
+        }
 
         if (inspection == true) {
             // エラー処理
@@ -462,20 +412,20 @@ class Answer {
             //主にエラー内容が共存できる部分があるので必要である
             let errorFlag = false;
             //それぞれのx座標がボードからはみ出していないか調べる
-            if (position1[0] < 0 || this.order[this.turn].board.width - size < position1[0]) {
+            if (position1[0] < 0 || this.current.width - size < position1[0]) {
                 console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
-            if (position2[0] < 0 || this.order[this.turn].board.width - size < position2[0]) {
+            if (position2[0] < 0 || this.current.width - size < position2[0]) {
                 console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
             //それぞれのy座標がボードからはみ出していないか調べる
-            if (position1[1] < 0 || this.order[this.turn].board.height - size < position1[1]) {
+            if (position1[1] < 0 || this.current.height - size < position1[1]) {
                 console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
-            if (position2[1] < 0 || this.order[this.turn].board.height - size < position2[1]) {
+            if (position2[1] < 0 || this.current.height - size < position2[1]) {
                 console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
@@ -509,9 +459,9 @@ class Answer {
                 /**操作する配列の左側 */
                 let leftLength = position[i][i] < position[2][i] ? position[i][i] : position[2][i];
                 /**操作する配列の右側 */
-                let rightLength = (i == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - (position[i][i] < position[2][i] ? position[2][i] : position[i][i]) - size;
+                let rightLength = (i == 0 ? this.current.width : this.current.height) - (position[i][i] < position[2][i] ? position[2][i] : position[i][i]) - size;
                 /**操作する配列の真ん中 */
-                let middleLength = (i == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - leftLength - rightLength - 2 * size;
+                let middleLength = (i == 0 ? this.current.width : this.current.height) - leftLength - rightLength - 2 * size;
                 /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
                 let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
                 //lengthFlagの値から優先度を設定する
@@ -586,280 +536,326 @@ class Answer {
         /**操作する配列の左側 */
         let leftLength = position1[type] < position2[type] ? position1[type] : position2[type];
         /**操作する配列の右側 */
-        let rightLength = (type == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - (position1[type] < position2[type] ? position2[type] : position1[type]) - size;
+        let rightLength = (type == 0 ? this.current.width : this.current.height) - (position1[type] < position2[type] ? position2[type] : position1[type]) - size;
         /**操作する配列の真ん中 */
-        let middleLength = (type == 0 ? this.order[this.turn].board.width : this.order[this.turn].board.height) - leftLength - rightLength - 2 * size;
+        let middleLength = (type == 0 ? this.current.width : this.current.height) - leftLength - rightLength - 2 * size;
 
         /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
         let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
         /**サイズに対しての定型抜き型の番号 */
         let patternType = size == 1 ? 0 : (Math.log2(size) - 1) * 3 + 1;
         /**pullOutに渡す座標 */
-        let position = new Array(2).fill(0);
+        let position = [new Array(2).fill(0), new Array(2).fill(0), new Array(2).fill(0), new Array(2).fill(0), new Array(2).fill(0)];
         //lengthFlagから交換の仕方を決める
         switch (lengthFlag) {
             case 111:
                 //L-E1-C-E2-R(5手)
                 //E1-C-E2-R-L(L
-                position[type] = leftLength - 256;
-                position[Math.abs(type - 1)] = 0;
-                this.add(22, position, type == 0 ? 4 : 1);
+                position[0][type] = leftLength - 256;
+                position[0][Math.abs(type - 1)] = 0;
+                this.add(22, position[0], type == 0 ? 4 : 1);
                 //E2-E1-C-R-L(E2
-                position[type] = size + middleLength;
-                position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-                this.add(patternType, position, type == 0 ? 2 : 3);
+                position[1][type] = size + middleLength;
+                position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                this.add(patternType, position[1], type == 0 ? 2 : 3);
                 //R-L-E2-E1-C(R-L
-                position[type] = size * 2 + middleLength;
-                position[Math.abs(type - 1)] = 0;
-                this.add(22, position, type == 0 ? 2 : 3);
+                position[2][type] = size * 2 + middleLength;
+                position[2][Math.abs(type - 1)] = 0;
+                this.add(22, position[2], type == 0 ? 2 : 3);
                 //R-L-E2-C-E1(E1
-                position[type] = rightLength + leftLength + size;
-                position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
-                this.add(patternType, position, type == 0 ? 4 : 1);
+                position[3][type] = rightLength + leftLength + size;
+                position[3][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                this.add(patternType, position[3], type == 0 ? 4 : 1);
                 //L-E2-C-E1-R(R
-                position[type] = rightLength - 256;
-                position[Math.abs(type - 1)] = 0;
-                this.add(22, position, type == 0 ? 4 : 1);
+                position[4][type] = rightLength - 256;
+                position[4][Math.abs(type - 1)] = 0;
+                this.add(22, position[4], type == 0 ? 4 : 1);
                 break;
             case 11:
                 //E1-C-E2-R(4手)
                 //E2-E1-C-R(E2
-                position[type] = size + middleLength;
-                position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-                this.add(patternType, position, type == 0 ? 2 : 3);
+                position[0][type] = size + middleLength;
+                position[0][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                this.add(patternType, position[0], type == 0 ? 2 : 3);
                 //R-E2-E1-C(R
-                position[type] = size * 2 + middleLength;
-                position[Math.abs(type - 1)] = 0;
-                this.add(22, position, type == 0 ? 2 : 3);
+                position[1][type] = size * 2 + middleLength;
+                position[1][Math.abs(type - 1)] = 0;
+                this.add(22, position[1], type == 0 ? 2 : 3);
                 //R-E2-C-E1(E1
-                position[type] = rightLength + size;
-                position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
-                this.add(patternType, position, type == 0 ? 4 : 1);
+                position[2][type] = rightLength + size;
+                position[2][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                this.add(patternType, position[2], type == 0 ? 4 : 1);
                 //E2-C-E1-R(R
-                position[type] = rightLength - 256;
-                position[Math.abs(type - 1)] = 0;
-                this.add(22, position, type == 0 ? 4 : 1);
+                position[3][type] = rightLength - 256;
+                position[3][Math.abs(type - 1)] = 0;
+                this.add(22, position[3], type == 0 ? 4 : 1);
                 break;
             case 110:
                 //L-E1-C-E2(4手)
                 //L-C-E2-E1(E1
-                position[type] = leftLength;
-                position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
-                this.add(patternType, position, type == 0 ? 4 : 1);
+                position[0][type] = leftLength;
+                position[0][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                this.add(patternType, position[0], type == 0 ? 4 : 1);
                 //C-E2-E1-L(L
-                position[type] = leftLength - 256;
-                position[Math.abs(type - 1)] = 0;
-                this.add(22, position, type == 0 ? 4 : 1);
+                position[1][type] = leftLength - 256;
+                position[1][Math.abs(type - 1)] = 0;
+                this.add(22, position[1], type == 0 ? 4 : 1);
                 //E2-C-E1-L(E2
-                position[type] = middleLength;
-                position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-                this.add(patternType, position, type == 0 ? 2 : 3);
+                position[2][type] = middleLength;
+                position[2][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                this.add(patternType, position[2], type == 0 ? 2 : 3);
                 //L-E2-C-E1(L
-                position[type] = size * 2 + middleLength;
-                position[Math.abs(type - 1)] = 0;
-                this.add(22, position, type == 0 ? 2 : 3);
+                position[3][type] = size * 2 + middleLength;
+                position[3][Math.abs(type - 1)] = 0;
+                this.add(22, position[3], type == 0 ? 2 : 3);
                 break;
             case 101:
                 if (priorityCell == 1) {
                     //L-E1-E2-R(3手)
                     //R-L-E1-E2(R
-                    position[type] = leftLength + size * 2 + middleLength;
-                    position[Math.abs(type - 1)] = 0;
-                    this.add(22, position, type == 0 ? 2 : 3);
+                    position[0][type] = leftLength + size * 2 + middleLength;
+                    position[0][Math.abs(type - 1)] = 0;
+                    this.add(22, position[0], type == 0 ? 2 : 3);
                     //R-L-E2-E1(E1
-                    position[type] = rightLength + leftLength;
-                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-                    this.add(patternType, position, type == 0 ? 4 : 1);
+                    position[1][type] = rightLength + leftLength;
+                    position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position[1], type == 0 ? 4 : 1);
                     //L-E2-E1-R(R
-                    position[type] = rightLength - 256;
-                    position[Math.abs(type - 1)] = 0;
-                    this.add(22, position, type == 0 ? 4 : 1);
+                    position[2][type] = rightLength - 256;
+                    position[2][Math.abs(type - 1)] = 0;
+                    this.add(22, position[2], type == 0 ? 4 : 1);
                 }
                 else {
                     //L-E1-E2-R(3手)
                     //E1-E2-R-L(L
-                    position[type] = leftLength - 256;
-                    position[Math.abs(type - 1)] = 0;
-                    this.add(22, position, type == 0 ? 4 : 1);
+                    position[0][type] = leftLength - 256;
+                    position[0][Math.abs(type - 1)] = 0;
+                    this.add(22, position[0], type == 0 ? 4 : 1);
                     //E2-E1-R-L(E2
-                    position[type] = size + middleLength;
-                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-                    this.add(patternType, position, type == 0 ? 2 : 3);
+                    position[1][type] = size + middleLength;
+                    position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position[1], type == 0 ? 2 : 3);
                     //L-E2-E1-R(L
-                    position[type] = size * 2 + middleLength + rightLength;
-                    position[Math.abs(type - 1)] = 0;
-                    this.add(22, position, type == 0 ? 2 : 3);
+                    position[2][type] = size * 2 + middleLength + rightLength;
+                    position[2][Math.abs(type - 1)] = 0;
+                    this.add(22, position[2], type == 0 ? 2 : 3);
                 }
                 break;
             case 10:
                 //E1-C-E2(2手)
                 //C-E2-E1(E1
-                position[type] = 0;
-                position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
-                this.add(patternType, position, type == 0 ? 4 : 1);
+                position[0][type] = 0;
+                position[0][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                this.add(patternType, position[0], type == 0 ? 4 : 1);
                 //E2-C-E1(E2
-                position[type] = middleLength;
-                position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-                this.add(patternType, position, type == 0 ? 2 : 3);
+                position[1][type] = middleLength;
+                position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                this.add(patternType, position[1], type == 0 ? 2 : 3);
                 break;
             case 100:
                 if (priorityCell == 2) {
                     //L-E1-E2(3手)
                     //E1-E2-L(L
-                    position[type] = leftLength - 256;
-                    position[Math.abs(type - 1)] = 0;
-                    this.add(22, position, type == 0 ? 4 : 1);
+                    position[0][type] = leftLength - 256;
+                    position[0][Math.abs(type - 1)] = 0;
+                    this.add(22, position[0], type == 0 ? 4 : 1);
                     //E2-E1-L(E2
-                    position[type] = size + middleLength;
-                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-                    this.add(patternType, position, type == 0 ? 2 : 3);
+                    position[1][type] = size + middleLength;
+                    position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position[1], type == 0 ? 2 : 3);
                     //L-E2-E1(L
-                    position[type] = size * 2 + middleLength;
-                    position[Math.abs(type - 1)] = 0;
-                    this.add(22, position, type == 0 ? 2 : 3);
+                    position[2][type] = size * 2 + middleLength;
+                    position[2][Math.abs(type - 1)] = 0;
+                    this.add(22, position[2], type == 0 ? 2 : 3);
                 }
                 else {
                     //L-E1-E2(1手)
                     //L-E2-E1(E1
-                    position[type] = leftLength;
-                    position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
-                    this.add(patternType, position, type == 0 ? 4 : 1);
+                    position[0][type] = leftLength;
+                    position[0][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                    this.add(patternType, position[0], type == 0 ? 4 : 1);
                 }
                 break;
             case 1:
                 if (priorityCell == 1) {
                     //E1-E2-R(3手)
                     //R-E1-E2(R
-                    position[type] = size * 2 + middleLength;
-                    position[Math.abs(type - 1)] = 0;
-                    this.add(22, position, type == 0 ? 2 : 3);
+                    position[0][type] = size * 2 + middleLength;
+                    position[0][Math.abs(type - 1)] = 0;
+                    this.add(22, position[0], type == 0 ? 2 : 3);
                     //R-E2-E1(E1
-                    position[type] = rightLength;
-                    position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
-                    this.add(patternType, position, type == 0 ? 4 : 1);
+                    position[1][type] = rightLength;
+                    position[1][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                    this.add(patternType, position[1], type == 0 ? 4 : 1);
                     //E2-E1-R(R
-                    position[type] = rightLength - 256;
-                    position[Math.abs(type - 1)] = 0;
-                    this.add(22, position, type == 0 ? 4 : 1);
+                    position[2][type] = rightLength - 256;
+                    position[2][Math.abs(type - 1)] = 0;
+                    this.add(22, position[2], type == 0 ? 4 : 1);
                 }
                 else {
                     //E1-E2-R(1手)
                     //E2-E1-R(E2
-                    position[type] = size + middleLength;
-                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-                    this.add(patternType, position, type == 0 ? 2 : 3);
+                    position[0][type] = size + middleLength;
+                    position[0][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position[0], type == 0 ? 2 : 3);
                 }
                 break;
             case 0:
                 if (priorityCell == 2) {
                     //E1-E2(1手)
                     //E2-E1(E2
-                    position[type] = size + middleLength;
-                    position[Math.abs(type - 1)] = position2[Math.abs(type - 1)];
-                    this.add(patternType, position, type == 0 ? 2 : 3);
+                    position[0][type] = size + middleLength;
+                    position[0][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
+                    this.add(patternType, position[0], type == 0 ? 2 : 3);
                 }
                 else {
                     //E1-E2(1手)
                     //E2-E1(E1
-                    position[type] = 0;
-                    position[Math.abs(type - 1)] = position1[Math.abs(type - 1)];
-                    this.add(patternType, position, type == 0 ? 4 : 1);
+                    position[0][type] = 0;
+                    position[0][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
+                    this.add(patternType, position[0], type == 0 ? 4 : 1);
                 }
                 break;
         }
     }
 
     /**
-     * 0番目以外の定型抜き型を使ってソートを行う
+     * 定型抜き型を使いソートを行う
      */
-    allSortAdvanced() {
-        [128, 64, 32, 16, 8, 4, 2].map(size => {
-            if (this.order[this.orderLength].board.height / size >= 2 && this.order[this.orderLength].board.width / size >= 2) {
-                console.log("size" + size);
-                let boardInfo = new Array(Math.floor(this.order[this.orderLength].board.height / size)).fill(0);
-                let ofsetI = this.order[this.orderLength].board.height % size == 0 ? 0 : 1;
-                for (let i = 0; i < Math.floor(this.order[this.orderLength].board.height / size); i++) {
-                    let temporaryArray = new Array(Math.floor(this.order[this.orderLength].board.width / size));
-                    let ofsetJ = this.order[this.orderLength].board.width % size == 0 ? 0 : 1;
-                    for (let j = 0; j < Math.floor(this.order[this.orderLength].board.width / size); j++) {
-                        temporaryArray[j] = { position: [j * size + ofsetJ, i * size + ofsetI], matchValue: 0, currentArray: new Array(size).fill(0), goalArray: new Array(size).fill(0), selectFlag: false };
-                        for (let k = 0; k < size; k++) {
-                            let temporaryArray2 = [new Array(size).fill(0), new Array(size).fill(0)];
-                            for (let l = 0; l < size; l++) {
-                                temporaryArray2[0][l] = this.order[this.orderLength].board.array[k + temporaryArray[j].position[1]][l + temporaryArray[j].position[0]];
-                                temporaryArray2[1][l] = this.goal.array[k + temporaryArray[j].position[1]][l + temporaryArray[j].position[0]];
-                                if (this.order[this.orderLength].board.array[k + temporaryArray[j].position[1]][l + temporaryArray[j].position[0]] == this.goal.array[k + temporaryArray[j].position[1]][l + temporaryArray[j].position[0]]) {
-                                    temporaryArray[j].matchValue++;
+    allSort() {
+        //128~2の大きさの定型抜き型を使ってソートを行う
+        [{ size: 128, max: 30, limit: false },
+        { size: 64, max: 25, limit: false },
+        { size: 32, max: 20, limit: false },
+        { size: 16, max: 12, limit: false },
+        { size: 8, max: 8, limit: false },
+        { size: 4, max: 4, limit: true },
+        { size: 2, max: 2, limit: true },
+        ].map(element => {
+            //分割できるか調べる
+            if (this.current.height / element.size >= 2 && this.current.width / element.size >= 2) {
+                /*
+                let calcMatchValue = this.matchValue();
+                let calcLength = this.turn;
+                console.log("size" + element.size);
+                */
+                let boardInfo = new Array(Math.floor(this.current.height / element.size) * Math.floor(this.current.width / element.size)).fill(0);
+
+                //分割したボードの情報を整理する
+                const initialization = (boardInfo) => {
+                    let count = 0;
+                    for (let i = 0; i < Math.floor(this.current.height / element.size); i++) {
+                        for (let j = 0; j < Math.floor(this.current.width / element.size); j++) {
+                            boardInfo[count] = { position: [j * element.size, i * element.size], matchValue: 0, currentArray: new Array(element.size).fill(0), goalArray: new Array(element.size).fill(0), selectFlag: false };
+                            for (let k = 0; k < element.size; k++) {
+                                let temporaryArray = [new Array(element.size).fill(0), new Array(element.size).fill(0)];
+                                for (let l = 0; l < element.size; l++) {
+                                    temporaryArray[0][l] = this.current.array[k + i * element.size][l + j * element.size];
+                                    temporaryArray[1][l] = this.goal.array[k + i * element.size][l + j * element.size];
+                                    if (this.current.array[k + i * element.size][l + j * element.size] == this.goal.array[k + i * element.size][l + j * element.size]) {
+                                        boardInfo[count].matchValue++;
+                                    }
+                                }
+                                boardInfo[count].currentArray[k] = temporaryArray[0];
+                                boardInfo[count].goalArray[k] = temporaryArray[1];
+                            }
+                            count++;
+                        }
+                    }
+                }
+
+                //一つの分割領域に対して有効でなくなるまで交換し続ける交換方法
+                const loopSwap = (boardInfo, limit = false) => {
+                    let max = element.max;
+                    for (let i = 0; i < boardInfo.length; i++) {
+                        let swapFlag = true;
+                        while (swapFlag) {
+                            swapFlag = false;
+                            for (let j = 0; j < boardInfo.length; j++) {
+                                //limitが有効になっている場合直線的な交換しか行わないようになる(手順が短くなる)
+                                if ((i != j) && (limit ? (boardInfo[i].position[0] == boardInfo[j].position[0] || boardInfo[i].position[1] == boardInfo[j].position[1]) : true)) {
+                                    let swapedMatchValue = this.matchValue(boardInfo[i].goalArray, boardInfo[j].currentArray);
+                                    let targetSwapedMatchValue = this.matchValue(boardInfo[j].goalArray, boardInfo[i].currentArray);
+                                    if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > max) {
+                                        this.swap(boardInfo[i].position, boardInfo[j].position, element.size);
+                                        let swap = boardInfo[i].currentArray;
+                                        boardInfo[i].currentArray = boardInfo[j].currentArray;
+                                        boardInfo[j].currentArray = swap;
+                                        boardInfo[i].matchValue = swapedMatchValue;
+                                        boardInfo[j].matchValue = targetSwapedMatchValue;
+                                        swapFlag = true;
+                                    }
                                 }
                             }
-                            temporaryArray[j].currentArray[k] = temporaryArray2[0];
-                            temporaryArray[j].goalArray[k] = temporaryArray2[1];
                         }
                     }
-                    boardInfo[i] = temporaryArray;
                 }
 
-                const evaluate = (array, targetArray) => {
-                    let matchValue = 0;
-                    for (let i = 0; i < size; i++) {
-                        for (let j = 0; j < size; j++) {
-                            if (array[i][j] == targetArray[i][j]) {
-                                matchValue++;
-                            }
-                        }
-                    }
-                    return matchValue;
-                }
-
-                for (let i = 0; i < boardInfo.length; i++) {
-                    for (let j = 0; j < boardInfo[0].length; j++) {
-                        if (!boardInfo[i][j].selectFlag) {
-                            boardInfo[i][j].selectFlag = true;
-                            let max = size * size / 2;
+                //一つの分割領域に関して一番有効なもう一つの分割領域同士を一対一対応で交換する交換方法
+                const injectionSwap = (boardInfo, limit = false) => {
+                    for (let i = 0; i < boardInfo.length; i++) {
+                        if (!boardInfo[i].selectFlag) {
+                            boardInfo[i].selectFlag = true;
+                            let max = element.max;
                             let maxPosition = false;
-                            for (let k = 0; k < boardInfo.length; k++) {
-                                for (let l = 0; l < boardInfo[0].length; l++) {
-                                    if (!boardInfo[k][l].selectFlag && (i == k || j == l)) {
-                                        let swapedMatchValue = evaluate(boardInfo[i][j].goalArray, boardInfo[k][l].currentArray);
-                                        let targetSwapedMatchValue = evaluate(boardInfo[k][l].goalArray, boardInfo[i][j].currentArray);
-                                        if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i][j].matchValue - boardInfo[k][l].matchValue) > max) {
-                                            max = swapedMatchValue + targetSwapedMatchValue - boardInfo[i][j].matchValue - boardInfo[k][l].matchValue;
-                                            maxPosition = [l, k];
-                                        }
+                            for (let j = 0; j < boardInfo.length; j++) {
+                                //limitが有効になっている場合直線的な交換しか行わないようになる(手順が短くなる)
+                                if (!boardInfo[j].selectFlag && (limit ? (boardInfo[i].position[0] == boardInfo[j].position[0] || boardInfo[i].position[1] == boardInfo[j].position[1]) : true)) {
+                                    let swapedMatchValue = this.matchValue(boardInfo[i].goalArray, boardInfo[j].currentArray);
+                                    let targetSwapedMatchValue = this.matchValue(boardInfo[j].goalArray, boardInfo[i].currentArray);
+                                    if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > max) {
+                                        max = swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue;
+                                        maxPosition = j;
                                     }
                                 }
                             }
                             if (maxPosition) {
-                                boardInfo[maxPosition[1]][maxPosition[0]].selectFlag = true;
-                                this.swap(boardInfo[i][j].position, boardInfo[maxPosition[1]][maxPosition[0]].position, size);
+                                boardInfo[maxPosition].selectFlag = true;
+                                this.swap(boardInfo[i].position, boardInfo[maxPosition].position, element.size);
                             }
                         }
                     }
                 }
+                //loopSwapの方が交換回数が多くより厳密な交換ができるんじゃないかなぁ～と思ったので、両方作って組み合わせている
+
+                initialization(boardInfo);
+
+                //分割数が少ないほどより厳密な交換を行う
+                //しかしもともの問題が小さい場合、size=2のような終盤の交換も厳密にしてしまうので初期値にlimitを設定している
+                if (boardInfo.length < 200) {
+                    loopSwap(boardInfo, element.limit);
+                    injectionSwap(boardInfo, element.limit);
+                    initialization(boardInfo, element.limit);
+                    injectionSwap(boardInfo, element.limit);
+                }
+                else if (boardInfo.length < 2000) {
+                    loopSwap(boardInfo, true);
+                    injectionSwap(boardInfo, true);
+                }
+                else {
+                    injectionSwap(boardInfo, true);
+                }
+
+                /*
+                console.log("一致数変化" + (this.matchValue() - calcMatchValue));
+                console.log("手数変化" + (this.turn - calcLength));
+                console.log("効率:" + (this.matchValue() - calcMatchValue) / (this.turn - calcLength));
+                console.log("-------------");
+                */
             }
         });
-    }
 
-    /**
-     * 0番目の定型抜き型のみを使ってソートを行う
-     */
-    allSort() {
+        //1の大きさの定型抜き型のみを使ってソートを行う
         /**
          * 現在の配列の情報
          * @type {object[]}
          */
         let currentInfo = [];
-        /**
-         * 正解の配列の情報
-         * @type {object[]}
-         */
-        let goalInfo = [];
         //現在と正解の配列の情報を取得する
         for (let i = 0; i < this.goal.height; i++) {
             for (let j = 0; j < this.goal.width; j++) {
-                if (this.order[this.orderLength].board.array[i][j] != this.goal.array[i][j]) {
-                    currentInfo.push({ value: this.order[this.orderLength].board.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false });
-                    goalInfo.push({ value: this.goal.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.order[this.orderLength].board.array[i][j] == this.goal.array[i][j] ? true : false });
+                if (this.current.array[i][j] != this.goal.array[i][j]) {
+                    currentInfo.push({ value: this.current.array[i][j], position: [j, i], endFlag: (i == 0 || i == this.goal.height - 1 || j == 0 || j == this.goal.width) ? true : false, selectFlag: this.current.array[i][j] == this.goal.array[i][j] ? true : false });
                 }
             }
         }
@@ -915,51 +911,17 @@ class Answer {
             };
         };
 
-        /** 交換済みの座標を削除する*/
-        const memoryRelease = () => {
-            //現在の一致情報しか操作されていないので、ゴールの一致情報のフラグも上げる
-            for (let i = 0; i < currentInfo.length; i++) {
-                if (currentInfo[i].selectFlag) {
-                    goalInfo[i].selectFlag = true;
-                }
-            }
-            //filterメソッドによって選択済みの要素を削除する
-            currentInfo = currentInfo.filter(element => !element.selectFlag);
-            goalInfo = goalInfo.filter(element => !element.selectFlag);
-        };
-
-        /** 許容手数量を超えたら一致数を最大値まで遡って強制終了させる関数*/
-        const forcedTermination = () => {
-            //許容手数量を超えているか検知する
-            if (this.order.length > 30000) {
-                //三万手までカットする
-                this.order = this.order.slice(0, 30000);
-                let max = this.matchValue();
-                let maxTurn = this.order.length;
-                //手数の後ろから比較して一致数の最大値を決める(swap関数の性質上15手以上のスワップはないので安牌を取って20まで遡ったら比較をやめる)
-                for (let i = 0; i < 20; i++) {
-                    if (this.matchValue(i) > max) {
-                        max = this.matchValue(i);
-                        maxTurn = -i;
-                    }
-                }
-                //最大値の手までカットする
-                this.order = this.order.slice(0, maxTurn);
-                this.terminationFlag = true;
-                console.log("許容手数量を超えたためプログラムを終了します");
-            }
-        }
-
+        //ペアのソート
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
             if (!this.terminationFlag) {
                 let positionInfo = [[], []];
                 //ペアの交換になる座標を配列にまとめる
                 for (let i = 0; i < currentInfo.length; i++) {
                     if (!currentInfo[i].selectFlag) {
-                        if (currentInfo[i].value == pair[0] && goalInfo[i].value == pair[1]) {
+                        if (currentInfo[i].value == pair[0] && this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == pair[1]) {
                             positionInfo[0].push(currentInfo[i]);
                         }
-                        else if (currentInfo[i].value == pair[1] && goalInfo[i].value == pair[0]) {
+                        else if (currentInfo[i].value == pair[1] && this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == pair[0]) {
                             positionInfo[1].push(currentInfo[i]);
                         }
                     }
@@ -982,17 +944,17 @@ class Answer {
                     const pairSort = (result) => {
                         if (!this.terminationFlag) {
                             this.swap(result[0], result[1]);
-                            forcedTermination();
                         }
                     }
 
                     //ソートを行う
                     sort(positionInfo, pairSort);
-                    memoryRelease();
+                    currentInfo = currentInfo.filter(element => !element.selectFlag);
                 }
             }
         });
 
+        //トリオのソート
         [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
             if (!this.terminationFlag) {
                 let positionInfo = [[], [], []];
@@ -1004,27 +966,27 @@ class Answer {
                 let count = [{ key: trio[0], value: 0, goal: null }, { key: trio[1], value: 0, goal: null }, { key: trio[2], value: 0, goal: null }];
 
                 //トリオの交換になる座標を配列にまとめる
-                for (let j = 0; j < currentInfo.length; j++) {
-                    if (!currentInfo[j].selectFlag) {
-                        if (currentInfo[j].value == trio[0] && (goalInfo[j].value == trio[1] || goalInfo[j].value == trio[2])) {
+                for (let i = 0; i < currentInfo.length; i++) {
+                    if (!currentInfo[i].selectFlag) {
+                        if (currentInfo[i].value == trio[0] && (this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == trio[1] || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == trio[2])) {
                             count[0].value++;
-                            positionInfo[0].push(currentInfo[j]);
+                            positionInfo[0].push(currentInfo[i]);
                             if (!count[0].goal) {
-                                count[0].goal = goalInfo[j].value;
+                                count[0].goal = this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]];
                             }
                         }
-                        else if (currentInfo[j].value == trio[1] && (goalInfo[j].value == trio[0] || goalInfo[j].value == trio[2])) {
+                        else if (currentInfo[i].value == trio[1] && (this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == trio[0] || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == trio[2])) {
                             count[1].value++;
-                            positionInfo[1].push(currentInfo[j]);
+                            positionInfo[1].push(currentInfo[i]);
                             if (!count[1].goal) {
-                                count[1].goal = goalInfo[j].value;
+                                count[1].goal = this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]];
                             }
                         }
-                        else if (currentInfo[j].value == trio[2] && (goalInfo[j].value == trio[0] || goalInfo[j].value == trio[1])) {
+                        else if (currentInfo[i].value == trio[2] && (this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == trio[0] || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == trio[1])) {
                             count[2].value++;
-                            positionInfo[2].push(currentInfo[j]);
+                            positionInfo[2].push(currentInfo[i]);
                             if (!count[2].goal) {
-                                count[2].goal = goalInfo[j].value;
+                                count[2].goal = this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]];
                             }
                         }
                     }
@@ -1061,17 +1023,17 @@ class Answer {
                                 this.swap(result[1], result[2]);
                                 this.swap(result[0], result[1]);
                             }
-                            forcedTermination();
                         }
                     };
 
                     //ソートを行う
                     sort(positionInfo, trioSort);
-                    memoryRelease();
+                    currentInfo = currentInfo.filter(element => !element.selectFlag);
                 }
             }
         });
 
+        //カルテットのソート
         if (!this.terminationFlag) {
             let positionInfo = [[], [], [], []];
             let goalPattern = [null, null, null, null];
@@ -1079,28 +1041,28 @@ class Answer {
             //カルテットの交換になる座標を配列にまとめる
             for (let i = 0; i < currentInfo.length; i++) {
                 if (!currentInfo[i].selectFlag) {
-                    if (currentInfo[i].value == 0 && (goalInfo[i].value == 1 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                    if (currentInfo[i].value == 0 && (this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 1 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 2 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 3)) {
                         positionInfo[0].push(currentInfo[i]);
                         if (!goalPattern[0]) {
-                            goalPattern[0] = goalInfo[i].value;
+                            goalPattern[0] = this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]];
                         }
                     }
-                    else if (currentInfo[i].value == 1 && (goalInfo[i].value == 0 || goalInfo[i].value == 2 || goalInfo[i].value == 3)) {
+                    else if (currentInfo[i].value == 1 && (this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 0 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 2 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 3)) {
                         positionInfo[1].push(currentInfo[i]);
                         if (!goalPattern[1]) {
-                            goalPattern[1] = goalInfo[i].value;
+                            goalPattern[1] = this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]];
                         }
                     }
-                    else if (currentInfo[i].value == 2 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 3)) {
+                    else if (currentInfo[i].value == 2 && (this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 0 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 1 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 3)) {
                         positionInfo[2].push(currentInfo[i]);
                         if (!goalPattern[2]) {
-                            goalPattern[2] = goalInfo[i].value;
+                            goalPattern[2] = this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]];
                         }
                     }
-                    else if (currentInfo[i].value == 3 && (goalInfo[i].value == 0 || goalInfo[i].value == 1 || goalInfo[i].value == 2)) {
+                    else if (currentInfo[i].value == 3 && (this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 0 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 1 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 2)) {
                         positionInfo[3].push(currentInfo[i]);
                         if (!goalPattern[3]) {
-                            goalPattern[3] = goalInfo[i].value;
+                            goalPattern[3] = this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]];
                         }
                     }
                 }
@@ -1143,7 +1105,6 @@ class Answer {
                             this.swap(result[0], result[3]);
                         }
                         this.swap(result[2], result[3]);
-                        forcedTermination();
                     }
                 };
 
@@ -1158,12 +1119,7 @@ class Answer {
  * 操作手順の内容を記録するクラス
  */
 class Order {
-    constructor(board, patternNumber, position, direction) {
-        /**
-         * 操作手順の内容
-         * @type {Board}
-         */
-        this.board = board;
+    constructor(patternNumber, position, direction) {
         /**
          * 抜き型の番号
          * @type {number}

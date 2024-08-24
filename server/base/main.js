@@ -54,19 +54,14 @@ console.log("一致数:" + boardData.answer.matchValue());
 
 measureStart();
 
-boardData.answer.allSortAdvanced();
-
-console.log("一致数:" + boardData.answer.matchValue());
-
-console.log("合計手数:" + boardData.answer.orderLength);
-
 boardData.answer.allSort();
 
 measureFinish();
 
 console.log("一致数:" + boardData.answer.matchValue());
 
-console.log("合計手数:" + boardData.answer.orderLength);
+console.log("合計手数:" + boardData.answer.turn);
+
 
 //測定結果表示
 console.log("計算時間=" + result + "秒");
