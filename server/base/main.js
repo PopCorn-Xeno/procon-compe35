@@ -55,7 +55,7 @@ node main.js
 
 const boardData = new BoardData(null, null, 256, 256);
 
-console.log("一致数:" + boardData.answer.matchValue());
+console.log("一致数:" + boardData.answer.countMatchValue());
 
 measureStart();
 
@@ -63,7 +63,7 @@ boardData.answer.allSort();
 
 measureFinish();
 
-console.log("一致数:" + boardData.answer.matchValue());
+console.log("一致数:" + boardData.answer.countMatchValue());
 
 console.log("合計手数:" + boardData.answer.turn);
 
