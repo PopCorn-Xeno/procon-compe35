@@ -1,6 +1,7 @@
 //ファイルインポート
 const { BoardData, Board } = require("./functions/class");
 const fs = require('fs');
+const { inspect } = require("util");
 
 let accuracy = 0, start = 0, result = 0;
 
@@ -35,6 +36,10 @@ const measurePerformance = () => {
     fs.writeFile('./functions/log/orderLength.txt', JSON.stringify(measureOrderLength, undefined, ' '), 'utf-8', (err) => { });
 }
 
+function fullLog(data) {
+    console.log(inspect(data, { maxArrayLength: null }));
+}
+
 /* メモリ強化版
  * node --max-old-space-size=32000 main.js
  */
@@ -48,7 +53,7 @@ node main.js
 
 //measurePerformance();
 
-const boardData = new BoardData(null, 256, 256);
+const boardData = new BoardData(null, 128, 128);
 
 console.log("一致数:" + boardData.answer.matchValue());
 
@@ -65,3 +70,5 @@ console.log("合計手数:" + boardData.answer.turn);
 
 //測定結果表示
 console.log("計算時間=" + result + "秒");
+
+// fullLog(boardData.answer.current.array);
