@@ -8,7 +8,7 @@ class BoardData {
      * この問題の解答
      * @type {Answer}
      */
-    answer
+    answer;
 
     /** ボードの情報 */
     #board = {
@@ -291,35 +291,72 @@ class Answer {
      */
     patterns = [];
 
+    /**
+     * 現在のボード
+     * @type {Board}
+     */
+    current;
+
+    /**
+     * 問題の完成形（解答のボード）
+     * @type {Board}
+     */
+    goal;
+
+    /**
+     * 経過ターン数
+     * @type {number}
+     */
+    turn;
+
+    /**
+     * 使う抜き型のデータ
+     * このクラスにも読み込んでおく
+     * @type {Board[]}
+     */
+    pattern;
+
+    /**
+     * 操作の終了フラグ
+     * @type {boolean}
+     */
     terminationFlag = false;
 
     /**
-     * @param {Board} start
-     * @param {Board} goal
-     * @param {Board[]} patterns
+     * @param {Board} start 初期状態のボード
+     * @param {Board} goal 解答のボード
+     * @param {Board[]} patterns 使用する抜き型
      */
     constructor(start, goal, patterns) {
-        /**現在のボード */
         this.current = start;
-        /**問題の完成形 */
         this.goal = goal;
-        /**現在処理しているターン数 */
         this.turn = 0;
-        //こちらにもformatPatternを読み込む
         this.patterns = patterns;
     }
 
+    /**
+     * 一番最後のオーダー（最後に操作したボード）
+     * コンソールに出力してデータを返す
+     */
     get latestOrder() {
-        return this.this.current;
+        console.log("現在" + (this.turn) + "手目");
+        console.log(this.current.array);
+        return this.current;
     }
 
     /**一番最後のOrderを表示する */
-    showLatestOrder() {
-        console.log("現在" + (this.turn) + "手目");
-        console.log(this.current.array);
-    }
+    // showLatestOrder() {
+    //     console.log("現在" + (this.turn) + "手目");
+    //     console.log(this.current.array);
+    // }
 
-    matchValue(array1 = this.current.array, array2 = this.goal.array) {
+    /**
+     * 2つのボードにおけるセルの一致数を数える
+     * @param {number[][]} array1 デフォルトで現在操作中のボード (current.array)
+     * @param {number[][]} array2 デフォルトで解答のボード (goal.array)
+     * @returns 一致数
+     */
+    countMatchValue(array1 = this.current.array, array2 = this.goal.array) {
         let match = 0;
         for (let i = 0; i < array1.length; i++) {
             for (let j = 0; j < array1[0].length; j++) {
@@ -331,38 +368,52 @@ class Answer {
         return match;
     }
 
-    makeSendData(){
-        let sendData={
-            n:this.order.length,
-            ops:[]
+    /**
+     * 回答用の送信データを作成する
+     * @param {boolean} [isOutput=false] ファイル出力するか
+     * @returns 送信データ (文字列ではないJSON)
+     */
+    makeSendData(isOutput = false) {
+        /**
+         * 送信データの大枠
+         */
+        let sendData = {
+            n: this.order.length,
+            ops: []
         }
 
-        for(let i=0;i<this.order.length;i++){
+        // orderから各情報を照合して代入
+        for (let i = 0; i < this.order.length; i++) {
             sendData.ops.push({
-                p:this.order[i].patternNumber,
-                x:this.order[i].position[0],
-                y:this.order[i].position[1],
-                s:0
+                p: this.order[i].patternNumber,
+                x: this.order[i].position[0],
+                y: this.order[i].position[1],
+                s: 0
             });
         }
 
-        for(let i=0;i<this.order.length;i++){
-            switch(this.order[i].direction){
+        // 抜き型の操作方向をレギュレーションに合わせる
+        for (let i = 0; i < this.order.length; i++) {
+            switch (this.order[i].direction) {
                 case 1:
                     break;
                 case 2:
-                    sendData.ops[i].s=3;
+                    sendData.ops[i].s = 3;
                     break;
                 case 3:
-                    sendData.ops[i].s=1;
+                    sendData.ops[i].s = 1;
                     break;
                 case 4:
-                    sendData.ops[i].s=2;
+                    sendData.ops[i].s = 2;
                     break;
             }
         }
 
-        fs.writeFile('./functions/log/sendLog.json', JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
+        if (isOutput) {
+            fs.writeFile('./functions/log/sendLog.json', JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
+        }
+        
+        return sendData;
     }
 
     /**
@@ -484,10 +535,10 @@ class Answer {
     swap(position1, position2, size = 1, priorityCell = 0, inspection = true) {
         if (inspection == true) {
             // エラー処理
-            /**エラーが起きたか判定する */
-            //主にエラー内容が共存できる部分があるので必要である
+            /* エラーが起きたか判定する */
+            // 主にエラー内容が共存できる部分があるので必要である
             let errorFlag = false;
-            //それぞれのx座標がボードからはみ出していないか調べる
+            // それぞれのx座標がボードからはみ出していないか調べる
             if (position1[0] < 0 || this.current.width - size < position1[0]) {
                 console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
@@ -496,7 +547,7 @@ class Answer {
                 console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
-            //それぞれのy座標がボードからはみ出していないか調べる
+            // それぞれのy座標がボードからはみ出していないか調べる
             if (position1[1] < 0 || this.current.height - size < position1[1]) {
                 console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
@@ -505,7 +556,7 @@ class Answer {
                 console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
                 errorFlag = true;
             }
-            //サイズが不正な値でないか調べる
+            // サイズが不正な値でないか調べる
             if (size > 256) {
                 console.error("swap関数:sizeが不正な値です(256より大きいサイズを指定することはできません)");
             }
@@ -513,14 +564,14 @@ class Answer {
                 console.error("swap関数:sizeが不正な値です(2^nの値を指定してください)");
             }
 
-            //フラグを参照して関数を中断する
+            // フラグを参照して関数を中断する
             if (errorFlag == true) {
                 return null;
             }
         }
 
-        //指定した場所が直線上に並んでいるか調べる
-        //直線上に並んでいなかったら斜めの交換用に処理を変える
+        // 指定した場所が直線上に並んでいるか調べる
+        // 直線上に並んでいなかったら斜めの交換用に処理を変える
         if (position1[0] != position2[0] && position1[1] != position2[1]) {
             //指定した要素同士が重なっていないか調べる
             if ((position1[0] < position2[0] ? position2[0] - position1[0] < size : position1[0] - position2[0] < size) && (position1[1] < position2[1] ? position2[1] - position1[1] < size : position1[1] - position2[1] < size)) {
@@ -528,19 +579,19 @@ class Answer {
                 return null;
             }
 
-            /**3つの座標が合わさった配列 */
+            /** 3つの座標が合わさった配列 */
             let position = [position1, position2, [position2[0], position1[1]]];
 
             const setPriority = (i) => {
-                /**操作する配列の左側 */
+                /** 操作する配列の左側 */
                 let leftLength = position[i][i] < position[2][i] ? position[i][i] : position[2][i];
-                /**操作する配列の右側 */
+                /** 操作する配列の右側 */
                 let rightLength = (i == 0 ? this.current.width : this.current.height) - (position[i][i] < position[2][i] ? position[2][i] : position[i][i]) - size;
-                /**操作する配列の真ん中 */
+                /** 操作する配列の真ん中 */
                 let middleLength = (i == 0 ? this.current.width : this.current.height) - leftLength - rightLength - 2 * size;
-                /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
+                /** それぞれのlengthに値があるか判定するフラグ(左中右: 000) */
                 let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
-                //lengthFlagの値から優先度を設定する
+                // lengthFlagの値から優先度を設定する
                 if (size == 1) {
                     switch (lengthFlag) {
                         case 111:
@@ -585,10 +636,10 @@ class Answer {
                 }
             }
 
-            /**要素の交換優先度 */
+            /** 要素の交換優先度 */
             let priority = [0, 1].map(i => setPriority(i));
 
-            //優先度の値によって交換の仕方を変える(関数の再帰を行っている)
+            // 優先度の値によって交換の仕方を変える(関数の再帰を行っている)
             if (priority[0] < priority[1]) {
                 this.swap(position[0], position[2], size, size == 1 ? 0 : (position[0][0] < position[2][0] ? 1 : 2), false);
                 this.swap(position[1], position[2], size, 0, false);
@@ -603,150 +654,150 @@ class Answer {
             }
         }
 
-        /**横列操作=0,縦列操作=1 */
+        /** 横列操作 = 0,縦列操作 = 1 */
         let type = 0;
         if (position1[0] == position2[0]) {
             type = 1;
         }
 
-        /**操作する配列の左側 */
+        /** 操作する配列の左側 */
         let leftLength = position1[type] < position2[type] ? position1[type] : position2[type];
-        /**操作する配列の右側 */
+        /** 操作する配列の右側 */
         let rightLength = (type == 0 ? this.current.width : this.current.height) - (position1[type] < position2[type] ? position2[type] : position1[type]) - size;
-        /**操作する配列の真ん中 */
+        /** 操作する配列の真ん中 */
         let middleLength = (type == 0 ? this.current.width : this.current.height) - leftLength - rightLength - 2 * size;
 
-        /**それぞれのlengthに値があるか判定するフラグ(左中右:000) */
+        /** それぞれのlengthに値があるか判定するフラグ(左中右:000) */
         let lengthFlag = (leftLength > 0 ? 1 : 0) * 100 + (middleLength > 0 ? 1 : 0) * 10 + (rightLength > 0 ? 1 : 0);
-        /**サイズに対しての定型抜き型の番号 */
+        /** サイズに対しての定型抜き型の番号 */
         let patternType = size == 1 ? 0 : (Math.log2(size) - 1) * 3 + 1;
-        /**pullOutに渡す座標 */
+        /** pullOutに渡す座標 */
         let position = [new Array(2).fill(0), new Array(2).fill(0), new Array(2).fill(0), new Array(2).fill(0), new Array(2).fill(0)];
-        //lengthFlagから交換の仕方を決める
+        // lengthFlagから交換の仕方を決める
         switch (lengthFlag) {
             case 111:
-                //L-E1-C-E2-R(5手)
-                //E1-C-E2-R-L(L
+                // L-E1-C-E2-R (5手)
+                // E1-C-E2-R-L(L
                 position[0][type] = leftLength - 256;
                 position[0][Math.abs(type - 1)] = 0;
                 this.add(22, position[0], type == 0 ? 4 : 1);
-                //E2-E1-C-R-L(E2
+                // E2-E1-C-R-L(E2
                 position[1][type] = size + middleLength;
                 position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
                 this.add(patternType, position[1], type == 0 ? 2 : 3);
-                //R-L-E2-E1-C(R-L
+                // R-L-E2-E1-C(R-L
                 position[2][type] = size * 2 + middleLength;
                 position[2][Math.abs(type - 1)] = 0;
                 this.add(22, position[2], type == 0 ? 2 : 3);
-                //R-L-E2-C-E1(E1
+                // R-L-E2-C-E1(E1
                 position[3][type] = rightLength + leftLength + size;
                 position[3][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
                 this.add(patternType, position[3], type == 0 ? 4 : 1);
-                //L-E2-C-E1-R(R
+                // L-E2-C-E1-R(R
                 position[4][type] = rightLength - 256;
                 position[4][Math.abs(type - 1)] = 0;
                 this.add(22, position[4], type == 0 ? 4 : 1);
                 break;
             case 11:
-                //E1-C-E2-R(4手)
-                //E2-E1-C-R(E2
+                // E1-C-E2-R (4手)
+                // E2-E1-C-R(E2
                 position[0][type] = size + middleLength;
                 position[0][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
                 this.add(patternType, position[0], type == 0 ? 2 : 3);
-                //R-E2-E1-C(R
+                // R-E2-E1-C(R
                 position[1][type] = size * 2 + middleLength;
                 position[1][Math.abs(type - 1)] = 0;
                 this.add(22, position[1], type == 0 ? 2 : 3);
-                //R-E2-C-E1(E1
+                // R-E2-C-E1(E1
                 position[2][type] = rightLength + size;
                 position[2][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
                 this.add(patternType, position[2], type == 0 ? 4 : 1);
-                //E2-C-E1-R(R
+                // E2-C-E1-R(R
                 position[3][type] = rightLength - 256;
                 position[3][Math.abs(type - 1)] = 0;
                 this.add(22, position[3], type == 0 ? 4 : 1);
                 break;
             case 110:
-                //L-E1-C-E2(4手)
-                //L-C-E2-E1(E1
+                // L-E1-C-E2(4手)
+                // L-C-E2-E1(E1
                 position[0][type] = leftLength;
                 position[0][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
                 this.add(patternType, position[0], type == 0 ? 4 : 1);
-                //C-E2-E1-L(L
+                // C-E2-E1-L(L
                 position[1][type] = leftLength - 256;
                 position[1][Math.abs(type - 1)] = 0;
                 this.add(22, position[1], type == 0 ? 4 : 1);
-                //E2-C-E1-L(E2
+                // E2-C-E1-L(E2
                 position[2][type] = middleLength;
                 position[2][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
                 this.add(patternType, position[2], type == 0 ? 2 : 3);
-                //L-E2-C-E1(L
+                // L-E2-C-E1(L
                 position[3][type] = size * 2 + middleLength;
                 position[3][Math.abs(type - 1)] = 0;
                 this.add(22, position[3], type == 0 ? 2 : 3);
                 break;
             case 101:
                 if (priorityCell == 1) {
-                    //L-E1-E2-R(3手)
-                    //R-L-E1-E2(R
+                    // L-E1-E2-R (3手)
+                    // R-L-E1-E2(R
                     position[0][type] = leftLength + size * 2 + middleLength;
                     position[0][Math.abs(type - 1)] = 0;
                     this.add(22, position[0], type == 0 ? 2 : 3);
-                    //R-L-E2-E1(E1
+                    // R-L-E2-E1(E1
                     position[1][type] = rightLength + leftLength;
                     position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
                     this.add(patternType, position[1], type == 0 ? 4 : 1);
-                    //L-E2-E1-R(R
+                    // L-E2-E1-R(R
                     position[2][type] = rightLength - 256;
                     position[2][Math.abs(type - 1)] = 0;
                     this.add(22, position[2], type == 0 ? 4 : 1);
                 }
                 else {
-                    //L-E1-E2-R(3手)
-                    //E1-E2-R-L(L
+                    // L-E1-E2-R (3手)
+                    // E1-E2-R-L(L
                     position[0][type] = leftLength - 256;
                     position[0][Math.abs(type - 1)] = 0;
                     this.add(22, position[0], type == 0 ? 4 : 1);
-                    //E2-E1-R-L(E2
+                    // E2-E1-R-L(E2
                     position[1][type] = size + middleLength;
                     position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
                     this.add(patternType, position[1], type == 0 ? 2 : 3);
-                    //L-E2-E1-R(L
+                    // L-E2-E1-R(L
                     position[2][type] = size * 2 + middleLength + rightLength;
                     position[2][Math.abs(type - 1)] = 0;
                     this.add(22, position[2], type == 0 ? 2 : 3);
                 }
                 break;
             case 10:
-                //E1-C-E2(2手)
-                //C-E2-E1(E1
+                // E1-C-E2 (2手)
+                // C-E2-E1(E1
                 position[0][type] = 0;
                 position[0][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
                 this.add(patternType, position[0], type == 0 ? 4 : 1);
-                //E2-C-E1(E2
+                // E2-C-E1(E2
                 position[1][type] = middleLength;
                 position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
                 this.add(patternType, position[1], type == 0 ? 2 : 3);
                 break;
             case 100:
                 if (priorityCell == 2) {
-                    //L-E1-E2(3手)
+                    // L-E1-E2 (3手)
                     //E1-E2-L(L
                     position[0][type] = leftLength - 256;
                     position[0][Math.abs(type - 1)] = 0;
                     this.add(22, position[0], type == 0 ? 4 : 1);
-                    //E2-E1-L(E2
+                    // E2-E1-L(E2
                     position[1][type] = size + middleLength;
                     position[1][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
                     this.add(patternType, position[1], type == 0 ? 2 : 3);
-                    //L-E2-E1(L
+                    // L-E2-E1(L
                     position[2][type] = size * 2 + middleLength;
                     position[2][Math.abs(type - 1)] = 0;
                     this.add(22, position[2], type == 0 ? 2 : 3);
                 }
                 else {
-                    //L-E1-E2(1手)
-                    //L-E2-E1(E1
+                    // L-E1-E2 (1手)
+                    // L-E2-E1(E1
                     position[0][type] = leftLength;
                     position[0][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
                     this.add(patternType, position[0], type == 0 ? 4 : 1);
@@ -754,23 +805,23 @@ class Answer {
                 break;
             case 1:
                 if (priorityCell == 1) {
-                    //E1-E2-R(3手)
-                    //R-E1-E2(R
+                    // E1-E2-R (3手)
+                    // R-E1-E2(R
                     position[0][type] = size * 2 + middleLength;
                     position[0][Math.abs(type - 1)] = 0;
                     this.add(22, position[0], type == 0 ? 2 : 3);
-                    //R-E2-E1(E1
+                    // R-E2-E1(E1
                     position[1][type] = rightLength;
                     position[1][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
                     this.add(patternType, position[1], type == 0 ? 4 : 1);
-                    //E2-E1-R(R
+                    // E2-E1-R(R
                     position[2][type] = rightLength - 256;
                     position[2][Math.abs(type - 1)] = 0;
                     this.add(22, position[2], type == 0 ? 4 : 1);
                 }
                 else {
-                    //E1-E2-R(1手)
-                    //E2-E1-R(E2
+                    // E1-E2-R (1手)
+                    // E2-E1-R(E2
                     position[0][type] = size + middleLength;
                     position[0][Math.abs(type - 1)] = position2[Math.abs(type - 1)];
                     this.add(patternType, position[0], type == 0 ? 2 : 3);
@@ -785,8 +836,8 @@ class Answer {
                     this.add(patternType, position[0], type == 0 ? 2 : 3);
                 }
                 else {
-                    //E1-E2(1手)
-                    //E2-E1(E1
+                    // E1-E2 (1手)
+                    // E2-E1(E1
                     position[0][type] = 0;
                     position[0][Math.abs(type - 1)] = position1[Math.abs(type - 1)];
                     this.add(patternType, position[0], type == 0 ? 4 : 1);
@@ -799,7 +850,7 @@ class Answer {
      * 定型抜き型を使いソートを行う
      */
     allSort() {
-        //128~2の大きさの定型抜き型を使ってソートを行う
+        // 128~2の大きさの定型抜き型を使ってソートを行う
         [{ size: 128, max: 30, limit: false },
         { size: 64, max: 25, limit: false },
         { size: 32, max: 20, limit: false },
@@ -808,7 +859,7 @@ class Answer {
         { size: 4, max: 4, limit: true },
         { size: 2, max: 2, limit: true },
         ].map(element => {
-            //分割できるか調べる
+            // 分割できるか調べる
             if (this.current.height / element.size >= 2 && this.current.width / element.size >= 2) {
                 /*
                 let calcMatchValue = this.matchValue();
@@ -817,7 +868,7 @@ class Answer {
                 */
                 let boardInfo = new Array(Math.floor(this.current.height / element.size) * Math.floor(this.current.width / element.size)).fill(0);
 
-                //分割したボードの情報を整理する
+                // 分割したボードの情報を整理する
                 const initialization = (boardInfo) => {
                     let count = 0;
                     for (let i = 0; i < Math.floor(this.current.height / element.size); i++) {
@@ -840,7 +891,7 @@ class Answer {
                     }
                 }
 
-                //一つの分割領域に対して有効でなくなるまで交換し続ける交換方法
+                // 一つの分割領域に対して有効でなくなるまで交換し続ける交換方法
                 const loopSwap = (boardInfo, limit = false) => {
                     let max = element.max;
                     for (let i = 0; i < boardInfo.length; i++) {
@@ -848,10 +899,10 @@ class Answer {
                         while (swapFlag) {
                             swapFlag = false;
                             for (let j = 0; j < boardInfo.length; j++) {
-                                //limitが有効になっている場合直線的な交換しか行わないようになる(手順が短くなる)
+                                // limitが有効になっている場合直線的な交換しか行わないようになる(手順が短くなる)
                                 if ((i != j) && (limit ? (boardInfo[i].position[0] == boardInfo[j].position[0] || boardInfo[i].position[1] == boardInfo[j].position[1]) : true)) {
-                                    let swapedMatchValue = this.matchValue(boardInfo[i].goalArray, boardInfo[j].currentArray);
-                                    let targetSwapedMatchValue = this.matchValue(boardInfo[j].goalArray, boardInfo[i].currentArray);
+                                    let swapedMatchValue = this.countMatchValue(boardInfo[i].goalArray, boardInfo[j].currentArray);
+                                    let targetSwapedMatchValue = this.countMatchValue(boardInfo[j].goalArray, boardInfo[i].currentArray);
                                     if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > max) {
                                         this.swap(boardInfo[i].position, boardInfo[j].position, element.size);
                                         let swap = boardInfo[i].currentArray;
@@ -867,7 +918,7 @@ class Answer {
                     }
                 }
 
-                //一つの分割領域に関して一番有効なもう一つの分割領域同士を一対一対応で交換する交換方法
+                // 一つの分割領域に関して一番有効なもう一つの分割領域同士を一対一対応で交換する交換方法
                 const injectionSwap = (boardInfo, limit = false) => {
                     for (let i = 0; i < boardInfo.length; i++) {
                         if (!boardInfo[i].selectFlag) {
@@ -877,8 +928,8 @@ class Answer {
                             for (let j = 0; j < boardInfo.length; j++) {
                                 //limitが有効になっている場合直線的な交換しか行わないようになる(手順が短くなる)
                                 if (!boardInfo[j].selectFlag && (limit ? (boardInfo[i].position[0] == boardInfo[j].position[0] || boardInfo[i].position[1] == boardInfo[j].position[1]) : true)) {
-                                    let swapedMatchValue = this.matchValue(boardInfo[i].goalArray, boardInfo[j].currentArray);
-                                    let targetSwapedMatchValue = this.matchValue(boardInfo[j].goalArray, boardInfo[i].currentArray);
+                                    let swapedMatchValue = this.countMatchValue(boardInfo[i].goalArray, boardInfo[j].currentArray);
+                                    let targetSwapedMatchValue = this.countMatchValue(boardInfo[j].goalArray, boardInfo[i].currentArray);
                                     if ((swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue) > max) {
                                         max = swapedMatchValue + targetSwapedMatchValue - boardInfo[i].matchValue - boardInfo[j].matchValue;
                                         maxPosition = j;
@@ -892,12 +943,12 @@ class Answer {
                         }
                     }
                 }
-                //loopSwapの方が交換回数が多くより厳密な交換ができるんじゃないかなぁ～と思ったので、両方作って組み合わせている
+                // loopSwapの方が交換回数が多くより厳密な交換ができるんじゃないかなぁ～と思ったので、両方作って組み合わせている
 
                 initialization(boardInfo);
 
-                //分割数が少ないほどより厳密な交換を行う
-                //しかしもともの問題が小さい場合、size=2のような終盤の交換も厳密にしてしまうので初期値にlimitを設定している
+                // 分割数が少ないほどより厳密な交換を行う
+                // しかしもともの問題が小さい場合、size=2のような終盤の交換も厳密にしてしまうので初期値にlimitを設定している
                 if (boardInfo.length < 200) {
                     loopSwap(boardInfo, element.limit);
                     injectionSwap(boardInfo, element.limit);
@@ -921,7 +972,7 @@ class Answer {
             }
         });
 
-        //1の大きさの定型抜き型のみを使ってソートを行う
+        // 1の大きさの定型抜き型のみを使ってソートを行う
         /**
          * 現在の配列の情報
          * @type {object[]}
@@ -941,12 +992,12 @@ class Answer {
          * @type {boolean[]}
          */
         /* 
-        1.指定した要素から上下左右4マスにターゲットがあるか
-        2.指定した要素から十字方向にターゲットがあるか
-        3.指定した要素から右上左上右下左下にターゲットがあるか
-        4.指定した要素から太さ3マスの十字方向にターゲットがあるか
-        5.条件なし
-        上から順に交換に必要な手順が少ない
+            1. 指定した要素から上下左右4マスにターゲットがあるか
+            2. 指定した要素から十字方向にターゲットがあるか
+            3. 指定した要素から右上左上右下左下にターゲットがあるか
+            4. 指定した要素から太さ3マスの十字方向にターゲットがあるか
+            5. 条件なし
+            上から順に交換に必要な手順が少ない
         */
         const formula = [(position1, position2) => (position1[1] == position2[1]) && (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) || (position1[0] == position2[0]) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
         (position1, position2) => position1[0] == position2[0] || position1[1] == position2[1],
@@ -956,22 +1007,22 @@ class Answer {
 
         /**
          * ここにpositionInfoと交換手順を記した関数を渡すとソートが行われる
-         * @param {*} positionInfo 
-         * @param {*} func 
+         * @param {*} positionInfo ペアの組み合わせ等の座標情報
+         * @param {*} func swapでソートを行う関数
          */
         const sort = (positionInfo, func) => {
-            //一個目の座標を順番に選択するためのfor文
+            // 一個目の座標を順番に選択するためのfor文
             for (let i = 0; i < positionInfo[0].length; i++) {
                 let result = new Array(positionInfo.length).fill(0);
                 positionInfo[0][i].selectFlag = true;
                 result[0] = positionInfo[0][i].position;
-                //要素の数値を順番に選択するためのfor文
+                // 要素の数値を順番に選択するためのfor文
                 for (let j = 1; j < positionInfo.length; j++) {
-                    //順番に条件式が当てはまるか調べるためのfor文
+                    // 順番に条件式が当てはまるか調べるためのfor文
                     for (let k = 0; k < formula.length; k++) {
-                        //座標を選択するためのfor文
+                        // 座標を選択するためのfor文
                         for (let l = 0; l < positionInfo[j].length; l++) {
-                            //選択されていない座標と条件式に当てはまる座標同士を交換する
+                            // 選択されていない座標と条件式に当てはまる座標同士を交換する
                             if (!positionInfo[j][l].selectFlag && formula[k](result[j - 1], positionInfo[j][l].position)) {
                                 positionInfo[j][l].selectFlag = true;
                                 result[j] = positionInfo[j][l].position;
@@ -987,11 +1038,11 @@ class Answer {
             };
         };
 
-        //ペアのソート
+        /* ペアのソート */
         [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(pair => {
             if (!this.terminationFlag) {
                 let positionInfo = [[], []];
-                //ペアの交換になる座標を配列にまとめる
+                // ペアの交換になる座標を配列にまとめる
                 for (let i = 0; i < currentInfo.length; i++) {
                     if (!currentInfo[i].selectFlag) {
                         if (currentInfo[i].value == pair[0] && this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == pair[1]) {
@@ -1003,7 +1054,7 @@ class Answer {
                     }
                 }
 
-                //配列の中にどちらも要素があれば交換を実行する
+                // 配列の中にどちらも要素があれば交換を実行する
                 if (positionInfo[0].length != 0 && positionInfo[1].length != 0) {
                     //長さが短い方を0に持ってくる
                     if (positionInfo[0].length > positionInfo[1].length) {
@@ -1012,11 +1063,11 @@ class Answer {
                         positionInfo[1] = swap;
                     }
 
-                    //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
+                    // 配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
                     positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
                     positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
 
-                    //ペアのソートの交換の仕方
+                    /** ペアのソートの交換の仕方 */
                     const pairSort = (result) => {
                         if (!this.terminationFlag) {
                             this.swap(result[0], result[1]);
@@ -1030,18 +1081,24 @@ class Answer {
             }
         });
 
-        //トリオのソート
+        /* トリオのソート */
         [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]].map(trio => {
             if (!this.terminationFlag) {
                 let positionInfo = [[], [], []];
-                /*
-                key=現在の座標の要素の数値
-                value=選択された回数
-                goal=正解の座標の要素の数値
+                /**
+                 * key: 現在の座標の要素の数値
+                 * 
+                 * value: 選択された回数
+                 * 
+                 * goal: 正解の座標の要素の数値
                 */
-                let count = [{ key: trio[0], value: 0, goal: null }, { key: trio[1], value: 0, goal: null }, { key: trio[2], value: 0, goal: null }];
+                let count = [
+                    { key: trio[0], value: 0, goal: null },
+                    { key: trio[1], value: 0, goal: null },
+                    { key: trio[2], value: 0, goal: null }
+                ];
 
-                //トリオの交換になる座標を配列にまとめる
+                // トリオの交換になる座標を配列にまとめる
                 for (let i = 0; i < currentInfo.length; i++) {
                     if (!currentInfo[i].selectFlag) {
                         if (currentInfo[i].value == trio[0] && (this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == trio[1] || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == trio[2])) {
@@ -1069,7 +1126,7 @@ class Answer {
                 }
 
                 if (count.filter(count => count.goal === null).length == 0) {
-                    //1番目と2番目、2番目と3番目の交換を行うと揃うようにいい感じに要素を入れ替える
+                    // 1番目と2番目、2番目と3番目の交換を行うと揃うようにいい感じに要素を入れ替える
                     let min = 2;
                     for (let i = 0; i < 2; i++) {
                         if (count[i].value < count[min].value) {
@@ -1083,12 +1140,12 @@ class Answer {
                     count[0] = count[min];
                     count[min] = swap;
 
-                    //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
+                    // 配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
                     positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
                     positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
                     positionInfo[2] = positionInfo[2].filter(element => !element.endFlag).concat(positionInfo[2].filter(element => element.endFlag));
 
-                    //トリオの交換の仕方
+                    /** トリオの交換の仕方 */
                     const trioSort = (result) => {
                         if (!this.terminationFlag) {
                             if (count[1].key == count[0].goal) {
@@ -1102,19 +1159,19 @@ class Answer {
                         }
                     };
 
-                    //ソートを行う
+                    // ソートを行う
                     sort(positionInfo, trioSort);
                     currentInfo = currentInfo.filter(element => !element.selectFlag);
                 }
             }
         });
 
-        //カルテットのソート
-        if (!this.terminationFlag) {
+        /* カルテットのソート */
+        if(!this.terminationFlag) {
             let positionInfo = [[], [], [], []];
             let goalPattern = [null, null, null, null];
 
-            //カルテットの交換になる座標を配列にまとめる
+            // カルテットの交換になる座標を配列にまとめる
             for (let i = 0; i < currentInfo.length; i++) {
                 if (!currentInfo[i].selectFlag) {
                     if (currentInfo[i].value == 0 && (this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 1 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 2 || this.goal.array[currentInfo[i].position[1]][currentInfo[i].position[0]] == 3)) {
@@ -1145,7 +1202,7 @@ class Answer {
             }
 
             if (goalPattern.filter(element => element == null).length == 0) {
-                //sort関数のformulaで評価した座標同士を使いたいので1番目,2番目の要素同士、3番目,4番目の要素同士を交換したら揃うように値をいい感じに入れ替える
+                // sort関数のformulaで評価した座標同士を使いたいので1番目,2番目の要素同士、3番目,4番目の要素同士を交換したら揃うように値をいい感じに入れ替える
                 if (goalPattern[2] == 0) {
                     let swap = positionInfo[1];
                     positionInfo[1] = positionInfo[2];
@@ -1164,13 +1221,13 @@ class Answer {
 
                 }
 
-                //配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
+                // 配列の端にある要素と中にある要素をペアにしたいのでendFlagより順番を変更する
                 positionInfo[0] = positionInfo[0].filter(element => !element.endFlag).concat(positionInfo[0].filter(element => element.endFlag));
                 positionInfo[1] = positionInfo[1].filter(element => element.endFlag).concat(positionInfo[1].filter(element => !element.endFlag));
                 positionInfo[2] = positionInfo[2].filter(element => !element.endFlag).concat(positionInfo[2].filter(element => element.endFlag));
                 positionInfo[3] = positionInfo[3].filter(element => element.endFlag).concat(positionInfo[3].filter(element => !element.endFlag));
 
-                //カルテットの交換の仕方
+                // カルテットの交換の仕方
                 const quartetSort = (result) => {
                     if (!this.terminationFlag) {
                         this.swap(result[0], result[1]);
@@ -1184,11 +1241,11 @@ class Answer {
                     }
                 };
 
-                //ソートを行う
+                // ソートを行う
                 sort(positionInfo, quartetSort);
             }
         }
-        this.makeSendData();
+        // this.makeSendData();
     }
 }
 
@@ -1220,12 +1277,13 @@ class Order {
  */
 class Board {
     /**
-     *Boardクラスの中の配列
+     * Boardクラスの中の配列
+     * @type {number[][]}
      */
     array = [[]];
 
     /**
-     *Boardクラスの中の配列の高さ
+     * Boardクラスの中の配列の高さ
      */
     get height() {
         switch (this.dimension) {
@@ -1242,14 +1300,14 @@ class Board {
     }
 
     /**
-     *Boardクラスの中の配列の幅
+     * Boardクラスの中の配列の幅
      */
     get width() {
         switch (this.dimension) {
-            //配列の中になにも入ってなかった時の例外処理
+            // 配列の中になにも入ってなかった時の例外処理
             case null:
                 return null;
-            //1次元配列または配列以外を読み込んだ場合の例外処理
+            // 1次元配列または配列以外を読み込んだ場合の例外処理
             case 0:
             case 1:
                 return this.array.length;
