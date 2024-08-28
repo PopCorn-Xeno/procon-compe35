@@ -41,16 +41,16 @@ class BoardData {
     }
 
     /**
-     * @param {*} data 
+     * @param {*} board 
      * @param {*} width 
      * @param {*} height 
      */
-    constructor(data = null, width = 0, height = 0) {
+    constructor(board = null, pattern = null, width = 0, height = 0) {
         // 受信データを使用しなかった場合、問題をランダムで作るモードに移行する、また0に指定すると座標を表す数値を出力する
-        if (data === null) {
+        if (board === null) {
             this.#makeRandom(height, width);
         }
-        else if (data == 0) {
+        else if (board == 0) {
             let sample = [];
             for (let i = 1; i <= height; i++) {
                 let temporary = [];
@@ -68,12 +68,12 @@ class BoardData {
              * 受信データのボード情報をコピー
              * @type {{}}
              */
-            let board = data?.board;
+            let board = board?.board;
             /**
              * 受信データの抜き型情報をコピー
              * @type {{}[]}
              */
-            let patterns = data?.general?.patterns;
+            let patterns = board?.general?.patterns;
 
             this.#board.width = board?.width;
             this.#board.height = board?.height;
@@ -90,6 +90,54 @@ class BoardData {
 
         for (let i = 0; i < 25; i++) {
             this.#patterns.push(this.#setFormatPattern(i));
+        }
+
+        if (pattern == null) {
+            for (let i = 0; i < 256; i++) {
+                let array = new Array(Math.floor(Math.random() * 256) + 1).fill(0);
+                let width = Math.floor(Math.random() * 256) + 1;
+                for (let j = 0; j < array.length; j++) {
+                    array[j] = new Array(width).fill(0).map(value => Math.round(Math.random()));
+                }
+                this.#patterns.push(new Board(array));
+            }
+        }
+
+        if (board == null && pattern == null) {
+            let receptionData = {
+                board: {
+                    width: this.#board.start.width,
+                    height: this.#board.start.height,
+                    start: [],
+                    goal: [],
+                },
+                general: {
+                    n: this.#patterns.length - 25,
+                    patterns: []
+                }
+            }
+
+            for (let i = 0; i < this.#board.start.height; i++) {
+                receptionData.board.start.push(this.#board.start.array[i].toString());
+                receptionData.board.goal.push(this.#board.goal.array[i].toString());
+            }
+
+            for (let i = 25; i < this.#patterns.length; i++) {
+                receptionData.general.patterns.push({
+                    p: i,
+                    width: this.#patterns[i].width,
+                    height: this.#patterns[i].height,
+                    cells: []
+                });
+            }
+
+            for (let i = 25; i < this.#patterns.length; i++) {
+                for (let j = 0; j < this.#patterns[i].array.length; j++) {
+                    receptionData.general.patterns[i - 25].cells.push(this.#patterns[i].array[j].toString());
+                }
+            }
+
+            fs.writeFile('./functions/log/receptionLog.json', JSON.stringify(receptionData, undefined, ' '), 'utf-8', (err) => { });
         }
 
         this.answer = new Answer(this.#board.start, this.#board.goal, this.#patterns);
@@ -283,6 +331,40 @@ class Answer {
         return match;
     }
 
+    makeSendData(){
+        let sendData={
+            n:this.order.length,
+            ops:[]
+        }
+
+        for(let i=0;i<this.order.length;i++){
+            sendData.ops.push({
+                p:this.order[i].patternNumber,
+                x:this.order[i].position[0],
+                y:this.order[i].position[1],
+                s:0
+            });
+        }
+
+        for(let i=0;i<this.order.length;i++){
+            switch(this.order[i].direction){
+                case 1:
+                    break;
+                case 2:
+                    sendData.ops[i].s=3;
+                    break;
+                case 3:
+                    sendData.ops[i].s=1;
+                    break;
+                case 4:
+                    sendData.ops[i].s=2;
+                    break;
+            }
+        }
+
+        fs.writeFile('./functions/log/sendLog.json', JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
+    }
+
     /**
     * 抜き型で指定した座標を抜き、指定した方向に寄せ、隙間を抜いた要素で埋める関数
     * @param {Board} board　並べ替えたい2次元配列 
@@ -400,12 +482,6 @@ class Answer {
      * @returns
      */
     swap(position1, position2, size = 1, priorityCell = 0, inspection = true) {
-        if(this.turn>=29995){
-            console.log("許容手数量を超えたためプログラムを終了します");
-            this.terminationFlag=true;
-            return 0;
-        }
-
         if (inspection == true) {
             // エラー処理
             /**エラーが起きたか判定する */
@@ -1112,6 +1188,7 @@ class Answer {
                 sort(positionInfo, quartetSort);
             }
         }
+        this.makeSendData();
     }
 }
 
