@@ -5,21 +5,29 @@
     <link rel='stylesheet' href='/stylesheets/style.css' />
   </head>
   <body>
-    <!-- <h1>Board Process Orders</h1>
-    <% for (let i = 0; i < datas[0]?.array?.length; i++) { %>
-      <p><%= datas[0]?.array[i] %></p>
-    <% } %> -->
+      <input id="width">
+      <input id="height">
       <button id="start">start</button>
-      <p id="log"><%= log %></p>
+      <p id="processTime"></p>
+      <p id="log"></p>
   </body>
 
   <script>
     const startButton = document.getElementById("start");
     const logArea = document.getElementById("log");
-    startButton.addEventListener("click", () => {
+    const inputs = {
+      width: document.getElementById("width"),
+      height: document.getElementById("height")
+    }
+    const processTime = document.getElementById("processTime");
+
+    startButton.addEventListener("click", async () => {
       logArea.textContent = "";
+
       // main.js の実行を開始する
-      fetch("/start")
+      const start = performance.now();
+      // エンドポイントにアクセス
+      await fetch(`/start?width=${inputs.width.value}&height=${inputs.height.value}`)
         .then(response => {
           // 送信されるストリームを読み込むリーダー
           const reader = response.body.getReader();
@@ -31,9 +39,8 @@
             function processText(result) {
               // ストリームの読み取りが完了していれば終了する（再帰用の処理）
               if (result.done) return;
-              // 読み込んでいないデータチャンクがあれば
-              // テキストデータをデコードする
-              logArea.textContent += decoder.decode(result.value);
+              // 読み込んでいないデータチャンクがあればテキストデータをデコードする
+              logArea.textContent = decoder.decode(result.value);
               // 再帰してストリームが終了するまで再度デコードする
               return reader.read().then(processText);
             }
@@ -41,6 +48,9 @@
 
         })
         .catch(err => console.error("Fetch failed.", err));
+        
+        // 処理時間を表示する（通信によって多少の誤差はある）
+        processTime.textContent = performance.now() - start;
     });
   </script>
 </html>
