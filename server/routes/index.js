@@ -2,12 +2,8 @@ var express = require('express');
 var router = express.Router();
 const { exec, spawn } = require("child_process");
 
-let datas = [];
-let log = [];
-
-/* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { datas: datas.length > 0 ? datas : "", log: log });
+  res.render('index');
 });
 
 router.get("/start", (req, res, next) => {
@@ -20,22 +16,19 @@ router.get("/start", (req, res, next) => {
   //   console.log(log);
   //   res.redirect("../");
   // })
-  const child = spawn("node", ["--max-old-space-size=16000", "base/main.js"]);
+  const child = spawn("node", ["--max-old-space-size=16000", "base/sub.js", req.query?.width, req.query?.height]);
 
   child.stdout.on("data", data => {
     console.log(data.toString());
-    // log.push(data.toString() + "\n");
-    res.write(data.toString() + "\n");
+    res.write(data.toString());
   });
 
   child.stderr.on("data", data => {
     console.error(data.toString());
-    res.write(data.toString() + "\n");
+    res.write(data.toString());
   });
 
-  child.on("close", code => {
-    res.end();
-  })
+  child.on("close", () => { res.end() })
 
   // res.redirect("../");
 })

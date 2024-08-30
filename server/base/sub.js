@@ -1,22 +1,18 @@
-//ファイルインポート
 const { BoardData } = require("./functions/class");
 const { inspect } = require("util");
 
 function fullLog(data) {
-    console.log(inspect(data, { maxArrayLength: null }));
+    console.log(inspect(data, { maxArrayLength: null, maxStringLength: null }));
 }
 
-const boardData = new BoardData(null, null, 256, 256);
+const boardData = new BoardData(null, null, process.argv[2], process.argv[3]);
 
-console.log("一致数:" + boardData.answer.countMatchValue());
+boardData.answer.allSort(true);
 
-boardData.answer.allSort();
+console.log(boardData.answer.makeSendData(true, false)?.n);
 
-console.log("一致数:" + boardData.answer.countMatchValue());
-
-console.log("合計手数:" + boardData.answer.turn);
-
-//測定結果表示
-console.log("計算時間=" + result + "秒");
-
-// fullLog(boardData.answer.current.array);
+/* コマンドライン引数のシグネチャ
+ * node --max-old-space-size={RAM_SIZE[MB]} sub.js width height
+ * width: process.argv[2]
+ * height: process.argv[3]
+ */
