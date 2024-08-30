@@ -16,7 +16,7 @@ router.get("/start", (req, res, next) => {
   //   console.log(log);
   //   res.redirect("../");
   // })
-  const child = spawn("node", ["--max-old-space-size=16000", "base/sub.js", req.query?.width, req.query?.height]);
+  const child = spawn("node", ["--max-old-space-size=16000", "process/sub.js", req.query?.width, req.query?.height]);
 
   child.stdout.on("data", data => {
     console.log(data.toString());
