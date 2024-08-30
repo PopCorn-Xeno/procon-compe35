@@ -310,13 +310,6 @@ class Answer {
     turn;
 
     /**
-     * 使う抜き型のデータ
-     * このクラスにも読み込んでおく
-     * @type {Board[]}
-     */
-    pattern;
-
-    /**
      * 操作の終了フラグ
      * @type {boolean}
      */
@@ -358,10 +351,19 @@ class Answer {
      */
     countMatchValue(array1 = this.current.array, array2 = this.goal.array) {
         let match = 0;
-        for (let i = 0; i < array1.length; i++) {
-            for (let j = 0; j < array1[0].length; j++) {
-                if (array1[i][j] == array2[i][j]) {
+        if (!array1[0].length) {
+            for (let i = 0; i < array1.length; i++) {
+                if (array1[i] == array2[i]) {
                     match++;
+                }
+            }
+        }
+        else {
+            for (let i = 0; i < array1.length; i++) {
+                for (let j = 0; j < array1[0].length; j++) {
+                    if (array1[i][j] == array2[i][j]) {
+                        match++;
+                    }
                 }
             }
         }
@@ -412,7 +414,7 @@ class Answer {
         if (isOutput) {
             fs.writeFile('./functions/log/sendLog.json', JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
         }
-        
+
         return sendData;
     }
 
@@ -444,7 +446,7 @@ class Answer {
             return null;
         }
 
-        errorFlag = true;
+        //errorFlag = true;
 
         switch (direction) {
             case 1:
@@ -459,11 +461,9 @@ class Answer {
                             line[j] = { value: board.array[j][i], key: this.patterns[patternNumber].array[j - position[1]] ? this.patterns[patternNumber].array[j - position[1]][i - position[0]] ?? 0 : 0 };
                         }
                     }
-
-                    if (line.filter(element => element.key == 1).length != 0) {
+                    /*if (line.filter(element => element.key == 1).length != 0) {
                         errorFlag = false;
-                    }
-
+                    }*/
                     if (direction == 1) {
                         line = line.filter(element => element.key == 0).concat(line.filter(element => element.key == 1));
                     }
@@ -474,13 +474,13 @@ class Answer {
                         board.array[j][i] = line[j].value;
                     }
                 }
-                if (errorFlag) {
+                /*if (errorFlag) {
                     console.log("操作された要素がありません");
-                }
+                }*/
                 return board;
             case 2:
             case 4:
-                for (let i = 0 < position[1] ? position[1] : 0; i < Math.min(board.width, this.patterns[patternNumber].width + position[1]); i++) {
+                for (let i = 0 < position[1] ? position[1] : 0; i < Math.min(board.height, this.patterns[patternNumber].height + position[1]); i++) {
                     let line = new Array(board.width).fill(0);
                     for (let j = 0; j < board.width; j++) {
                         if (patternNumber == 0) {
@@ -490,11 +490,9 @@ class Answer {
                             line[j] = { value: board.array[i][j], key: this.patterns[patternNumber].array[i - position[1]] ? this.patterns[patternNumber].array[i - position[1]][j - position[0]] ?? 0 : 0 };
                         }
                     }
-
-                    if (line.filter(element => element.key == 1).length != 0) {
+                    /*if (line.filter(element => element.key == 1).length != 0) {
                         errorFlag = false;
-                    }
-
+                    }*/
                     if (direction == 4) {
                         line = line.filter(element => element.key == 0).concat(line.filter(element => element.key == 1)).map(element => element.value);
                     }
@@ -503,9 +501,9 @@ class Answer {
                     }
                     board.array[i] = line;
                 }
-                if (errorFlag) {
+                /*if (errorFlag) {
                     console.log("操作された要素がありません");
-                }
+                }*/
                 return board;
         }
     }
@@ -519,7 +517,7 @@ class Answer {
     */
     add(patternNumber, position, direction) {
         this.order.push(new Order(patternNumber, position, direction));
-        this.current = this.#pullOut(this.current, patternNumber, position, direction);
+        this.#pullOut(this.current, patternNumber, position, direction);
         this.turn++;
     }
 
@@ -847,9 +845,73 @@ class Answer {
     }
 
     /**
-     * 定型抜き型を使いソートを行う
+     * 全探索によって現在打てる最善手を操作するソート方法
+     * 一手進んだら、次手で一致数変化が著しく低下する
      */
-    allSort() {
+    exhaustiveSort() {
+        const cloneCurrent = () => {
+            let copy = new Array(this.current.height);
+            for (let i = 0; i < this.current.height; i++) {
+                let temporaryArray = new Array(this.current.width);
+                for (let j = 0; j < this.current.width; j++) {
+                    temporaryArray[j] = this.current.array[i][j];
+                }
+                copy[i] = temporaryArray;
+            }
+            return copy;
+        }
+
+        let max = { number: 0, position: [0, 0], direction: 0, value: 0 };
+        for (let i = 25; i < this.patterns.length; i++) {
+            if (this.current.height * 0.75 < this.patterns[i].height) {
+                for (let j = 1 - this.patterns[i].width; j < this.current.width / 4; j++) {
+                    let matchValue = this.countMatchValue(this.#pullOut(new Board(cloneCurrent()), i, [j, 0], 4).array);
+                    if (matchValue > max.value) {
+                        max.number = i;
+                        max.position = [j, 0];
+                        max.direction = 4;
+                        max.value = matchValue;
+                    }
+                }
+                for (let j = this.current.width - 1; (this.current.width * 0.75) - this.patterns[i].width < j; j--) {
+                    let matchValue = this.countMatchValue(this.#pullOut(new Board(cloneCurrent()), i, [j, 0], 2).array);
+                    if (matchValue > max.value) {
+                        max.number = i;
+                        max.position = [j, 0];
+                        max.direction = 2;
+                        max.value = matchValue;
+                    }
+                }
+            }
+            if (this.current.width * 0.75 < this.patterns[i].width) {
+                for (let j = 1 - this.patterns[i].height; j < this.current.height / 4; j++) {
+                    let matchValue = this.countMatchValue(this.#pullOut(new Board(cloneCurrent()), i, [0, j], 1).array);
+                    if (matchValue > max.value) {
+                        max.number = i;
+                        max.position = [0, j];
+                        max.direction = 1;
+                        max.value = matchValue;
+                    }
+                }
+                for (let j = this.current.height - 1; (this.current.height * 0.75) - this.patterns[i].height < j; j--) {
+                    let matchValue = this.countMatchValue(this.#pullOut(new Board(cloneCurrent()), i, [0, j], 3).array);
+                    if (matchValue > max.value) {
+                        max.number = i;
+                        max.position = [0, j];
+                        max.direction = 3;
+                        max.value = matchValue;
+                    }
+                }
+            }
+        }
+        //console.log("一致数変化:" + (max.value - this.countMatchValue()));
+        this.#pullOut(this.current, max.number, max.position, max.direction);
+    }
+
+    /**
+     * 0番目以外の定型抜き型を使いソートを行う
+     */
+    splitSort() {
         // 128~2の大きさの定型抜き型を使ってソートを行う
         [{ size: 128, max: 30, limit: false },
         { size: 64, max: 25, limit: false },
@@ -971,8 +1033,12 @@ class Answer {
                 */
             }
         });
+    }
 
-        // 1の大きさの定型抜き型のみを使ってソートを行う
+    /**
+     * 0番目の定型抜き型を使いソートを行う
+     */
+    allSort() {
         /**
          * 現在の配列の情報
          * @type {object[]}
@@ -1167,7 +1233,7 @@ class Answer {
         });
 
         /* カルテットのソート */
-        if(!this.terminationFlag) {
+        if (!this.terminationFlag) {
             let positionInfo = [[], [], [], []];
             let goalPattern = [null, null, null, null];
 
@@ -1245,6 +1311,14 @@ class Answer {
                 sort(positionInfo, quartetSort);
             }
         }
+    }
+
+    /**
+     * 上記のソートを組み合わせたソート
+     */
+    completeSort() {
+        this.splitSort();
+        this.allSort();
         // this.makeSendData();
     }
 }
@@ -1287,9 +1361,6 @@ class Board {
      */
     get height() {
         switch (this.dimension) {
-            //配列の中になにも入ってなかった時の例外処理
-            case null:
-                return null;
             //1次元配列または配列以外を読み込んだ場合の例外処理
             case 0:
             case 1:
@@ -1304,11 +1375,9 @@ class Board {
      */
     get width() {
         switch (this.dimension) {
-            // 配列の中になにも入ってなかった時の例外処理
-            case null:
-                return null;
             // 1次元配列または配列以外を読み込んだ場合の例外処理
             case 0:
+                return 1;
             case 1:
                 return this.array.length;
             case 2:
@@ -1320,16 +1389,12 @@ class Board {
      * @param {number[][]} array 
      */
     constructor(array) {
-        if (array === null || array == undefined) {
-            console.error("Boardクラス:未定義の値を代入しました");
-            return null;
-        }
-        else if (typeof (array) === 'number') {
+        if (!array.length) {
             this.array = new Array(1).fill(array);
-            /**配列の次元(0=数値 , 1=1次元配列 , null=値なし) */
+            /**配列の次元(0=数値 , 1=1次元配列 , 2=2次元配列) */
             this.dimension = 0;
         }
-        else if (typeof (array[0]) === 'number') {
+        else if (!array[0].length) {
             this.dimension = 1;
             this.array = array;
         }
