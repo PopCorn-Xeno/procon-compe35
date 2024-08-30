@@ -137,7 +137,7 @@ class BoardData {
                 }
             }
 
-            fs.writeFile('./functions/log/receptionLog.json', JSON.stringify(receptionData, undefined, ' '), 'utf-8', (err) => { });
+            fs.writeFile('./log/receptionLog.json', JSON.stringify(receptionData, undefined, ' '), 'utf-8', (err) => { });
         }
 
         this.answer = new Answer(this.#board.start, this.#board.goal, this.#patterns);
@@ -370,10 +370,11 @@ class Answer {
 
     /**
      * 回答用の送信データを作成する
-     * @param {boolean} [isOutput=false] ファイル出力するか
-     * @returns 送信データ (文字列ではないJSON)
+     * @param {boolean} [isOutput=false] ファイル出力するか (デフォルト `false`)
+     * @param {boolean} [isStringified=true] 戻り値を文字列のJSONにするか (デフォルト `true`)
+     * @returns 送信データ (シリアライズの有無は引数 `isStringified` で決定)
      */
-    makeSendData(isOutput = false) {
+    makeSendData(isOutput = false, isStringified = true) {
         /**
          * 送信データの大枠
          */
@@ -410,10 +411,10 @@ class Answer {
         }
 
         if (isOutput) {
-            fs.writeFile('./functions/log/sendLog.json', JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
+            fs.writeFile('./log/sendLog.json', JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
         }
         
-        return sendData;
+        return isStringified ? JSON.stringify(sendData) : sendData;
     }
 
     /**
@@ -848,8 +849,12 @@ class Answer {
 
     /**
      * 定型抜き型を使いソートを行う
+     * @param {boolean} isOutputProgress 重いソート処理ごとに現在のセルの一致数を出力するか
      */
-    allSort() {
+    allSort(isOutputProgress = false) {
+
+        const outputProgress = () => { if(isOutputProgress) console.log(this.countMatchValue()) } ;
+
         // 128~2の大きさの定型抜き型を使ってソートを行う
         [{ size: 128, max: 30, limit: false },
         { size: 64, max: 25, limit: false },
@@ -916,6 +921,7 @@ class Answer {
                             }
                         }
                     }
+                    outputProgress();
                 }
 
                 // 一つの分割領域に関して一番有効なもう一つの分割領域同士を一対一対応で交換する交換方法
@@ -942,6 +948,7 @@ class Answer {
                             }
                         }
                     }
+                    outputProgress();
                 }
                 // loopSwapの方が交換回数が多くより厳密な交換ができるんじゃないかなぁ～と思ったので、両方作って組み合わせている
 
@@ -1036,6 +1043,7 @@ class Answer {
                 };
                 func(result);
             };
+            outputProgress();
         };
 
         /* ペアのソート */
