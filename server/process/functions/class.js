@@ -94,8 +94,8 @@ class BoardData {
 
         if (pattern == null) {
             for (let i = 0; i < 256; i++) {
-                let array = new Array(Math.floor(Math.random() * 256) + 1).fill(0);
-                let width = Math.floor(Math.random() * 256) + 1;
+                let array = new Array(Math.floor(Math.random() * 225) + 32).fill(0);
+                let width = Math.floor(Math.random() * 225) + 32;
                 for (let j = 0; j < array.length; j++) {
                     array[j] = new Array(width).fill(0).map(value => Math.round(Math.random()));
                 }
@@ -923,7 +923,6 @@ class Answer {
           * @param {boolean} isOutputProgress 重いソート処理ごとに現在のセルの一致数を出力するか
      */
     splitSort(isOutputProgress = false) {
-
         const outputProgress = () => { if(isOutputProgress) console.log(this.countMatchValue()) } ;
 
         // 128~2の大きさの定型抜き型を使ってソートを行う
@@ -1056,7 +1055,6 @@ class Answer {
      * @param {boolean} isOutputProgress 重いソート処理ごとに現在のセルの一致数を出力するか
      */
     allSort(isOutputProgress = false) {
-
         const outputProgress = () => { if(isOutputProgress) console.log(this.countMatchValue()) } ;
 
         /**
