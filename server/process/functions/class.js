@@ -417,10 +417,10 @@ class Answer {
             }
         }
 
-        let fileName = './log/sendLog.json';
-
+        let fileName = 'sendLog.json';
+        console.warn(isOutput);
         if (isOutput) {
-            fs.writeFile(fileName, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
+            fs.writeFile(`./process/log/${fileName}`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
         }
 
         callback?.call(this, fileName, sendData.n, sendData.ops);
