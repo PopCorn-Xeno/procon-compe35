@@ -59,7 +59,7 @@ console.log("一致数:" + boardData.answer.countMatchValue());
 
 measureStart();
 
-boardData.answer.allSort();
+boardData.answer.completeSort();
 
 measureFinish();
 
