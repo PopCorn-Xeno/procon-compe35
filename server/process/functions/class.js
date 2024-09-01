@@ -420,7 +420,7 @@ class Answer {
         }
 
         let fileName = 'sendLog.json';
-        console.warn(isOutput);
+        
         if (isOutput) {
             fs.writeFile(`./process/log/${fileName}`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
         }
