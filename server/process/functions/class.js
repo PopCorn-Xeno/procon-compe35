@@ -1,5 +1,4 @@
 const { padStart, min, values, first, result } = require("lodash");
-const cloneDeep = require("lodash/cloneDeep");
 const fs = require('fs');
 const { count } = require("console");
 
@@ -170,9 +169,15 @@ class BoardData {
         * @param {number[][]} array 並び替えるボード（2次元配列）
         */
         const shuffleBoard = array => {
-
-            /** 引数の対象配列をディープコピーしたシャッフル用の配列 */
-            let clone = cloneDeep(array);
+            /** 引数の対象配列をコピーしたシャッフル用の配列 */
+            let clone = new Array(array.height);
+            for(let i=0;i<array.length;i++){
+                let temporaryArray=new Array(array.width);
+                for(let j=0;j<array[0].length;j++){
+                    temporaryArray[j]=array[i][j];                    
+                }
+                clone[i]=temporaryArray;
+            }
 
             /** 与えられた引数の縦の要素数 */
             const height = clone.length;
@@ -404,7 +409,7 @@ class Answer {
         }
 
         let fileName = 'sendLog.json';
-        
+
         if (isOutput) {
             fs.writeFile(`./process/log/${fileName}`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
         }
@@ -442,12 +447,17 @@ class Answer {
 
         //errorFlag = true;
 
+        //縦の交換
         switch (direction) {
             case 1:
             case 3:
+                //横にfor文を回す
                 for (let i = 0 < position[0] ? position[0] : 0; i < Math.min(board.width, this.patterns[patternNumber].width + position[0]); i++) {
+                    /**縦列の情報 */
                     let line = new Array(board.height).fill(0);
+                    //縦にfor文を回す
                     for (let j = 0; j < board.height; j++) {
+                        //現在地の抜き型の値とその場所のボードの値をまとめる
                         if (patternNumber == 0) {
                             line[j] = { value: board.array[j][i], key: j - position[1] == 0 ? 1 : 0 };
                         }
@@ -455,28 +465,30 @@ class Answer {
                             line[j] = { value: board.array[j][i], key: this.patterns[patternNumber].array[j - position[1]] ? this.patterns[patternNumber].array[j - position[1]][i - position[0]] ?? 0 : 0 };
                         }
                     }
-                    /*if (line.filter(element => element.key == 1).length != 0) {
-                        errorFlag = false;
-                    }*/
+
+                    //フィルターと結合によって変形後の形にする
                     if (direction == 1) {
                         line = line.filter(element => element.key == 0).concat(line.filter(element => element.key == 1));
                     }
                     else {
                         line = line.filter(element => element.key == 1).concat(line.filter(element => element.key == 0));
                     }
+                    //完成した配列をボードの対応する縦列に代入する
                     for (let j = 0; j < board.height; j++) {
                         board.array[j][i] = line[j].value;
                     }
                 }
-                /*if (errorFlag) {
-                    console.log("操作された要素がありません");
-                }*/
                 return board;
+            //横の交換
             case 2:
             case 4:
+                //縦にfor文を回す
                 for (let i = 0 < position[1] ? position[1] : 0; i < Math.min(board.height, this.patterns[patternNumber].height + position[1]); i++) {
+                    /**横列の情報 */
                     let line = new Array(board.width).fill(0);
+                    //横にfor文を回す
                     for (let j = 0; j < board.width; j++) {
+                        //現在地の抜き型の値とその場所のボードの値をまとめる
                         if (patternNumber == 0) {
                             line[j] = { value: board.array[i][j], key: j - position[0] == 0 ? 1 : 0 };
                         }
@@ -484,20 +496,17 @@ class Answer {
                             line[j] = { value: board.array[i][j], key: this.patterns[patternNumber].array[i - position[1]] ? this.patterns[patternNumber].array[i - position[1]][j - position[0]] ?? 0 : 0 };
                         }
                     }
-                    /*if (line.filter(element => element.key == 1).length != 0) {
-                        errorFlag = false;
-                    }*/
+
+                    //フィルターと結合によって変形後の形にする
                     if (direction == 4) {
                         line = line.filter(element => element.key == 0).concat(line.filter(element => element.key == 1)).map(element => element.value);
                     }
                     else {
                         line = line.filter(element => element.key == 1).concat(line.filter(element => element.key == 0)).map(element => element.value);
                     }
+                    //完成した配列をボードの対応する横列に代入する
                     board.array[i] = line;
                 }
-                /*if (errorFlag) {
-                    console.log("操作された要素がありません");
-                }*/
                 return board;
         }
     }
@@ -884,8 +893,15 @@ class Answer {
      */
     straightSort(isOutputProgress = false) {
         const outputProgress = () => { if (isOutputProgress) console.log(this.countMatchValue()) };
-        
+
+        /**
+         * 二つの座標とサイズを指定するとその領域をスワップしたときの増加量を計算する
+         * @param {*} position1 一つ目の座標
+         * @param {*} position2 二つ目の座標
+         * @param {*} size 判定する領域の大きさ
+         */
         const evaluate = (position1, position2, size) => {
+            //2つの領域の現在と完成形の配列を作る
             let current = new Array(2).fill(0).map(array => array = new Array(size));
             let goal = new Array(2).fill(0).map(array => array = new Array(size));
             for (let i = 0; i < size; i++) {
@@ -894,16 +910,23 @@ class Answer {
                 goal[0][i] = this.goal.array[position1[1] + i].slice(position1[0], position1[0] + size);
                 goal[1][i] = this.goal.array[position2[1] + i].slice(position2[0], position2[0] + size);
             }
+            //完成した4つの配列を組み合わせてその一致数を計算することで増加量を算出する
             return this.countMatchValue(current[0], goal[1]) + this.countMatchValue(current[1], goal[0]) - this.countMatchValue(current[0], goal[0]) - this.countMatchValue(current[1], goal[1]);
         }
 
-        for (let i = 7; 0 < i; i--) {
-            let size = Math.pow(2, i);
+        //定型抜き型をサイズが大きい方から順番に指定する
+        [128, 64, 32, 16, 8, 4, 2].map(size => {
+            //基準となる座標を一つ選択する
             for (let Y = 0; Y <= this.current.height - size; Y += size) {
-                for (let X = 0; X <= this.current.width - size; X += size) {
-
+                for (let X = 0; X <= this.current.width - size; X += size) {                    
+                    //ターゲットになるもう一つの座標を決める
+                    //条件は以下の通り
+                    //1.基準の座標から直線上にある座標
+                    //2.最も一致数変化が増加する座標
                     let max = { position: false, value: 2 };
+                    //横にfor文を回してターゲットを探す
                     for (let x = 0; x <= this.current.width - size; x++) {
+                        //基準と領域が被らないようにする
                         if ((x + size) <= X || (X + size) <= x) {
                             let value = evaluate([X, Y], [x, Y], size);
                             if (value > max.value) {
@@ -912,7 +935,9 @@ class Answer {
                             }
                         }
                     }
+                    //縦にfor文を回してターゲットを探す
                     for (let y = 0; y <= this.current.height - size; y++) {
+                        //基準と領域が被らないようにする
                         if ((y + size) <= Y || (Y + size) <= y) {
                             let value = evaluate([X, Y], [X, y], size);
                             if (value > max.value) {
@@ -921,14 +946,14 @@ class Answer {
                             }
                         }
                     }
-
+                    //最も増加量が大きい領域と基準の領域を交換する
                     if (max.position) {
                         this.#swap([X, Y], max.position, size);
                     }
                 }
             }
             outputProgress();
-        }
+        });
     }
 
     /**
