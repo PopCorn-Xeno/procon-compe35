@@ -1,12 +1,13 @@
 var express = require('express');
 var router = express.Router();
-const { exec, spawn } = require("child_process");
+const { spawn } = require("child_process");
+const fs = require("fs");
 
-router.get('/', function(req, res, next) {
+router.get('/', (req, res) => {
   res.render('index');
 });
 
-router.get("/start", (req, res, next) => {
+router.get("/start", (req, res) => {
   // exec("node base/main.js", (err, stdout, stderr) => {
   //   if (err) {
   //     console.error(`stderr: ${stderr}`);
@@ -33,10 +34,18 @@ router.get("/start", (req, res, next) => {
   // res.redirect("../");
 })
 
-router.post("/", (req, res, next) => {
+router.post("/", (req, res) => {
   // console.log(req.body.array);
   // datas.push(req.body);
   // res.redirect("/");
 })
+
+router.get("/result", (req, res) => {
+  let json = (fs.readFileSync(`./process/log/${req.query.name}`, "utf-8"));
+  res.render("result", {
+    name: req.query.name,
+    orders: json
+  })
+});
 
 module.exports = router;

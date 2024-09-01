@@ -32,8 +32,8 @@ const measurePerformance = () => {
         measureResult.push(result);
         measureOrderLength.push(boardData.answer.order.length);
     }
-    fs.writeFile('./log/performance.txt', JSON.stringify(measureResult, undefined, ' '), 'utf-8', (err) => { });
-    fs.writeFile('./log/orderLength.txt', JSON.stringify(measureOrderLength, undefined, ' '), 'utf-8', (err) => { });
+    fs.writeFile('./process/log/performance.txt', JSON.stringify(measureResult, undefined, ' '), 'utf-8', (err) => { });
+    fs.writeFile('./process/log/orderLength.txt', JSON.stringify(measureOrderLength, undefined, ' '), 'utf-8', (err) => { });
 }
 
 function fullLog(data) {
