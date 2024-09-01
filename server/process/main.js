@@ -45,7 +45,7 @@ function fullLog(data) {
  */
 
 /*コピペでファイル実行
-cd ./server/base
+cd ./server/process
 node main.js
 */
 
