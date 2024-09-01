@@ -20,17 +20,17 @@ const measureFinish = () => {
 const measurePerformance = () => {
     let measureResult = [];
     let measureOrderLength = [];
-    for (let i = 70; i < 125; i++) {
+    for (let i = 32; i < 256; i++) {
         console.log(i);
-        let boardData = new BoardData(null, i, i);
+        let boardData = new BoardData(null, 0, i, i);
 
         measureStart();
 
-        boardData.answer.allSort();
+        boardData.answer.completeSort();
 
         measureFinish();
         measureResult.push(result);
-        measureOrderLength.push(boardData.answer.order.length);
+        measureOrderLength.push(boardData.answer.turn);
     }
     fs.writeFile('./process/log/performance.txt', JSON.stringify(measureResult, undefined, ' '), 'utf-8', (err) => { });
     fs.writeFile('./process/log/orderLength.txt', JSON.stringify(measureOrderLength, undefined, ' '), 'utf-8', (err) => { });
@@ -53,7 +53,7 @@ node main.js
 
 //measurePerformance();
 
-const boardData = new BoardData(null, null, 256, 256);
+const boardData = new BoardData(null, 0, 256, 256);
 
 console.log("一致数:" + boardData.answer.countMatchValue());
 
