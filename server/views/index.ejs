@@ -2,18 +2,98 @@
 <html>
   <head>
     <title>Board Process Orders</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel='stylesheet' href='/css/index.css'/>
   </head>
   <body>
     <main>
       <div class="cubic-element upper-side">
-        <div class="hexagon"></div>
+        <div class="hexagon">
+          <div class="content">
+            <h1>進捗<span>PROGRESS</span></h1>
+            <div id="progressBar">
+              <div class="gauge"></div>
+              <p><span class="percentage">000.0</span>%</p>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="cubic-element right-side">
         <div class="hexagon"></div>
       </div>
       <div class="cubic-element left-side">
-        <div class="hexagon"></div>
+        <div class="hexagon">
+          <div class="content">
+            <h1>設定<span>SETTING</span></h1>
+            <div class="item-area">
+
+              <p class="item">デバッグモード
+                <span class="type">debugMode: boolean</span>
+              </p>
+              <input type="checkbox" class="toggle" id="debugMode" name="debugMode">
+              
+              <%# -- debugModeがfalseのときにactive -- %>
+              <div class="options">
+                <p class="item">接続先ポート番号
+                  <span class="type">port: number</span>
+                </p>
+                <div class="number-field-area">
+                  <div class="number-field" id="port">
+                    <button class="increment-upper-triangle">▲</button>
+                    <input type="number" value="8001" min="1" max="65535">
+                    <button class="decrement-lower-triangle">▼</button>
+                  </div>
+                </div>
+
+                <p class="item">簡易サーバー起動
+                  <span class="type">runSimpleServer: Request</span>
+                </p>
+                <input type="checkbox" class="toggle" id="runSimpleServer" name="runSimpleServer">
+              </div>
+
+              <%# debugModeがtrueのときにactive %>
+              <div class="options">
+                <p class="item">ボードサイズ
+                  <span class="type">width, height: number</span>
+                </p>
+                <div class="number-field-area">
+                  <div class="number-field" id="width">
+                    <button class="increment-upper-triangle">▲</button>
+                    <input type="number" value="32" min="32" max="256">
+                    <button class="decrement-lower-triangle">▼</button>
+                  </div>
+                  <p>×</p>
+                  <div class="number-field" id="height">
+                    <button class="increment-upper-triangle">▲</button>
+                    <input type="number" value="32" min="32" max="256">
+                    <button class="decrement-lower-triangle">▼</button>
+                  </div>
+                </div>
+
+                <p class="item">問題の生成のみ実行
+                  <span class="type">isGenQuestion: boolean</span>
+                </p>
+                <input type="checkbox" class="toggle" id="isGenQuestion" name="isGenQuestion">
+              </div>
+              
+              <p class="item">ログを保存
+                <span class="type">isSavedLog: boolean</span>
+              </p>
+              <input type="checkbox" class="toggle" id="isSavedLog" name="isSavedLog">
+
+            </div>
+
+            <div class="description-area" id="description">
+              各項目のスイッチに触れると説明が表示されます。設定終了後に、STARTボタンを押して処理の実行を開始してください。
+            </div>
+
+            <div class="side-button-area">
+              <button id="start"><span>START</span></button>
+            </div>
+          </div>
+
+          </div>
+        </div>
       </div>
       <div class="cubic-element lower-side">
         <div class="octagon"></div>
@@ -27,5 +107,5 @@
       <button id="result">result</button>
   </body>
 
-  <script src="/js/index.js"></script>
+  <script src="/js/index.js" type="module"></script>
 </html>

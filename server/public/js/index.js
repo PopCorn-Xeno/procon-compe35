@@ -1,91 +1,54 @@
+import { StopWatch, NumberField, InputDescription, ProgressBar } from "./class.js"
+
 /* -- 変数・クラス -- */
-
-/**
- * 処理時間を計測するストップウォッチを作成するクラス
- * `00:00.00` 表示に対応する
- */
-class StopWatch {
-    /**
-     * 経過時間を出力するHTMLエレメント
-     * @type {HTMLElement}
-     */
-    outputElement = null;
-    /**
-     * 経過時間
-     */
-    #time = 0;
-    /**
-     * setIntervalのID
-     */
-    #id = 0;
-    /**
-     * 時間の増分値
-     * 0.01s (10ms)
-     */
-    #increment = 0.01;
-
-    /**
-     * @param {HTMLElement} outputElement 経過時間表示を出力するHTML要素
-     */
-    constructor(outputElement) {
-        this.outputElement = outputElement;
-        this.reset();
-    }
-
-    /**
-     * ストップウォッチ表示を作成する
-     * @param {number} seconds 秒 
-     * @returns `00:00.00`表示の文字列
-     */
-    #display(seconds) {
-        /**
-         * 入力引数が1の位のみの数字であった場合に10の位を0で埋める
-         * @param {string} strValue 文字列に変換された数値
-         * @returns 0埋めした文字列数値
-         */
-        const fillZero = strValue => strValue.length < 2 ? "0" + strValue : strValue;
-
-        // 増分値に応じて小数第2位まで丸める
-        seconds = Math.floor(seconds / this.#increment) * this.#increment;
-        // 小数点以下を切り捨てる
-        let truncated = Math.trunc(seconds);
-        // 分、秒、ミリ秒表示を求める
-        let min = Math.trunc(seconds / 60).toString();
-        let sec = truncated < 60 ? truncated.toString() : (truncated % 60).toString();
-        let ms = Math.round((seconds - truncated) / this.#increment).toString();
-        
-        return `${fillZero(min)}:${fillZero(sec)}.${fillZero(ms)}`;
-    }
-
-    /** ストップウォッチを開始する */
-    start() {
-        this.#id = setInterval(() => {
-            this.#time += this.#increment;
-            this.outputElement.textContent = this.#display(this.#time);
-        }, this.#increment * 1000);
-    }
-
-    /** ストップウォッチを停止する */
-    stop() {
-        clearInterval(this.#id);
-    }
-
-    /** ストップウォッチをリセットする */
-    reset() {
-        this.#time = 0;
-        this.outputElement.textContent = this.#display(0);
-    }
-}
 
 const buttons = {
     start: document.getElementById("start"),
     result: document.getElementById("result")
 };
 const logArea = document.getElementById("log");
+
+/** 入力系要素 */
 const inputs = {
-    width: document.getElementById("width"),
-    height: document.getElementById("height")
+    debugMode: new InputDescription(
+        document.getElementById("debugMode"),
+        "ONにすると、ランダムに問題を生成して処理を行います。"
+    ),
+    port: new InputDescription(
+        new NumberField(document.getElementById("port")),
+        "問題を送受信するサーバーのポート番号を設定します。簡易サーバー・本番環境どちらにも適用されます。"
+    ),
+    runSimpleServer: new InputDescription(
+        document.getElementById("runSimpleServer"),
+        "ONにすると簡易サーバーを上記ポートで起動します。OFFにすると簡易サーバーを切断します。"
+    ),
+    width: new InputDescription(
+        new NumberField(document.getElementById("width")),
+        "生成するボードの横幅を入力してください (32~256)。"
+    ),
+    height: new InputDescription(
+        new NumberField(document.getElementById("height")),
+        "生成するボードの縦幅を入力してください (32~256)。"
+    ),
+    isGenQuestion: new InputDescription(
+        document.getElementById("isGenQuestion"),
+        "ONにすると簡易サーバーの問題生成に用いる input.json をランダムに生成し、処理は実行しません。"
+    ),
+    isSavedLog: new InputDescription(
+        document.getElementById("isSavedLog"),
+        "ONにすると処理結果・送信データのログを保存します。"
+    )
 }
+
+const descriptionArea = document.getElementById("description");
+const defaultText = descriptionArea.textContent;
+for (let key in inputs) {
+    inputs[key].setDefault(defaultText)
+               .setAction((text) => descriptionArea.textContent = text);
+}
+
+const options = document.querySelectorAll(".options");
+const progressBar = new ProgressBar(document.getElementById("progressBar"));
 const processTime = new StopWatch(document.getElementById("processTime"));
 
 /**
@@ -98,13 +61,30 @@ const results = { matchValue: undefined, filename: "", counts: 0 }
 
 /* -- DOMイベント -- */
 
+document.addEventListener("DOMContentLoaded", () => {
+    if (inputs.debugMode.element.checked) {
+        options.item(0).classList.remove("active");
+        options.item(1).classList.add("active");
+    }
+    else {
+        options.item(0).classList.add("active");
+        options.item(1).classList.remove("active");
+    }
+})
+
+inputs.debugMode.element.addEventListener("change", () => {
+    options.forEach(element => element.classList.toggle("active"));
+});
+
 buttons.start.addEventListener("click", async () => {
     logArea.textContent = "";
     processTime.reset();
     processTime.start();
+    const width = inputs.width.element.value;
+    const height = inputs.height.element.value;
 
     // エンドポイントにアクセス
-    await fetch(`/start?width=${inputs.width.value}&height=${inputs.height.value}`)
+    await fetch(`/start?width=${width}&height=${height}`)
         .then(response => {
             // 送信されるストリームを読み込むリーダー
             const reader = response.body.getReader();
@@ -135,8 +115,7 @@ buttons.start.addEventListener("click", async () => {
 
                     if (results.matchValue) {
                         // inputsはhtmlから入力したときのみ有効なので、実戦形式の際は入力データからとってこなければならない
-                        let progress = results.matchValue / (inputs.width.value * inputs.height.value);
-                        logArea.textContent = `${Math.round(progress * 100)}%`;
+                        progressBar.progress(results.matchValue / (width * height));
                     }
                     if (results.filename != "" && results.counts != 0) {
                         logArea.textContent += ` 手数: ${results.counts} 出力ファイル: ${results.filename}`;
