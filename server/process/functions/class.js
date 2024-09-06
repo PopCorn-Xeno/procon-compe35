@@ -364,14 +364,14 @@ class Answer {
      * @param {boolean} [isOutput=false] ファイル出力するか
      * @param {Result | undefined} callback 結果を返却するコールバック
      */
-    #makeSendData(isOutput = false, callback) {
+    makeSendData(isOutput = false, callback) {
 
         /**
- * @callback Result
- * @param {string} output 出力したJSONファイル名
- * @param {number} n かかった手数
- * @param {[][]} ops 実際の操作手順
- */
+         * @callback Result
+         * @param {string} output 出力したJSONファイル名
+         * @param {number} n かかった手数
+         * @param {[][]} ops 実際の操作手順
+         */
 
         /**
          * 送信データの大枠
