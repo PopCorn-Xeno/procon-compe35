@@ -171,12 +171,12 @@ class BoardData {
         const shuffleBoard = array => {
             /** 引数の対象配列をコピーしたシャッフル用の配列 */
             let clone = new Array(array.height);
-            for(let i=0;i<array.length;i++){
-                let temporaryArray=new Array(array.width);
-                for(let j=0;j<array[0].length;j++){
-                    temporaryArray[j]=array[i][j];                    
+            for (let i = 0; i < array.length; i++) {
+                let temporaryArray = new Array(array.width);
+                for (let j = 0; j < array[0].length; j++) {
+                    temporaryArray[j] = array[i][j];
                 }
-                clone[i]=temporaryArray;
+                clone[i] = temporaryArray;
             }
 
             /** 与えられた引数の縦の要素数 */
@@ -915,40 +915,53 @@ class Answer {
         }
 
         //定型抜き型をサイズが大きい方から順番に指定する
-        [128, 64, 32, 16, 8, 4, 2].map(size => {
-            //基準となる座標を一つ選択する
-            for (let Y = 0; Y <= this.current.height - size; Y += size) {
-                for (let X = 0; X <= this.current.width - size; X += size) {                    
-                    //ターゲットになるもう一つの座標を決める
-                    //条件は以下の通り
-                    //1.基準の座標から直線上にある座標
-                    //2.最も一致数変化が増加する座標
-                    let max = { position: false, value: 2 };
-                    //横にfor文を回してターゲットを探す
-                    for (let x = 0; x <= this.current.width - size; x++) {
-                        //基準と領域が被らないようにする
-                        if ((x + size) <= X || (X + size) <= x) {
-                            let value = evaluate([X, Y], [x, Y], size);
-                            if (value > max.value) {
-                                max.value = value;
-                                max.position = [x, Y];
+        [{ size: 128, min: 25 },
+        { size: 64, min: 20 },
+        { size: 32, min: 12 },
+        { size: 16, min: 8 },
+        { size: 8, min: 6 },
+        { size: 4, min: 4 },
+        { size: 2, min: 2 }].map(element => {
+            let breakFlag = true;
+            while (breakFlag) {
+                breakFlag = false;
+                //基準となる座標を一つ選択する
+                for (let Y = 0; Y <= this.current.height - element.size; Y += element.size) {
+                    for (let X = 0; X <= this.current.width - element.size; X += element.size) {
+                        //ターゲットになるもう一つの座標を決める
+                        //条件は以下の通り
+                        //1.基準の座標から直線上にある座標
+                        //2.最も一致数変化が増加する座標
+                        /**ターゲットになった座標の情報 */
+                        //初期値はvalueにelement.minを代入し増加量の最低保証を作成している
+                        let max = { position: false, value: element.min };
+                        //横にfor文を回してターゲットを探す
+                        for (let x = 0; x <= this.current.width - element.size; x++) {
+                            //基準と領域が被らないようにする
+                            if ((x + element.size) <= X || (X + element.size) <= x) {
+                                let value = evaluate([X, Y], [x, Y], element.size);
+                                if (value > max.value) {
+                                    max.value = value;
+                                    max.position = [x, Y];
+                                }
                             }
                         }
-                    }
-                    //縦にfor文を回してターゲットを探す
-                    for (let y = 0; y <= this.current.height - size; y++) {
-                        //基準と領域が被らないようにする
-                        if ((y + size) <= Y || (Y + size) <= y) {
-                            let value = evaluate([X, Y], [X, y], size);
-                            if (value > max.value) {
-                                max.value = value;
-                                max.position = [X, y];
+                        //縦にfor文を回してターゲットを探す
+                        for (let y = 0; y <= this.current.height - element.size; y++) {
+                            //基準と領域が被らないようにする
+                            if ((y + element.size) <= Y || (Y + element.size) <= y) {
+                                let value = evaluate([X, Y], [X, y], element.size);
+                                if (value > max.value) {
+                                    max.value = value;
+                                    max.position = [X, y];
+                                }
                             }
                         }
-                    }
-                    //最も増加量が大きい領域と基準の領域を交換する
-                    if (max.position) {
-                        this.#swap([X, Y], max.position, size);
+                        //最も増加量が大きい領域と基準の領域を交換する
+                        if (max.position) {
+                            this.#swap([X, Y], max.position, element.size);
+                            breakFlag = true;
+                        }
                     }
                 }
             }
