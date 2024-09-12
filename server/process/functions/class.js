@@ -1,6 +1,4 @@
-const { padStart, min, values, first, result } = require("lodash");
 const fs = require('fs');
-const { count } = require("console");
 
 class BoardData {
     /**
@@ -28,6 +26,12 @@ class BoardData {
      * @type {Board[]}
      */
     #patterns = [];
+
+    /**
+     * インスタンス化された時間を記録し、出力ファイル名に利用する
+     * @type {string}
+     */
+    #date;
 
     /** ボードの情報 */
     get board() {
@@ -103,43 +107,12 @@ class BoardData {
         }
 
         if (board == null && pattern == null) {
-            let receptionData = {
-                board: {
-                    width: this.#board.start.width,
-                    height: this.#board.start.height,
-                    start: [],
-                    goal: [],
-                },
-                general: {
-                    n: this.#patterns.length - 25,
-                    patterns: []
-                }
-            }
-
-            for (let i = 0; i < this.#board.start.height; i++) {
-                receptionData.board.start.push(this.#board.start.array[i].toString());
-                receptionData.board.goal.push(this.#board.goal.array[i].toString());
-            }
-
-            for (let i = 25; i < this.#patterns.length; i++) {
-                receptionData.general.patterns.push({
-                    p: i,
-                    width: this.#patterns[i].width,
-                    height: this.#patterns[i].height,
-                    cells: []
-                });
-            }
-
-            for (let i = 25; i < this.#patterns.length; i++) {
-                for (let j = 0; j < this.#patterns[i].array.length; j++) {
-                    receptionData.general.patterns[i - 25].cells.push(this.#patterns[i].array[j].toString());
-                }
-            }
-
-            fs.writeFile('./functions/log/receptionLog.json', JSON.stringify(receptionData, undefined, ' '), 'utf-8', (err) => { });
+            
         }
 
         this.answer = new Answer(this.#board.start, this.#board.goal, this.#patterns);
+        // スラッシュやコロンなどファイル名禁止文字を取り除いて文字列化
+        this.#date = `${new Date().toLocaleString().replace(/ /g, "_").replace(/[:/]/g, "-")}`;;
     }
 
     /**
@@ -281,6 +254,110 @@ class BoardData {
                 return new Board(new Array(length).fill(new Array(length).fill(0).map(() => i++ % 2 == 0 ? 1 : 0)));
         }
     }
+
+    /**
+     * 問題の受信データをファイルに出力する
+     * あとで実際の本番環境のJSONにも対応できるようにするよ！！
+     */
+    writeReceptionData() {
+        /** 受信データの大枠 */
+        let receptionData = {
+            board: {
+                width: this.#board.start.width,
+                height: this.#board.start.height,
+                start: [],
+                goal: [],
+            },
+            general: {
+                n: this.#patterns.length - 25,
+                patterns: []
+            }
+        }
+
+        for (let i = 0; i < this.#board.start.height; i++) {
+            receptionData.board.start.push(this.#board.start.array[i].toString());
+            receptionData.board.goal.push(this.#board.goal.array[i].toString());
+        }
+
+        for (let i = 25; i < this.#patterns.length; i++) {
+            receptionData.general.patterns.push({
+                p: i,
+                width: this.#patterns[i].width,
+                height: this.#patterns[i].height,
+                cells: []
+            });
+        }
+
+        for (let i = 25; i < this.#patterns.length; i++) {
+            for (let j = 0; j < this.#patterns[i].array.length; j++) {
+                receptionData.general.patterns[i - 25].cells.push(this.#patterns[i].array[j].toString());
+            }
+        }
+
+        fs.writeFile(`./process/log/question/question_${this.#date}.json`, JSON.stringify(receptionData, undefined, ' '), 'utf-8', (err) => { });
+        return this;
+    }
+
+    /**
+     * 回答用の送信データを作成し、ファイルに出力する
+     * コールバックから元のデータも取得できる
+     * @param {boolean} [isOutput=false] ファイル出力するか
+     * @param {Result | undefined} callback 結果を返却するコールバック
+     */
+    writeSendData(isOutput = false, callback) {
+
+        /**
+         * @callback Result
+         * @param {string} id 出力したJSONファイルの識別用日付情報など
+         * @param {number} n かかった手数
+         * @param {[][]} ops 実際の操作手順
+         */
+
+        /**
+         * 送信データの大枠
+         */
+        let sendData = {
+            n: this.answer.order.length,
+            ops: []
+        }
+
+        // orderから各情報を照合して代入
+        for (let i = 0; i < this.answer.order.length; i++) {
+            sendData.ops.push({
+                p: this.answer.order[i].patternNumber,
+                x: this.answer.order[i].position[0],
+                y: this.answer.order[i].position[1],
+                s: 0
+            });
+        }
+
+        // 抜き型の操作方向をレギュレーションに合わせる
+        for (let i = 0; i < this.answer.order.length; i++) {
+            switch (this.answer.order[i].direction) {
+                // 上（初期値0から変更なし）
+                case 1:
+                    break;
+                // 右
+                case 2:
+                    sendData.ops[i].s = 3;
+                    break;
+                // 下
+                case 3:
+                    sendData.ops[i].s = 1;
+                    break;
+                // 左
+                case 4:
+                    sendData.ops[i].s = 2;
+                    break;
+            }
+        }
+
+        if (isOutput) {
+            fs.writeFile(`./process/log/result/result_${this.#date}.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
+        }
+
+        callback?.call(this, this.#date, sendData.n, sendData.ops);
+    }
 }
 
 class Answer {
@@ -320,6 +397,8 @@ class Answer {
      */
     terminationFlag = false;
 
+    #history;
+
     /**
      * @param {Board} start 初期状態のボード
      * @param {Board} goal 解答のボード
@@ -330,6 +409,10 @@ class Answer {
         this.goal = goal;
         this.turn = 0;
         this.patterns = patterns;
+    }
+
+    useHistory(flag) {
+        flag ? this.#history = [{}] : null;
     }
 
     /**
@@ -357,64 +440,6 @@ class Answer {
             }
         }
         return match;
-    }
-
-    /**
-     * 回答用の送信データを作成する
-     * @param {boolean} [isOutput=false] ファイル出力するか
-     * @param {Result | undefined} callback 結果を返却するコールバック
-     */
-    makeSendData(isOutput = false, callback) {
-
-        /**
-         * @callback Result
-         * @param {string} output 出力したJSONファイル名
-         * @param {number} n かかった手数
-         * @param {[][]} ops 実際の操作手順
-         */
-
-        /**
-         * 送信データの大枠
-         */
-        let sendData = {
-            n: this.order.length,
-            ops: []
-        }
-
-        // orderから各情報を照合して代入
-        for (let i = 0; i < this.order.length; i++) {
-            sendData.ops.push({
-                p: this.order[i].patternNumber,
-                x: this.order[i].position[0],
-                y: this.order[i].position[1],
-                s: 0
-            });
-        }
-
-        // 抜き型の操作方向をレギュレーションに合わせる
-        for (let i = 0; i < this.order.length; i++) {
-            switch (this.order[i].direction) {
-                case 1:
-                    break;
-                case 2:
-                    sendData.ops[i].s = 3;
-                    break;
-                case 3:
-                    sendData.ops[i].s = 1;
-                    break;
-                case 4:
-                    sendData.ops[i].s = 2;
-                    break;
-            }
-        }
-
-        let fileName = 'sendLog.json';
-
-        if (isOutput) {
-            fs.writeFile(`./process/log/${fileName}`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
-        }
-
-        callback?.call(this, fileName, sendData.n, sendData.ops);
     }
 
     /**
@@ -531,7 +556,6 @@ class Answer {
      * @param {number} size 入れ替える配列の大きさ
      * @param {number} priorityCell 指定要素が重なっていたときどちらの要素の形を保つか(0=最短手,1=左側,2=右側)
      * @param {boolean} inspection エラー処理を行うかどうか
-     * @returns
      */
     #swap(position1, position2, size = 1, priorityCell = 0, inspection = true) {
         if (inspection == true) {
@@ -889,11 +913,9 @@ class Answer {
 
     /**
      * 0番目以外の定型抜き型を使いソートを行う
-     * @param {boolean} isOutputProgress 重いソート処理ごとに現在のセルの一致数を出力するか
+     * @param {ProgressOutput} callback 処理の進捗を出力するためのコールバック
      */
-    straightSort(isOutputProgress = false) {
-        const outputProgress = () => { if (isOutputProgress) console.log(this.countMatchValue()) };
-
+    straightSort(callback) {
         /**
          * 二つの座標とサイズを指定するとその領域をスワップしたときの増加量を計算する
          * @param {*} position1 一つ目の座標
@@ -965,17 +987,15 @@ class Answer {
                     }
                 }
             }
-            outputProgress();
+            callback?.call(this, this.countMatchValue());
         });
     }
 
     /**
      * 0番目の定型抜き型を使いソートを行う
-     * @param {boolean} isOutputProgress 重いソート処理ごとに現在のセルの一致数を出力するか
+     * @param {ProgressOutput} callback 処理の進捗を出力するためのコールバック
      */
-    allSort(isOutputProgress = false) {
-        const outputProgress = () => { if (isOutputProgress) console.log(this.countMatchValue()) };
-
+    allSort(callback) {
         /**
          * 現在の配列の情報
          * @type {object[]}
@@ -1002,11 +1022,13 @@ class Answer {
             5. 条件なし
             上から順に交換に必要な手順が少ない
         */
-        const formula = [(position1, position2) => (position1[1] == position2[1]) && (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) || (position1[0] == position2[0]) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
-        (position1, position2) => position1[0] == position2[0] || position1[1] == position2[1],
-        (position1, position2) => (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
-        (position1, position2) => position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1 || position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1,
-        (position1, position2) => true];
+        const formula = [
+            (position1, position2) => (position1[1] == position2[1]) && (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) || (position1[0] == position2[0]) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
+            (position1, position2) => position1[0] == position2[0] || position1[1] == position2[1],
+            (position1, position2) => (position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1) && (position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1),
+            (position1, position2) => position1[0] == position2[0] - 1 || position1[0] == position2[0] + 1 || position1[1] == position2[1] - 1 || position1[1] == position2[1] + 1,
+            (position1, position2) => true
+        ];
 
         /**
          * ここにpositionInfoと交換手順を記した関数を渡すとソートが行われる
@@ -1039,7 +1061,7 @@ class Answer {
                 };
                 func(result);
             };
-            outputProgress();
+            callback?.call(this, this.countMatchValue());
         };
 
         /* ペアのソート */
@@ -1252,11 +1274,16 @@ class Answer {
     }
 
     /**
-     * 上記のソートを組み合わせたソート
+     * @callback ProgressOutput 処理の進捗を出力するためのコールバック
+     * @param {number} matchValue 現在のセルの一致数
      */
-    completeSort() {
-        this.straightSort();
-        this.allSort();
+    /**
+     * 上記のソートを組み合わせたソート
+     * @param {ProgressOutput} callback 処理の進捗を出力するためのコールバック
+     */
+    completeSort(callback) {
+        this.straightSort(callback);
+        this.allSort(callback);
         // this.#makeSendData();
     }
 }
