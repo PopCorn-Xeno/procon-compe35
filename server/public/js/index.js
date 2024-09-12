@@ -1,18 +1,17 @@
-import { StopWatch, NumberField, InputDescription, ProgressBar } from "./class.js"
+import { StopWatch, NumberField, InputDescription, ProgressBar, Result, Status, ConsoleWindow } from "./class.js"
 
-/* -- 変数・クラス -- */
-
+//#region 変数・定数
+/** 主に実行ボタン */
 const buttons = {
     start: document.getElementById("start"),
-    result: document.getElementById("result")
+    confirm: document.getElementById("confirm")
 };
-const logArea = document.getElementById("log");
 
 /** 入力系要素 */
 const inputs = {
     debugMode: new InputDescription(
         document.getElementById("debugMode"),
-        "ONにすると、ランダムに問題を生成して処理を行います。"
+        "ON: ランダムに問題を生成して処理します。<br>OFF:LAN内のサーバーと送受信を行います。"
     ),
     port: new InputDescription(
         new NumberField(document.getElementById("port")),
@@ -20,7 +19,7 @@ const inputs = {
     ),
     runSimpleServer: new InputDescription(
         document.getElementById("runSimpleServer"),
-        "ONにすると簡易サーバーを上記ポートで起動します。OFFにすると簡易サーバーを切断します。"
+        "ON: 簡易サーバーを上記ポートで起動します。<br>OFF: 簡易サーバーを切断します。"
     ),
     width: new InputDescription(
         new NumberField(document.getElementById("width")),
@@ -32,37 +31,86 @@ const inputs = {
     ),
     isGenQuestion: new InputDescription(
         document.getElementById("isGenQuestion"),
-        "ONにすると簡易サーバーの問題生成に用いる input.json をランダムに生成し、処理は実行しません。"
+        "ON: 簡易サーバーの問題生成に用いる input.json をランダムに生成し、処理は実行しません。"
     ),
     isSavedLog: new InputDescription(
         document.getElementById("isSavedLog"),
-        "ONにすると処理結果・送信データのログを保存します。"
-    )
+        "ON: 結果・送信データのログを保存します。<br>OFF: ログを毎回上書きします。"
+    ),
+    isDrawnBoard: new InputDescription(
+        document.getElementById("isDrawnBoard"),
+        "ONにすると処理結果表示においてボードの変化を描画しますが、処理が遅延する可能性があります。"
+    ),
+    values() {
+        return {
+            debugMode: this.debugMode.element.checked,
+            port: this.port.element.value,
+            runSimpleServer: this.runSimpleServer.element.checked,
+            width: this.width.element.value,
+            height: this.height.element.value,
+            isGenQuestion: this.isGenQuestion.element.checked,
+            isSavedLog: this.isSavedLog.element.checked,
+            isDrawnBoard: this.isDrawnBoard.element.checked
+        }
+    }
+}
+// 入力系要素・ホバー時の説明表示設定
+const defaultText = document.getElementById("description").innerHTML;
+for (const key in inputs) {
+    if (inputs[key] instanceof InputDescription) {
+        inputs[key].setDefault(defaultText)
+                   .setAction(text => document.getElementById("description").innerHTML = text);
+    }
 }
 
-const descriptionArea = document.getElementById("description");
-const defaultText = descriptionArea.textContent;
-for (let key in inputs) {
-    inputs[key].setDefault(defaultText)
-               .setAction((text) => descriptionArea.textContent = text);
-}
-
+/** 設定項目の「オプション」 */
 const options = document.querySelectorAll(".options");
-const progressBar = new ProgressBar(document.getElementById("progressBar"));
-const processTime = new StopWatch(document.getElementById("processTime"));
+
+/** 出力系要素 */
+const outputs = {
+    progressBar: new ProgressBar(document.getElementById("progressBar")),
+    status: new Status(document.getElementById("status")),
+    processedTime: new StopWatch(document.getElementById("processedTime")),
+    expectedTime: new StopWatch(document.getElementById("expectedTime")),
+    orderCount: document.getElementById("orderCount"),
+    expectedCount: document.getElementById("expectedCount"),
+    console: new ConsoleWindow(document.getElementById("console"))
+}
+
+/** 処理結果を保存する */
+let result = new Result();
+//#endregion
+
+//#region 関数
+/**
+ * @callback ApproximationFormula 近似式をラムダ式で計算式表記するためのコールバック
+ * @param {number} x x軸のパラメータ
+ * @returns {number} 式の解
+ */
+/**
+ * 近似式を用いて処理時間または操作手数を予め計算する
+ * @param {number} surface 面積・総マス数 (縦x横)
+ * @param {ApproximationFormula} formula 
+ * @returns 近似値
+ */
+function approximateProcess(surface, formula) {
+    return formula(surface);
+}
 
 /**
- * @param {Object} results プロセスの処理結果を保存する
- * @param {number | undefined} results.matchValue 現在のセルの一致数
- * @param {string} results.filename 処理結果(送信データ)の出力ファイル名
- * @param {number} results.counts 操作手数
+ * 数値を3桁コンマ区切り (`1,000`) で表す
+ * ※ `toLocaleString` が使えなかったので正規表現で
+ * @param {number} value 数値
+ * @returns 3桁コンマ区切り表記の数値文字列
  */
-const results = { matchValue: undefined, filename: "", counts: 0 }
+function toCommaDivision(value) {
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+}
+//#endregion
 
-/* -- DOMイベント -- */
-
+//#region DOMイベントリスナー
 document.addEventListener("DOMContentLoaded", () => {
-    if (inputs.debugMode.element.checked) {
+    if (inputs.values().debugMode) {
         options.item(0).classList.remove("active");
         options.item(1).classList.add("active");
     }
@@ -70,69 +118,140 @@ document.addEventListener("DOMContentLoaded", () => {
         options.item(0).classList.add("active");
         options.item(1).classList.remove("active");
     }
+    outputs.status.standBy();
+    outputs.console.log(
+        `Page was loaded at ${new Date().toTimeString().replace(/(日本標準時)/, "JST")}.`,
+        "Process has been ready."
+    )
 })
 
 inputs.debugMode.element.addEventListener("change", () => {
     options.forEach(element => element.classList.toggle("active"));
 });
 
+inputs.runSimpleServer.element.addEventListener("change", event => {
+    if (event.target.checked) {
+        fetch(`/run-server/${inputs.port.element.value}`).then(response => {
+            response.text().then(message => {
+                outputs.console.log([message, "Start process within 5 minutes."]);
+            });
+        });
+    }
+    else {
+        fetch("/stop-server").then(response => {
+            response.text().then(message => outputs.console.log(message));
+        });
+    }
+})
+
 buttons.start.addEventListener("click", async () => {
-    logArea.textContent = "";
-    processTime.reset();
-    processTime.start();
-    const width = inputs.width.element.value;
-    const height = inputs.height.element.value;
+    // 共通初期化処理
+    result = new Result();
+    outputs.processedTime.reset().start();
+    outputs.progressBar.reset();
+    outputs.orderCount.innerHTML = "0";
+    outputs.status.process();
+    outputs.console.log("Process start.");
 
-    // エンドポイントにアクセス
-    await fetch(`/start?width=${width}&height=${height}`)
-        .then(response => {
-            // 送信されるストリームを読み込むリーダー
-            const reader = response.body.getReader();
-            // バイナリのテキストを変換するデコーダー
-            const decoder = new TextDecoder();
-            // 送信されたテキストを読み込む
-            return reader.read().then(
-
-                // 読み込んだテキストデータを処理する
-                function processText(result) {
-                    // ストリームの読み取りが完了していれば終了する（再帰用の処理）
-                    if (result.done) return;
-                    // 読み込んでいないデータチャンクがあればテキストデータをデコードする
-                    let decoded = decoder.decode(result.value);
-
-                    // デコードデータがこの正規表現にマッチすれば「一致数」の出力である
-                    results.matchValue = decoded.match(/^[0-9]+/)?.at(0);
-                    
-                    // デコードデータがこの正規表現にマッチすれば「出力ファイル名」と「処理手数」の出力である
-                    let pathAndCounts = /^([A-Za-z0-9-]+\.json) ([0-9]+)/.exec(decoded);
-                    // ファイル名、手数の分割代入
-                    if (pathAndCounts) {
-                        [results.filename, results.counts] = pathAndCounts.slice(1, 3);
-                    }
-
-                    // エラー処理：UIもうちょっと作ってから入れるようにする
-                    // console.log(decoded.match(/error/i));
-
-                    if (results.matchValue) {
-                        // inputsはhtmlから入力したときのみ有効なので、実戦形式の際は入力データからとってこなければならない
-                        progressBar.progress(results.matchValue / (width * height));
-                    }
-                    if (results.filename != "" && results.counts != 0) {
-                        logArea.textContent += ` 手数: ${results.counts} 出力ファイル: ${results.filename}`;
-                    }
-
-                    // 再帰してストリームが終了するまで再度デコードする
-                    return reader.read().then(processText);
+    /**
+     * @callback OnDecode デコードされたときのアクション
+     * @param {string} decoded デコード済み文字列
+     */
+    /**
+     * 
+     * @param {Response} response `fetch` によるレスポンス
+     * @param {OnDecode} onDecode バックエンドからのデータをデコードするときに行う処理
+     */
+    const fetchProcess = (response, onDecode) => {
+        // 送信されるストリームを読み込むリーダー
+        const reader = response.body.getReader();
+        // バイナリのテキストを変換するデコーダー
+        const decoder = new TextDecoder();
+        // 送信されたテキストを読み込む
+        return reader.read().then(
+            /**
+             * 読み込んだストリームを再帰しながらデコードする
+             * @param {ReadableStreamReadResult<Uint8Array>} text バイナリテキスト
+             */
+            function decodeStream(text) {
+                // ストリームの読み取りが完了していれば終了する
+                if (text.done) return;
+                // 読み込んでいないデータチャンクがあればテキストデータをデコードして
+                // コールバック処理を行わせる
+                onDecode(decoder.decode(text.value));
+                // 再帰してストリームが終了するまでデコードを続ける
+                return reader.read().then(decodeStream);
+            }
+        );
+    }
+    
+    /**
+     * デバッグモードONの時の処理
+     * 引数には `inputs.values()` を指定すると楽
+     */
+    const debugOn = async ({ width, height, isGenQuestion, isSavedLog, isDrawnBoard }) => {
+        outputs.expectedTime.display(approximateProcess(
+            width * height,
+            x => -8.145e-19 * x**4 - 1.106e-13 * x**3 + 4.685e-8 * x**2 + 5.737e-4 * x - 0.41
+        ));
+        outputs.expectedCount.innerHTML = toCommaDivision(
+            approximateProcess(
+                width * height,
+                x => Math.floor(-1.294e-15 * x**4 + 1.982e-10 * x**3 - 1.161e-5 * x**2 + 1.507 * x + 420)
+        ));   
+    
+        // エンドポイントにアクセス
+        await fetch(`/start/on?width=${width}&height=${height}&isGenQuestion=${isGenQuestion}&isSavedLog=${isSavedLog}&isDrawnBoard=${isDrawnBoard}`)
+            .then(response => fetchProcess(response, decoded => {
+                // デコードデータがこの正規表現にマッチすれば「一致数」の出力である
+                result.matchValue = decoded.match(/^[0-9]+\n$/)?.at(0);
+                console.warn(result.matchValue);
+                // デコードデータがこの正規表現にマッチすれば「出力ファイルのクエリ」と「処理手数」の出力である
+                let idAndCounts = /^((([0-9-]{2,4}){2,3}_*){2}) ([0-9]+)\n$/.exec(decoded);
+                // ファイル名、手数の分割代入
+                if (idAndCounts) {
+                    [result.id, result.orderCount] = [idAndCounts[1], idAndCounts.at(-1)];
                 }
-            );
+                
+                if (result.matchValue) {
+                    // inputsはhtmlから入力したときのみ有効なので、実戦形式の際は入力データからとってこなければならない
+                    outputs.progressBar.progress(result.matchValue / (width * height));
+                }
+                if (result.id != "" && result.orderCount != 0) {
+                    outputs.orderCount.innerHTML = toCommaDivision(result.orderCount);
+                }
+                if (decoded.match(/error/i)?.input) {
+                    outputs.console.error(decoded.match(/error/i).input);
+                }
+            }))
+            .catch(err => outputs.console.error(["Fetch failed.", err]));
+    
+        // 処理時間を表示する（通信によって多少の誤差はある）
+        outputs.processedTime.stop();
+        outputs.status.complete();
+        outputs.console.log("Process finished.");
+    }
 
-        })
-        .catch(err => console.error("Fetch failed.", err));
+    /**
+     * デバッグモードOFFの時の処理
+     * 引数には `inputs.values()` を指定すると楽
+     */
+    const debugOff = async ({ port, runSimpleServer, isSavedLog, isDrawnBoard }) => {
+        await fetch(`/start/off?port=${port}&runSimpleServer=${runSimpleServer}&isSavedLog=${isSavedLog}&isDrawnBoard=${isDrawnBoard}`)
+        .then(response => console.log(response));
+    }
 
-    // 処理時間を表示する（通信によって多少の誤差はある）
-    processTime.stop();
+    // デバッグモードがONのとき
+    if (inputs.values().debugMode) {
+        debugOn(inputs.values());
+    }
+    // OFFのとき
+    else {
+        debugOff(inputs.values());
+    }
 });
 
-buttons.result.addEventListener("click", () => {
-    document.location.href = `/result?name=${results.filename}`;
+buttons.confirm.addEventListener("click", () => {
+    window.open(`/result?id=${result.id}`);
 });
+//#endregion
