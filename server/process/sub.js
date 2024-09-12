@@ -1,19 +1,18 @@
 const { BoardData } = require("./functions/class");
-const { inspect } = require("util");
+const yargs = require("yargs");
 
-function fullLog(data) {
-    console.log(inspect(data, { maxArrayLength: null, maxStringLength: null }));
-}
+process.on("message", m => {
+    console.log(m);
+})
 
-const boardData = new BoardData(null, null, process.argv[2], process.argv[3]);
+const boardData = new BoardData(null, null, yargs.argv?.width, yargs.argv?.height);
 
-boardData.answer.allSort(true);
+boardData.answer.completeSort((match) => process.send(match));
 
-boardData.answer.makeSendData(true, (filename, count) => console.log(filename, count));
+boardData.writeReceptionData().writeSendData(true, (id, count) => process.send(`${id} ${count}`));
 
-// throw new Error("test error");
+process.exit();
 /* コマンドライン引数のシグネチャ
- * node --max-old-space-size={RAM_SIZE[MB]} sub.js width height
- * width: process.argv[2]
- * height: process.argv[3]
+ * node --max-old-space-size={RAM_SIZE[MB]} sub.js {params}
+ * params: --width, --height, --isGenQuestion, --isSavedLog, --isDrawnBoard
  */
