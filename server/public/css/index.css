@@ -1,3 +1,4 @@
+/** --< 基本設定 >-- */
 * {
     box-sizing: border-box;
 }
@@ -9,6 +10,7 @@ html, body {
     padding: 0;
 }
 
+/** --< メインスクリーン >-- */
 main {
     --centering-margin: 5%;
     max-height: calc(100% - var(--centering-margin));
@@ -21,22 +23,36 @@ main {
     caret-color: transparent;
 }
 
+/** -- 立体に見せる要素 -- */
+/* 立体に見せる設定 */
 .cubic-element {
     transform-style: preserve-3d;
     height: 100%;
     position: absolute;
 }
 
+/* 上下部分の共通設定 */
 .cubic-element.upper-side, .cubic-element.lower-side {
     height: 50%;
     inset: auto 0;
     margin: 0 auto;
+
+    .content {
+        position: relative;
+        margin: 0 auto;
+
+        > h1 {
+            font-size: 1em;
+        }
+    }
 }
 
+/* 上部分の設定 */
 .cubic-element.upper-side {
     width: 33.3%;
     top: 0;
 
+    /* 六角形オブジェクト */
     > .hexagon {
         --vertex-margin: 20%;
         width: 100%;
@@ -48,14 +64,8 @@ main {
                            calc(25% - var(--vertex-margin)) 100%, 0% 50%);
 
         > .content {
-            position: relative;
-            margin: 0 auto;
             width: 85%;
             height: 80%;
-
-            > h1 {
-                font-size: 1em;
-            }
 
             #progressBar {
                 position: relative;
@@ -86,7 +96,7 @@ main {
 }
 
 .cubic-element.lower-side {
-    width: 37.5%;
+    width: 35%;
     bottom: 0;
 
     > .octagon {
@@ -103,22 +113,60 @@ main {
                            calc(30% - var(--vertex-margin-width)) 100%,
                            0% calc(70% + var(--vertex-margin-height)),
                            0% calc(30% - var(--vertex-margin-height)));
+        
+        > .content {
+            width: 92.5%;
+            height: 85%;
+
+            #console {
+                width: 100%;
+                height: 65%;
+                border: 2px white solid;
+                margin: 0.5em 0;
+                padding: 0 0.5em 0.5em 2em;
+                overflow-y: auto;
+
+                > li {
+                    width: 100%;
+                    overflow-wrap: break-word;
+                    font-size: 0.85em;
+                    color: white;
+                    margin-top: 0.5em;
+
+                    &::marker {
+                        font-size: 1.25em;
+                    }
+                }
+
+                > li.log::marker {
+                    color: green;
+                }
+
+                > li.error {
+                    color: red;
+
+                    &::marker {
+                        color: red;
+                    }
+                }
+            }
+        }
     }
 }
 
 .cubic-element.left-side, .cubic-element.right-side {
     perspective: 450px;
     width: 50%;
-    overflow-x: hidden;
-    --angleY: 40deg;
-    --translateX: 0%;
-    --translateY: 20%;
+    overflow: hidden;
+    --angleY: 35deg;
+    --translateX: -5%;
+    --translateY: 17.5%;
     --translateZ: -80px;
 
     > .hexagon {
         --vertex-margin: 5%;
         width: 100%;
-        height: 70%;
+        height: 75%;
         clip-path: polygon(calc(25% - var(--vertex-margin)) 0%,
                            calc(75% + var(--vertex-margin)) 0%, 100% 50%,
                            calc(75% + var(--vertex-margin)) 100%,
@@ -139,6 +187,15 @@ main {
     > .hexagon {
         transform: rotateY(var(--angleY))
                    translate3d(var(--translateX), var(--translateY), var(--translateZ));
+        
+        .item-area {
+            margin-left: 2.5%;
+            margin-right: auto;
+        }
+
+        .side-button-area {
+            inset: 2% -31% 0 auto;
+        }
     }
 }
 
@@ -148,10 +205,23 @@ main {
     > .hexagon {
         transform: rotateY(calc(-1 * var(--angleY)))
                    translate3d(calc(-1 * var(--translateX)), var(--translateY), var(--translateZ));
+    
+        .item-area {
+            margin-left: auto;
+            margin-right: 2.5%;
+        }
+
+        .side-button-area {
+            inset: 2% auto 0 -31%;
+
+            > button {
+                transform: rotate(180deg);
+            }
+        }
     }
 }
 
-.hexagon, .octagon {width: 33.3%;width: 33.3%;
+.hexagon, .octagon {
     position: absolute;
     background: rgba(0, 0, 0, 0.75);    
 }
@@ -159,7 +229,9 @@ main {
 .content {
     h1 {
         position: relative;
+        font-size: 1.85em;
         color: white;
+        margin-bottom: 3%;
         border-bottom: white 2px solid;
 
         > span {
@@ -170,7 +242,7 @@ main {
         }
     }
 
-    h1:before, .item::before {
+    h1:before, .item > p::before {
         content: "■";
         display: inline-block;
         transform: scaleX(0.3);
@@ -179,7 +251,6 @@ main {
 
     .item-area {
         width: 90%;
-        margin-left: 2.5%;
         display: flex;
         align-items: center;
         flex-direction: row;
@@ -187,22 +258,29 @@ main {
         justify-content: space-between;
 
         .item {
-            width: fit-content;
-            position: relative;
-            color: white;
-            font-size: 1.25em;
-            display: block;
-            padding: 2px 0.5em 2px 0;
-            margin: 0.75em 0 1em;
-            border-bottom: 2px white solid;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
 
-            > .type {
+            > p {
+                width: fit-content;
+                position: relative;
+                color: white;
+                font-size: 1.25em;
                 display: block;
-                position: absolute;
-                top: 100%;
-                margin: 2% 4%;
-                font-size: 0.5em;
-                font-family: monospace;
+                padding: 2px 0.5em 2px 0;
+                margin: 0.75em 0 1em;
+                border-bottom: 2px white solid;
+    
+                > .type {
+                    display: block;
+                    position: absolute;
+                    top: 100%;
+                    margin: 2% 4%;
+                    font-size: 0.5em;
+                    font-family: monospace;
+                }
             }
         }
 
@@ -221,7 +299,7 @@ main {
             justify-content: space-between;
             background: rgba(0, 0, 0, 0.3);
 
-            .item {
+            p {
                 font-size: 1.1em;
             }
 
@@ -246,159 +324,227 @@ main {
         .options {
             display: none;
         }
-    }
 
-    .toggle {
-        border: 1px solid #0c0c0d4d;
-        color: #737373;
-        display: block;
-        margin: 0 4px;
-        -webkit-appearance: none;
-        appearance: none;
-        background-color: #0c0c0d1a;
-        /* border-radius: calc(8px * var(--scale)); */
-        position: relative;
-        cursor: pointer;
-    }
-
-    .toggle:hover {
-        background-color: #0c0c0d33;
-        border-color: #0c0c0d7f;
-    }
-    .toggle:active {
-        background-color: #0c0c0d4d;
-    }
-
-    .toggle:checked {
-        background-color: #0060df;
-        border-color: #0060df;
-    }
-    
-    .toggle::before {
-        background-color: currentColor;
-        /* border-radius: calc(6px * var(--scale)); */
-        content: "";
-        display: inline-block;
-        width: 15%;
-        height: 75%;
-        position: absolute;
-        inset: 0;
-        margin: auto 5%;
-        transition: margin-left .2s cubic-bezier(.07, .95, 0, 1);
-    }
-
-    .toggle:checked::before {
-        background-color: #ffffff;
-        margin-left: 80%;
-    }
-    
-    .toggle::after {
-        content: "O";
-        font-size: 1em;
-        position: absolute;
-        right: 10%;
-        top: 50%;
-        transform: translate(0, -50%);
-    }
-    
-    .toggle:checked::after {
-        color: #ffffff;
-        content: "I";
-        left: 10%;
-    }
-
-    .number-field {
-        position: relative;
-        display: inline-block;
-
-        > input {
-            text-align: center;
-        }
-
-        > input::-webkit-inner-spin-button,
-        > input::-webkit-outer-spin-button {
-            appearance: none;
-            margin: 0;
-        }
-
-        > .increment-upper-triangle, 
-        > .decrement-lower-triangle {
+        .toggle {
+            border: 1px solid #0c0c0d4d;
+            color: #737373;
             display: block;
-            position: absolute;
-            inset: 0;
-            font-size: 1em;
-            text-align: center;
+            margin: 0 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: #0c0c0d1a;
+            /* border-radius: calc(8px * var(--scale)); */
+            position: relative;
             cursor: pointer;
-            color: white;
-            border: 0;
-            background: none;
-            cursor: pointer;
-            transition: color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)
-        }
+
+            &:hover {
+                background-color: #0c0c0d33;
+                border-color: #0c0c0d7f;
+            }
+
+            &:active {
+                background-color: #0c0c0d4d;
+            }
+
+            &:checked {
+                background-color: #0060df;
+                border-color: #0060df;
+            }
+
+            &::before {
+                background-color: currentColor;
+                /* border-radius: calc(6px * var(--scale)); */
+                content: "";
+                display: inline-block;
+                width: 15%;
+                height: 75%;
+                position: absolute;
+                inset: 0;
+                margin: auto 5%;
+                transition: margin-left .2s cubic-bezier(.07, .95, 0, 1);
+            }
         
-        > .increment-upper-triangle:active, 
-        > .decrement-lower-triangle:active {
-            color: gray;
+            &:checked::before {
+                background-color: #ffffff;
+                margin-left: 80%;
+            }
+            
+            &::after {
+                content: "O";
+                font-size: 1em;
+                position: absolute;
+                right: 10%;
+                top: 50%;
+                transform: translate(0, -50%);
+            }
+            
+            &:checked::after {
+                color: #ffffff;
+                content: "I";
+                left: 10%;
+            }
         }
 
-        > .increment-upper-triangle {
-            transform: translate(0, -80%);
+        .number-field {
+            position: relative;
+            display: inline-block;
+    
+            > input {
+                text-align: center;
+            }
+    
+            > input::-webkit-inner-spin-button,
+            > input::-webkit-outer-spin-button {
+                appearance: none;
+                margin: 0;
+            }
+    
+            > .increment-upper-triangle, 
+            > .decrement-lower-triangle {
+                display: block;
+                position: absolute;
+                inset: 0;
+                font-size: 1em;
+                text-align: center;
+                cursor: pointer;
+                color: white;
+                border: 0;
+                background: none;
+                cursor: pointer;
+                transition: color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            }
+            
+            > .increment-upper-triangle:active, 
+            > .decrement-lower-triangle:active {
+                color: gray;
+            }
+    
+            > .increment-upper-triangle {
+                transform: translate(0, -80%);
+            }
+    
+            > .decrement-lower-triangle {
+                transform: translate(0, 90%);
+            }
         }
 
-        > .decrement-lower-triangle {
-            transform: translate(0, 90%);
-        }
-    }    
-}
-
-.description-area {
-    position: relative;
-    width: 95%;
-    height: 17%;
-    margin: 5% 0;
-    padding: 2% 4%;
-    font-size: 0.85em;
-    color: white;
-    background-color: rgba(0, 0, 0, 0.25);
-}
-
-.side-button-area {
-    position: absolute;
-    inset: 2% -31% 0 auto;
-    margin: auto;
-    width: 27%;
-    height: 83%;
-
-    > button {
-        clip-path: polygon(100% 50%, 0 0, 0 100%);
-        background-color: rgba(0, 0, 0, 0.25);
-        width: 100%;
-        height: 100%;
-        border: 0;
-        cursor: pointer;
-
-        > span {
+        /* -- 主に右側 (.right-side) -- */
+        #status {
+            --scaleX: 0.8;
+            --scaleY: 1.2;
+            font-size: 2.25em;
+            font-weight: 900;
+            margin: 0.5em 0;
+            transform: scale(var(--scaleX), var(--scaleY));
             color: white;
-            writing-mode: vertical-lr;
-            letter-spacing: 0.5em;
-            text-align: center;
+
+            > .status-subtitle {
+                display: block;
+                width: 100%;
+                font-size: 0.35em;
+                font-weight: normal;
+                text-align: center;
+                letter-spacing: 0.6em;
+                margin-left: 0.3em;
+                transform: scaleY(calc(1 / var(--scaleY))) scaleX(var(--scaleY));
+            }
+        }
+
+        .processed-time-area {
+            font-size: 2.5em;
+            margin: 0.5em 0;
+            color: white;
+
+            > span {
+                display: block;
+            }
+
+            > #processedTime {
+                font-size: 1em;
+                font-weight: 700;
+            }
+
+            > span {
+                font-size: 0.35em;
+                font-weight: 300;
+                text-align: end;
+
+                > #expectedTime {
+                    font-size: 1.75em;
+                }
+            }
+        }
+
+        .order-count {
             font-size: 1.25em;
+            margin: 0.5em 0;
+            color: white;
+            text-align: end;
+
+            > #orderCount {
+                font-size: 2em;
+                font-weight: 700;
+            }
+
+            > span:last-child {
+                display: block;
+                font-size: 0.7em;
+                font-weight: 300;
+
+                > #expectedCount {
+                    font-size: 1.75em;
+                }
+            }
+        }
+    }
+   
+    .description-area {
+        position: relative;
+        width: 95%;
+        height: 17%;
+        margin: 5% 0;
+        padding: 2% 4%;
+        font-size: 0.9em;
+        color: white;
+        background-color: rgba(0, 0, 0, 0.25);
+    }
+    
+    .side-button-area {
+        position: absolute;
+        inset: 2% -31% 0 auto;
+        margin: auto;
+        width: 27%;
+        height: 83%;
+    
+        > button {
+            clip-path: polygon(100% 50%, 0 0, 0 100%);
+            background-color: rgba(0, 0, 0, 0.25);
             width: 100%;
             height: 100%;
-            margin: auto 0;
-            margin-top: 0.5em;
-            transform: translate(10%, 0) scaleY(1.25);
-            pointer-events: none;
-        }
+            border: 0;
+            cursor: pointer;
+    
+            > span {
+                color: white;
+                writing-mode: vertical-lr;
+                letter-spacing: 0.5em;
+                text-align: center;
+                font-size: 1.25em;
+                width: 100%;
+                height: 100%;
+                margin: auto 0;
+                margin-top: 0.5em;
+                transform: translate(10%, 0) scaleY(1.25);
+                pointer-events: none;
 
-        > span::after {
-            content: "▶";
-            font-size: 0.75em;
-            position: absolute;
-            inset: 0;
-            left: 45%;
+                &::after {
+                    content: "▶";
+                    font-size: 0.75em;
+                    position: absolute;
+                    inset: 0;
+                    left: 45%;
+                }
+            }
         }
     }
-
-    
 }
