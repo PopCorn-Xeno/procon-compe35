@@ -1,5 +1,9 @@
 const fs = require('fs');
+const error = require("./error");
 
+/**
+ * 問題を解くためのクラス
+ */
 class BoardData {
     /**
      * この問題の解答
@@ -44,11 +48,52 @@ class BoardData {
     }
 
     /**
-     * @param {*} board 
-     * @param {*} width 
-     * @param {*} height 
+     * @typedef ProblemBoad 受信データにおけるボード情報の形式
+     * @property {number} width 横幅
+     * @property {number} height 縦幅
+     * @property {string[]} start ボードの初期状態
+     * @property {string[]} goal ボードの完成状態
+     * 
+     * @typedef ProblemPattern 受信データにおける抜き型情報の形式
+     * @property {number} p 抜き型の番号
+     * @property {number} width 横幅
+     * @property {number} height 縦幅
+     * @property {string[]} cells 抜き型
      */
-    constructor(board = null, pattern = null, width = 0, height = 0) {
+
+    /**
+     * 1. `board`と`patterns`を入力・`width`と`height`省略:
+     *  **受信データを用いて問題を解く**
+     * 
+     * 2. `width`と`height`を入力・`board`と`patterns`を`null`指定:
+     *  **ランダムに問題を作成して解く**
+     * @param {ProblemBoad | null | 0} board 受信データのボードJSON
+     * @param {ProblemPattern[] | null} patterns 受信データの抜き型JSON
+     * @param {number} width ボードの横幅
+     * @param {number} height ボードの縦幅
+     */
+    constructor(board = null, patterns = null, width = 0, height = 0) {
+        // 定型抜き型を用意する
+        for (let i = 0; i < 25; i++) {
+            this.#patterns.push(this.#setFormatPattern(i));
+        }
+
+        // 受信データを使用する場合、JSONからデータを取得する
+        if (board && patterns && (!width && !height)) {
+            // 最後は符号の演算子を利用して暗黙的に数値型に変換する
+            this.#board.start = new Board(board.start.map(str => str.split("").map(elem => +elem)));
+            this.#board.goal = new Board(board.goal.map(str => str.split("").map(elem => +elem)));
+            // 抜き型の番号が25より大きいものが送られてきたとしても関係なく前から詰めていく
+            // 本来の番号を維持しないと回答で間違える可能性がある
+            this.#patterns = this.#patterns.concat(patterns.map(pattern => new Board(pattern.cells.map(str => str.split("").map(elem => +elem)))))
+            /* 要相談 */
+            // 抜き型の番号が25より大きいものが送られてきたとしてもそのインデックスから詰めていく
+            // 空のインデックスができてしまうので扱いづらいが本来の番号ごと維持できる
+            // for (let i = 0; i < patterns.length; i++) {
+            //     this.#patterns[patterns[i].p] = new Board(patterns[i].cells.map(str => str.split("").map(elem => +elem)));
+            // }
+        }        
+
         // 受信データを使用しなかった場合、問題をランダムで作るモードに移行する、また0に指定すると座標を表す数値を出力する
         if (board === null) {
             this.#makeRandom(height, width);
@@ -65,37 +110,8 @@ class BoardData {
 
             this.#board.start = new Board(sample);
         }
-        // 受信データを使用する場合、JSONからデータを取得する
-        else {
-            /**
-             * 受信データのボード情報をコピー
-             * @type {{}}
-             */
-            let board = board?.board;
-            /**
-             * 受信データの抜き型情報をコピー
-             * @type {{}[]}
-             */
-            let patterns = board?.general?.patterns;
 
-            this.#board.width = board?.width;
-            this.#board.height = board?.height;
-            // 最後は符号の演算子を利用して暗黙的に数値型に変換する
-            // for文の方が早く回るが、処理時間が気になり始めたときに改善する
-            this.#board.start = board?.start.map(str => str.split("").map(elem => +elem));
-            this.#board.goal = board?.goal.map(str => str.split("").map(elem => +elem));
-
-            this.#patterns = patterns;
-            for (let i = 0; i < this.#patterns.length; i++) {
-                this.#patterns[i].cells = this.#patterns[i].cells.map(str => str.split("").map(elem => +elem));
-            }
-        }
-
-        for (let i = 0; i < 25; i++) {
-            this.#patterns.push(this.#setFormatPattern(i));
-        }
-
-        if (pattern == null) {
+        if (patterns == null) {
             for (let i = 0; i < 256; i++) {
                 let array = new Array(Math.floor(Math.random() * 225) + 32).fill(0);
                 let width = Math.floor(Math.random() * 225) + 32;
@@ -104,10 +120,6 @@ class BoardData {
                 }
                 this.#patterns.push(new Board(array));
             }
-        }
-
-        if (board == null && pattern == null) {
-            
         }
 
         this.answer = new Answer(this.#board.start, this.#board.goal, this.#patterns);
@@ -294,7 +306,7 @@ class BoardData {
             }
         }
 
-        fs.writeFile(`./process/log/question/question_${this.#date}.json`, JSON.stringify(receptionData, undefined, ' '), 'utf-8', (err) => { });
+        fs.writeFileSync(`./process/log/question/question_${this.#date}.json`, JSON.stringify(receptionData, undefined, ' '), 'utf-8', (err) => { });
         return this;
     }
 
@@ -351,9 +363,9 @@ class BoardData {
                     break;
             }
         }
-
+        console.log(sendData);
         if (isOutput) {
-            fs.writeFile(`./process/log/result/result_${this.#date}.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { });
+            fs.writeFileSync(`./process/log/result/result_${this.#date}.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { console.error(err) });
         }
 
         callback?.call(this, this.#date, sendData.n, sendData.ops);
@@ -400,6 +412,12 @@ class Answer {
     #history;
 
     /**
+     * エラーが発生したときのハンドリングを行うコールバック
+     * @type {error.CatchHandler}
+     */
+    #errorHandler;
+
+    /**
      * @param {Board} start 初期状態のボード
      * @param {Board} goal 解答のボード
      * @param {Board[]} patterns 使用する抜き型
@@ -413,6 +431,16 @@ class Answer {
 
     useHistory(flag) {
         flag ? this.#history = [{}] : null;
+    }
+
+    /**
+     * エラーが発生したときのアクションを設定する
+     * @param {error.CatchHandler} callback エラーハンドラー
+     * @returns インスタンス
+     */
+    setErrorHandler(callback) {
+        this.#errorHandler = callback;
+        return this;
     }
 
     /**
@@ -457,32 +485,32 @@ class Answer {
         let errorFlag = false;
         //座標がx軸についてボードからはみ出しているかどうか判定する
         if (position[0] < 0 && this.patterns[patternNumber].width <= -position[0] || board.width <= position[0]) {
-            console.error("pullOut関数:x座標が不正な値です(抜き型がボードから完全にはみ出しています");
+            error.throwError(new error.PullOutError("x座標が不正な値です(抜き型がボードから完全にはみ出しています)"), this.#errorHandler);
             errorFlag = true;
         }
         //座標がy軸についてボードからはみ出しているかどうか判定する
         if (position[1] < 0 && this.patterns[patternNumber].height <= -position[1] || board.width <= position[1]) {
-            console.error("pullOut関数:y座標が不正な値です(抜き型がボードから完全にはみ出しています");
+            error.throwError(new error.PullOutError("y座標が不正な値です(抜き型がボードから完全にはみ出しています)"), this.#errorHandler);
             errorFlag = true
         }
-        //エラーが起きた場合nullを返す
+        // エラーが起きた場合nullを返す
         if (errorFlag == true) {
             return null;
         }
 
         //errorFlag = true;
 
-        //縦の交換
+        // 縦の交換
         switch (direction) {
             case 1:
             case 3:
                 //横にfor文を回す
                 for (let i = 0 < position[0] ? position[0] : 0; i < Math.min(board.width, this.patterns[patternNumber].width + position[0]); i++) {
-                    /**縦列の情報 */
+                    /** 縦列の情報 */
                     let line = new Array(board.height).fill(0);
-                    //縦にfor文を回す
+                    // 縦にfor文を回す
                     for (let j = 0; j < board.height; j++) {
-                        //現在地の抜き型の値とその場所のボードの値をまとめる
+                        // 現在地の抜き型の値とその場所のボードの値をまとめる
                         if (patternNumber == 0) {
                             line[j] = { value: board.array[j][i], key: j - position[1] == 0 ? 1 : 0 };
                         }
@@ -491,7 +519,7 @@ class Answer {
                         }
                     }
 
-                    //フィルターと結合によって変形後の形にする
+                    // フィルターと結合によって変形後の形にする
                     if (direction == 1) {
                         line = line.filter(element => element.key == 0).concat(line.filter(element => element.key == 1));
                     }
@@ -504,16 +532,16 @@ class Answer {
                     }
                 }
                 return board;
-            //横の交換
+            // 横の交換
             case 2:
             case 4:
-                //縦にfor文を回す
+                // 縦にfor文を回す
                 for (let i = 0 < position[1] ? position[1] : 0; i < Math.min(board.height, this.patterns[patternNumber].height + position[1]); i++) {
-                    /**横列の情報 */
+                    /** 横列の情報 */
                     let line = new Array(board.width).fill(0);
-                    //横にfor文を回す
+                    // 横にfor文を回す
                     for (let j = 0; j < board.width; j++) {
-                        //現在地の抜き型の値とその場所のボードの値をまとめる
+                        // 現在地の抜き型の値とその場所のボードの値をまとめる
                         if (patternNumber == 0) {
                             line[j] = { value: board.array[i][j], key: j - position[0] == 0 ? 1 : 0 };
                         }
@@ -522,14 +550,14 @@ class Answer {
                         }
                     }
 
-                    //フィルターと結合によって変形後の形にする
+                    // フィルターと結合によって変形後の形にする
                     if (direction == 4) {
                         line = line.filter(element => element.key == 0).concat(line.filter(element => element.key == 1)).map(element => element.value);
                     }
                     else {
                         line = line.filter(element => element.key == 1).concat(line.filter(element => element.key == 0)).map(element => element.value);
                     }
-                    //完成した配列をボードの対応する横列に代入する
+                    // 完成した配列をボードの対応する横列に代入する
                     board.array[i] = line;
                 }
                 return board;
@@ -565,28 +593,34 @@ class Answer {
             let errorFlag = false;
             // それぞれのx座標がボードからはみ出していないか調べる
             if (position1[0] < 0 || this.current.width - size < position1[0]) {
-                console.error("swap関数:position1のx座標が不正な値です(配列の外側の要素を指定することはできません");
+                error.throwError(new error.SwapError("position1のx座標が不正な値です(配列の外側の要素を指定することはできません)"), this.#errorHandler);
+                // "X position of the parameter `position1` is invalid (Cannot specify an element of outside of array)"
                 errorFlag = true;
             }
             if (position2[0] < 0 || this.current.width - size < position2[0]) {
-                console.error("swap関数:position2のx座標が不正な値です(配列の外側の要素を指定することはできません");
+                error.throwError(new error.SwapError("position2のx座標が不正な値です(配列の外側の要素を指定することはできません)"), this.#errorHandler);
+                // "X position of the parameter `position2` is invalid (Cannot specify an element of outside of array)"
                 errorFlag = true;
             }
             // それぞれのy座標がボードからはみ出していないか調べる
             if (position1[1] < 0 || this.current.height - size < position1[1]) {
-                console.error("swap関数:position1のy座標が不正な値です(配列の外側の要素を指定することはできません");
+                error.throwError(new error.SwapError("position1のy座標が不正な値です(配列の外側の要素を指定することはできません)"), this.#errorHandler);
+                // "Y position of the parameter `position1` is invalid (Cannot specify an element of outside of array)"
                 errorFlag = true;
             }
             if (position2[1] < 0 || this.current.height - size < position2[1]) {
-                console.error("swap関数:position2のy座標が不正な値です(配列の外側の要素を指定することはできません");
+                error.throwError(new error.SwapError("position2のy座標が不正な値です(配列の外側の要素を指定することはできません)"), this.#errorHandler);
+                // "2 position of the parameter `position2` is invalid (Cannot specify an element of outside of array)"
                 errorFlag = true;
             }
             // サイズが不正な値でないか調べる
             if (size > 256) {
-                console.error("swap関数:sizeが不正な値です(256より大きいサイズを指定することはできません)");
+                error.throwError(new error.SwapError("sizeが不正な値です(256より大きいサイズを指定することはできません)"), this.#errorHandler);
+                // "The parameter `size` is invalid (Cannot specify a size of more than 256)"
             }
             if (size == 0 ? false : !Number.isInteger(Math.log2(size))) {
-                console.error("swap関数:sizeが不正な値です(2^nの値を指定してください)");
+                error.throwError(new error.SwapError("sizeが不正な値です(2^nの値を指定してください)"), this.#errorHandler);
+                // "The parameter `size` is invalid (Specify the value of 2^n)"
             }
 
             // フラグを参照して関数を中断する
@@ -600,7 +634,8 @@ class Answer {
         if (position1[0] != position2[0] && position1[1] != position2[1]) {
             //指定した要素同士が重なっていないか調べる
             if ((Math.abs(position1[0] - position2[0]) < size) && (Math.abs(position1[1] - position2[1]) < size)) {
-                console.error("swap関数:直線的な交換でないのに指定した要素同士が重なっています");
+                error.throwError(new error.SwapError("直線的な交換でないのに指定した要素同士が重なっています"), this.#errorHandler);
+                // "Each specified element is overlaping although nonlinear swap"
                 return null;
             }
 
