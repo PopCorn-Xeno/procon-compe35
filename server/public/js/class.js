@@ -1,5 +1,5 @@
 /**
- * 処理時間を計測するストップウォッチを作成するクラス
+ * 処理時間を計測するストップウォッチを作成するクラス\
  * `00:00.00` 表示に対応する
  */
 export class StopWatch {
@@ -88,7 +88,7 @@ export class StopWatch {
 }
 
 /**
- * 数字で入力する設定項目を管理するクラス
+ * 数字で入力する設定項目を管理するクラス\
  * `<div class="number-field" id="">`をターゲットにする
  */
 export class NumberField {
@@ -311,7 +311,8 @@ export class Status {
 }
 
 /**
- * コンソールウィンドウを使うためのクラス
+ * コンソールウィンドウを使うためのクラス\
+ * **文字列中の`'<', '>', '\n'`はエスケープまたは改行コードに置き換わる**
  */
 export class ConsoleWindow {
     /**
@@ -348,7 +349,10 @@ export class ConsoleWindow {
                 message.forEach(m => element.innerHTML += `${m}<br>`);
             }
             else {
-                element.innerHTML = message;
+                element.innerHTML = message.toString()
+                                           .replace(/</g, "&lt;")
+                                           .replace(/>/g, "&gt;")
+                                           .replace(/\n/g, "<br>");
             }
             element.classList.add(className);
             element = this.#console.appendChild(element);
@@ -384,7 +388,17 @@ export class ConsoleWindow {
  * 処理結果を保存するクラス
  */
 export class Result {
-    constructor(matchValue = undefined, id = "", orderCount = 0) {
+    constructor(width = undefined, height = undefined, matchValue = undefined, id = "", orderCount = 0) {
+        /**
+         * ボードの横幅 - 受信データ使用時のみ利用
+         * @type {number | undefined}
+         */
+        this.width = width;
+        /**
+         * ボードの縦幅 - 受信データ使用時のみ利用
+         * @type {number | undefined}
+         */
+        this.height = height;
         /**
          * 現在のセルの一致数
          * @type {number | undefined} 
