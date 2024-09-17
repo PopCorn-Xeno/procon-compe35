@@ -77,6 +77,12 @@ const outputs = {
     console: new ConsoleWindow(document.getElementById("console"))
 }
 
+/** 処理の予想に用いる近似式 */
+const formulas = {
+    time: (x) => -8.145e-19 * x**4 - 1.106e-13 * x**3 + 4.685e-8 * x**2 + 5.737e-4 * x - 0.41,
+    order: (x) => Math.floor(-1.294e-15 * x**4 + 1.982e-10 * x**3 - 1.161e-5 * x**2 + 1.507 * x + 420)
+}
+
 /** 処理結果を保存する */
 let result = new Result();
 //#endregion
@@ -132,14 +138,14 @@ inputs.debugMode.element.addEventListener("change", () => {
 inputs.runSimpleServer.element.addEventListener("change", event => {
     if (event.target.checked) {
         fetch(`/run-server/${inputs.port.element.value}`).then(response => {
-            response.text().then(message => {
+            response.text().then((message) => {
                 outputs.console.log([message, "Start process within 5 minutes."]);
             });
         });
     }
     else {
         fetch("/stop-server").then(response => {
-            response.text().then(message => outputs.console.log(message));
+            response.text().then((message) => outputs.console.log(message));
         });
     }
 })
@@ -158,11 +164,11 @@ buttons.start.addEventListener("click", async () => {
      * @param {string} decoded デコード済み文字列
      */
     /**
-     * 
+     * フェッチしたリクエスト先から送信されるストリームを読んで様々な処理を行う
      * @param {Response} response `fetch` によるレスポンス
      * @param {OnDecode} onDecode バックエンドからのデータをデコードするときに行う処理
      */
-    const fetchProcess = (response, onDecode) => {
+    const fetchProcess = async (response, onDecode) => {
         // 送信されるストリームを読み込むリーダー
         const reader = response.body.getReader();
         // バイナリのテキストを変換するデコーダー
@@ -186,59 +192,112 @@ buttons.start.addEventListener("click", async () => {
     }
     
     /**
-     * デバッグモードONの時の処理
+     * デバッグモードONの時の処理\
      * 引数には `inputs.values()` を指定すると楽
      */
     const debugOn = async ({ width, height, isGenQuestion, isSavedLog, isDrawnBoard }) => {
-        outputs.expectedTime.display(approximateProcess(
-            width * height,
-            x => -8.145e-19 * x**4 - 1.106e-13 * x**3 + 4.685e-8 * x**2 + 5.737e-4 * x - 0.41
-        ));
-        outputs.expectedCount.innerHTML = toCommaDivision(
-            approximateProcess(
-                width * height,
-                x => Math.floor(-1.294e-15 * x**4 + 1.982e-10 * x**3 - 1.161e-5 * x**2 + 1.507 * x + 420)
-        ));   
-    
+        // 初期化
+        outputs.expectedTime.display(approximateProcess(width * height, formulas.time));
+        outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(width * height, formulas.order));   
         // エンドポイントにアクセス
-        await fetch(`/start/on?width=${width}&height=${height}&isGenQuestion=${isGenQuestion}&isSavedLog=${isSavedLog}&isDrawnBoard=${isDrawnBoard}`)
-            .then(response => fetchProcess(response, decoded => {
+        return await fetch(`/start/on?width=${width}&height=${height}&isGenQuestion=${isGenQuestion}&isSavedLog=${isSavedLog}&isDrawnBoard=${isDrawnBoard}`)
+        .then(async (response) => {
+            await fetchProcess(response, (decoded) => {
                 // デコードデータがこの正規表現にマッチすれば「一致数」の出力である
                 result.matchValue = decoded.match(/^[0-9]+\n$/)?.at(0);
-                console.warn(result.matchValue);
                 // デコードデータがこの正規表現にマッチすれば「出力ファイルのクエリ」と「処理手数」の出力である
                 let idAndCounts = /^((([0-9-]{2,4}){2,3}_*){2}) ([0-9]+)\n$/.exec(decoded);
+                // デコードデータがこの正規表現にマッチすれば「エラー」の出力である
+                let errorMessage = decoded.match(/error/i);
                 // ファイル名、手数の分割代入
                 if (idAndCounts) {
                     [result.id, result.orderCount] = [idAndCounts[1], idAndCounts.at(-1)];
                 }
-                
+                // 取得できた値をそれぞれ反映する
                 if (result.matchValue) {
-                    // inputsはhtmlから入力したときのみ有効なので、実戦形式の際は入力データからとってこなければならない
                     outputs.progressBar.progress(result.matchValue / (width * height));
                 }
                 if (result.id != "" && result.orderCount != 0) {
                     outputs.orderCount.innerHTML = toCommaDivision(result.orderCount);
                 }
-                if (decoded.match(/error/i)?.input) {
-                    outputs.console.error(decoded.match(/error/i).input);
+                if (errorMessage?.input) {
+                    outputs.console.error(errorMessage.input);
+                    outputs.processedTime.stop();
+                    outputs.status.error();
+                    return;
                 }
-            }))
-            .catch(err => outputs.console.error(["Fetch failed.", err]));
-    
-        // 処理時間を表示する（通信によって多少の誤差はある）
-        outputs.processedTime.stop();
-        outputs.status.complete();
-        outputs.console.log("Process finished.");
+            });
+            // 処理時間を表示する（通信によって多少の誤差はある）
+            outputs.processedTime.stop();
+            outputs.status.complete();
+            outputs.console.log("Process finished.");
+        })
+        .catch((error) => {
+            outputs.console.error(["Fetch failed.", error]);
+            outputs.processedTime.stop();
+            outputs.status.error();
+        });
     }
 
     /**
-     * デバッグモードOFFの時の処理
+     * デバッグモードOFFの時の処理\
      * 引数には `inputs.values()` を指定すると楽
      */
     const debugOff = async ({ port, runSimpleServer, isSavedLog, isDrawnBoard }) => {
-        await fetch(`/start/off?port=${port}&runSimpleServer=${runSimpleServer}&isSavedLog=${isSavedLog}&isDrawnBoard=${isDrawnBoard}`)
-        .then(response => console.log(response));
+        return await fetch(`/start/off?port=${port}&runSimpleServer=${runSimpleServer}&isSavedLog=${isSavedLog}&isDrawnBoard=${isDrawnBoard}`)
+        .then(async (response) => {
+            switch (response.status) {
+                // 正常な通信の場合
+                case 200:
+                    await fetchProcess(response, (decoded) => {
+                        let widthAndHeight = /^board: ([0-9]+), ([0-9]+)/.exec(decoded);
+                        if (widthAndHeight) {
+                            [result.width, result.height] = widthAndHeight.slice(1, 3)?.map(str => Number.parseInt(str));
+                            outputs.expectedTime.display(approximateProcess(result.width * result.height, formulas.time));
+                            outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(result.width * result.height, formulas.order));
+                            outputs.console.log(["Connecting server successed.", `width: ${result.width}, height: ${result.height}`]);
+                        }
+                        // デコードデータがこの正規表現にマッチすれば「一致数」の出力である
+                        result.matchValue = decoded.match(/^[0-9]+\n$/)?.at(0);
+                        // デコードデータがこの正規表現にマッチすれば「出力ファイルのクエリ」と「処理手数」の出力である
+                        let idAndCounts = /^((([0-9-]{2,4}){2,3}_*){2}) ([0-9]+)\n$/.exec(decoded);
+                        // デコードデータがこの正規表現にマッチすれば「エラー」の出力である
+                        let errorMessage = decoded.match(/error/i);
+                        // ファイル名、手数の分割代入
+                        if (idAndCounts) {
+                            [result.id, result.orderCount] = [idAndCounts[1], idAndCounts.at(-1)];
+                        }
+                        // 取得できた値をそれぞれ反映する
+                        if (result.matchValue) {
+                            outputs.progressBar.progress(result.matchValue / (result.width * result.height));
+                        }
+                        if (result.id != "" && result.orderCount != 0) {
+                            outputs.orderCount.innerHTML = toCommaDivision(result.orderCount);
+                        }
+                        if (errorMessage?.input) {
+                            outputs.console.error(errorMessage.input);   
+                        }
+                    });
+                    // 処理時間を表示する（通信によって多少の誤差はある）
+                    outputs.processedTime.stop();
+                    outputs.status.complete();
+                    outputs.console.log("Process finished.");
+                    break;
+                // その他飛んでくるエラーステータスの処理をする
+                case 403:
+                case 401:
+                case 500:
+                    await fetchProcess(response, outputs.console.error);
+                    outputs.processedTime.stop();
+                    outputs.status.error();
+                    break;
+            }
+        })
+        .catch((error) => {
+            outputs.console.error(["Fetch failed.", error]);
+            outputs.processedTime.stop();
+            outputs.status.error();
+        });
     }
 
     // デバッグモードがONのとき
