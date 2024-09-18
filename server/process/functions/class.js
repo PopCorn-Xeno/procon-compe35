@@ -92,7 +92,7 @@ class BoardData {
             // for (let i = 0; i < patterns.length; i++) {
             //     this.#patterns[patterns[i].p] = new Board(patterns[i].cells.map(str => str.split("").map(elem => +elem)));
             // }
-        }        
+        }
 
         // 受信データを使用しなかった場合、問題をランダムで作るモードに移行する、また0に指定すると座標を表す数値を出力する
         if (board === null) {
@@ -484,12 +484,12 @@ class Answer {
         //主にエラー内容が共存できる部分があるので必要である
         let errorFlag = false;
         //座標がx軸についてボードからはみ出しているかどうか判定する
-        if (position[0] < 0 && this.patterns[patternNumber].width <= -position[0] || board.width <= position[0]) {
+        if ((position[0] < 0 && this.patterns[patternNumber].width <= -position[0]) || board.width <= position[0]) {
             error.throwError(new error.PullOutError("x座標が不正な値です(抜き型がボードから完全にはみ出しています)"), this.#errorHandler);
             errorFlag = true;
         }
         //座標がy軸についてボードからはみ出しているかどうか判定する
-        if (position[1] < 0 && this.patterns[patternNumber].height <= -position[1] || board.width <= position[1]) {
+        if ((position[1] < 0 && this.patterns[patternNumber].height <= -position[1]) || board.height <= position[1]) {
             error.throwError(new error.PullOutError("y座標が不正な値です(抜き型がボードから完全にはみ出しています)"), this.#errorHandler);
             errorFlag = true
         }
