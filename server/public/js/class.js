@@ -20,7 +20,7 @@ export class StopWatch {
      * 時間の増分値
      * 0.01s (10ms)
      */
-    #increment = 0.01;
+    increment = 0.01;
 
     /**
      * @param {HTMLElement} outputElement 経過時間表示を出力するHTML要素
@@ -42,15 +42,15 @@ export class StopWatch {
          * @returns 0埋めした文字列数値
          */
         const fillZero = strValue => strValue.length < 2 ? "0" + strValue : strValue;
-
+        const inversed = 1 / this.increment;
         // 増分値に応じて小数第2位まで丸める
-        seconds = Math.floor(seconds / this.#increment) * this.#increment;
+        seconds = Math.floor(seconds * inversed) / inversed;
         // 小数点以下を切り捨てる
         let truncated = Math.trunc(seconds);
         // 分、秒、ミリ秒表示を求める
         let min = Math.trunc(seconds / 60).toString();
         let sec = truncated < 60 ? truncated.toString() : (truncated % 60).toString();
-        let ms = Math.round((seconds - truncated) / this.#increment).toString();
+        let ms = Math.round((seconds - truncated) * inversed).toString();
         
         return `${fillZero(min)}:${fillZero(sec)}.${fillZero(ms)}`;
     }
@@ -67,9 +67,9 @@ export class StopWatch {
     /** ストップウォッチを開始する */
     start() {
         this.#id = setInterval(() => {
-            this.#time += this.#increment;
+            this.#time += this.increment;
             this.outputElement.textContent = this.#display(this.#time);
-        }, this.#increment * 1000);
+        }, this.increment * 1000);
         return this;
     }
 
@@ -115,10 +115,12 @@ export class NumberField {
         /** 数値を1つ増やす */
         const increment = () => {
             if (this.value < this.max) this.value++;
+            else if (!this.max) this.value++;
         };
         /** 数値を1つ減らす */
         const decrement = () => {
             if (this.value > this.min) this.value--;
+            else if (!this.min) this.value--;
         };
         /**
          * ボタンを押しこまれたときのアクション
@@ -239,6 +241,7 @@ export class ProgressBar {
     #gauge;
     /**
      * パーセント (百分率)を表示する要素
+     * @type {HTMLElement}
      */
     #percentage;
     
@@ -299,6 +302,10 @@ export class Status {
     /** 処理中 */
     process() {
         return this.#change("処理中", "PROCESS");
+    }
+    /** ファイナライズ */
+    finalize() {
+        return this.#change("事後処理", "FINALIZE")
     }
     /** 処理完了 */
     complete() {
@@ -388,7 +395,59 @@ export class ConsoleWindow {
  * 処理結果を保存するクラス
  */
 export class Result {
-    constructor(width = undefined, height = undefined, matchValue = undefined, id = "", orderCount = 0) {
+    /**
+     * @typedef RegExpPatterns
+     * @property {RegExp} widthAndHeight マッチすれば「ボードの横幅」と「縦幅」の出力で、`256 x 256\n`などに対応
+     * @property {RegExp} matchValue マッチすれば「一致数」の出力で、`1024\n`などに対応
+     * @property {RegExp} idAndCount マッチすれば「出力ファイルのID」と「処理手数」の出力で、`2024-9-19_11-34-21 1994\n`または` 1994\n`に対応
+     * @property {RegExp} error マッチすれば「エラー」の出力で、`error`が含まれている文字列に対応
+     * @property {{input: RegExp, successed: RegExp, failed: RegExp}} send マッチすれば「回答データの送信状況」の出力
+     */
+    /**
+     * 各フィールドを取得するための正規表現
+     * @type {RegExpPatterns}
+     */
+    #patterns = Object.freeze({
+        widthAndHeight: /^([0-9]{2,3}) x ([0-9]{2,3})\n$/,
+        matchValue: /^([0-9]+\.*[0-9]*)\n$/,
+        idAndCount: /^((([0-9-]{2,4}){2,3}-*){2})* ([0-9]+)\n$/,
+        error: /error/gi,
+        send: {
+            input: /^Send .+ed\./,
+            successed: /successed/,
+            failed: /failed/
+        }
+    });
+
+    /**
+     * @typedef ResultPropertyCallbacks 各プロパティを取得できたときのコールバックを収めるオブジェクト
+     * @property {OnWidthAndHeight | undefined} onWidthAndHeight ボードの横幅と縦幅を取得できた時発火するコールバック
+     * @property {OnMatchValue | undefined} onMatchValue セルの一致数を取得できた時発火するコールバック
+     * @property {OnIdAndCount | undefined} onIdAndCount 出力ファイルのIDと手数を取得できた時発火するコールバック
+     * @property {OnError | undefined} onError エラーメッセージを取得できた時発火するコールバック
+     * @property {OnSend | undefined} onSend 回答データの送信状況が取得できたとき発火するコールバック
+     * 
+     * @callback OnWidthAndHeight ボードの横幅と縦幅を取得できた時発火する
+     * @param {number} width 横幅
+     * @param {number} height 縦幅
+     * @callback OnMatchValue セルの一致数を取得できた時発火する
+     * @param {number} value 一致数
+     * @callback OnIdAndCount 出力ファイルのIDと手数を取得できた時発火する
+     * @param {string | undefined} id 出力ファイルのID (*上書き保存の設定になっていると`undefined`が返る*)
+     * @param {number} count 手数
+     * @callback OnError エラーメッセージを取得できた時発火する
+     * @param {string} message エラーメッセージ
+     * @callback OnSend 回答データの送信状況が取得できたとき発火する
+     * @param {boolean} isSend 送信できたか
+     * @param {string} message 送信ステータスメッセージ
+     */
+    /**
+     * 各プロパティを取得できたときのコールバック
+     * @type {ResultPropertyCallbacks}
+     */
+    #actions = {};
+
+    constructor(width = undefined, height = undefined, matchValue = undefined, id = undefined, orderCount = undefined, error = undefined, isSend = false) {
         /**
          * ボードの横幅 - 受信データ使用時のみ利用
          * @type {number | undefined}
@@ -406,13 +465,80 @@ export class Result {
         this.matchValue = matchValue;
         /**
          * 処理結果(送信データ)の出力ファイル名
-         * @type {string} 
+         * @type {string | undefined} 
          */
         this.id = id;
         /**
          * 操作手数
-         * @type {number} 
+         * @type {number | undefined} 
          */
         this.orderCount = orderCount;
+        /**
+         * エラーに関するメッセージ
+         * @type {string | undefined}
+         */
+        this.error = error;
+
+        /**
+         * 回答が送られたどうかのフラグ
+         * @type {boolean}
+         */
+        this.isSend = isSend;
+    }
+
+    
+    /**
+     * 各プロパティを取得できたときのコールバックを登録する
+     * @param {ResultPropertyCallbacks} callbacks コールバック
+     * @example <caption>初期化の際に併用</caption>
+     * let result = new Result().setActions({
+     *     onMatchValue: (value) => console.log(value), ...
+     * });
+     * @example <caption>後から追加</caption>
+     * result.setActions({
+     *     onWidthAndHeight: (width, height) => console.log(width * height)
+     * });
+     */
+    setActions({ onWidthAndHeight, onMatchValue, onIdAndCount, onError, onSend }) {
+        if (onWidthAndHeight) this.#actions.onWidthAndHeight = onWidthAndHeight;
+        if (onMatchValue) this.#actions.onMatchValue = onMatchValue;
+        if (onIdAndCount) this.#actions.onIdAndCount = onIdAndCount;
+        if (onError) this.#actions.onError = onError;
+        if (onSend) this.#actions.onSend = onSend;
+        return this;
+    }
+    /**
+     * 各プロパティを取得する\
+     * それぞれ重複しない正規表現パターンを用いている
+     * @param {string} text 検索対象の文字列
+     */
+    obtain(text) {
+        if (this.#patterns.widthAndHeight.test(text)) {
+            /* 1. [*original*, *width*, *height*, ...(残りはキーバリュー)] を得る
+             * 2. slice(1)により、[*width*, *height*]のみを得る
+             * 3. mapで数値に変換
+             */
+            [this.width, this.height] = this.#patterns.widthAndHeight.exec(text)
+                                                                     .slice(1)
+                                                                     .map(str => Number.parseInt(str));
+            this.#actions?.onWidthAndHeight?.call(this, this.width, this.height);
+        }
+        if (this.#patterns.matchValue.test(text)) {
+            [this.matchValue] = this.#patterns.matchValue.exec(text).slice(1).map(str => Number.parseFloat(str));
+            this.#actions?.onMatchValue?.call(this, this.matchValue);
+        }
+        if (this.#patterns.idAndCount.test(text)) {
+            let executed = this.#patterns.idAndCount.exec(text);
+            [this.id, this.orderCount] = [executed.at(1), executed.at(-1)];
+            this.#actions?.onIdAndCount?.call(this, this.id, this.orderCount);
+        }
+        if (this.#patterns.error.test(text)) {
+            this.error = this.#patterns.error.exec(text).input;
+            this.#actions?.onError?.call(this, this.error);
+        }
+        if (this.#patterns.send.input.test(text)) {
+            this.isSend = this.#patterns.send.successed.test(text);
+            this.#actions?.onSend?.call(this, this.isSend, text);
+        }
     }
 }
