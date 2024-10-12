@@ -11,6 +11,7 @@
     "ejs": "~2.6.1",
     "express": "~4.16.1",
     "express-session": "^1.18.0",
+    "gridjs": "^6.2.0",
     "http-error": "^0.0.6",
     "http-errors": "~1.6.3",
     "lodash": "^4.17.21",
