@@ -1,5 +1,6 @@
 const fs = require('fs');
 const error = require("./error");
+const cloneDeep = require("lodash/cloneDeep")
 
 /**
  * 問題を解くためのクラス
@@ -35,7 +36,7 @@ class BoardData {
      * インスタンス化された時間を記録し、出力ファイル名に利用する
      * @type {string}
      */
-    #date;
+    #id;
 
     /** ボードの情報 */
     get board() {
@@ -48,7 +49,7 @@ class BoardData {
     }
 
     /**
-     * @typedef ProblemBoad 受信データにおけるボード情報の形式
+     * @typedef ProblemBoard 受信データにおけるボード情報の形式
      * @property {number} width 横幅
      * @property {number} height 縦幅
      * @property {string[]} start ボードの初期状態
@@ -67,7 +68,7 @@ class BoardData {
      * 
      * 2. `width`と`height`を入力・`board`と`patterns`を`null`指定:
      *  **ランダムに問題を作成して解く**
-     * @param {ProblemBoad | null | 0} board 受信データのボードJSON
+     * @param {ProblemBoard | null | 0} board 受信データのボードJSON
      * @param {ProblemPattern[] | null} patterns 受信データの抜き型JSON
      * @param {number} width ボードの横幅
      * @param {number} height ボードの縦幅
@@ -124,7 +125,16 @@ class BoardData {
 
         this.answer = new Answer(this.#board.start, this.#board.goal, this.#patterns);
         // スラッシュやコロンなどファイル名禁止文字を取り除いて文字列化
-        this.#date = `${new Date().toLocaleString().replace(/ /g, "_").replace(/[:/]/g, "-")}`;;
+        const date = new Date();
+        this.#id = [
+            date.getFullYear().toString(),
+            (date.getMonth() + 1).toString().padStart(2, "0"),
+            date.getDate().toString().padStart(2, "0"),
+            date.getHours().toString().padStart(2, "0"),
+            date.getMinutes().toString().padStart(2, "0"),
+            date.getSeconds().toString().padStart(2, "0")
+        ].join("-");
+        // this.#id = `${new Date().toLocaleString().replace(/ /g, "-").replace(/[:/]/g, "-")}`;;
     }
 
     /**
@@ -225,8 +235,6 @@ class BoardData {
         // 2次元配列をランダムに並び替える
         this.#board.start = new Board(shuffleBoard(regularArray));
         this.#board.goal = new Board(shuffleBoard(this.#board.start.array));
-
-        return this;
     }
 
     /**
@@ -268,107 +276,142 @@ class BoardData {
     }
 
     /**
-     * 問題の受信データをファイルに出力する
-     * あとで実際の本番環境のJSONにも対応できるようにするよ！！
+     * @typedef ReceptionData 受信データのJSON形式
+     * @property {ProblemBoard} board ボードの情報
+     * @property {ProblemGeneral} general 使用できる一般抜き型の情報
+     * 
+     * @typedef ProblemGeneral 使用できる一般抜き型の情報
+     * @property {number} n 使用できる一般抜き型の個数
+     * @property {ProblemPattern[]} patterns 一般抜き型
      */
-    writeReceptionData() {
-        /** 受信データの大枠 */
-        let receptionData = {
-            board: {
-                width: this.#board.start.width,
-                height: this.#board.start.height,
-                start: [],
-                goal: [],
-            },
-            general: {
-                n: this.#patterns.length - 25,
-                patterns: []
-            }
+    /**
+     * 問題の受信データをファイルに出力する\
+     * パラメータ`data`について
+     * - 受信したJSON（オブジェクト）を指定する
+     * - 指定しない或いはそれが`undefined`の場合はクラスが持っているボード情報をシリアライズする
+     * @param {ReceptionData | undefined} data 受信データ
+     * @param {boolean} isOverwritten ファイルを上書きして出力するか
+     * @param {Problem | undefined} callback 結果を返却するコールバック
+     */
+    writeReceptionData(data, isOverwritten = false, callback) {
+        /**
+         * @callback Problem
+         * @param {string} id 出力したJSONファイルの識別用日付情報など、結果ログと同じものである
+         * @param {ReceptionData} data 問題JSON
+         */
+
+        if (!data) {
+            data = {
+                board: {
+                    width: this.#board.start.width,
+                    height: this.#board.start.height,
+                    start: this.#board.start.formatCell(),
+                    goal: this.#board.goal.formatCell()
+                },
+                general: {
+                    n: this.#patterns.length - 25,
+                    // 配布される一般抜き型の通し番号が毎回25から始まることを祈る
+                    patterns: this.#patterns.slice(25).map((pattern, index) => new Object({
+                        p: index + 25,
+                        width: pattern.width,
+                        height: pattern.height,
+                        cells: pattern.formatCell()
+                    }))
+                }
+            };
         }
 
-        for (let i = 0; i < this.#board.start.height; i++) {
-            receptionData.board.start.push(this.#board.start.array[i].toString());
-            receptionData.board.goal.push(this.#board.goal.array[i].toString());
+        if (!fs.existsSync("./process/log/problem")) {
+            fs.mkdirSync("./process/log/problem", { recursive: true });
         }
 
-        for (let i = 25; i < this.#patterns.length; i++) {
-            receptionData.general.patterns.push({
-                p: i,
-                width: this.#patterns[i].width,
-                height: this.#patterns[i].height,
-                cells: []
-            });
+        if (!isOverwritten) {
+            fs.writeFileSync(`./process/log/problem/problem_${this.#id}.json`, JSON.stringify(data, undefined, ' '), 'utf-8', (err) => console.error(err));
         }
-
-        for (let i = 25; i < this.#patterns.length; i++) {
-            for (let j = 0; j < this.#patterns[i].array.length; j++) {
-                receptionData.general.patterns[i - 25].cells.push(this.#patterns[i].array[j].toString());
-            }
+        else {
+            fs.writeFileSync("./process/log/problem/problem.json", JSON.stringify(data, undefined, " "), "utf-8", (err) => console.error(err));
         }
-
-        fs.writeFileSync(`./process/log/question/question_${this.#date}.json`, JSON.stringify(receptionData, undefined, ' '), 'utf-8', (err) => { });
+        
+        callback?.call(this, isOverwritten ? "" : this.#id, data);
         return this;
     }
 
     /**
      * 回答用の送信データを作成し、ファイルに出力する
      * コールバックから元のデータも取得できる
-     * @param {boolean} [isOutput=false] ファイル出力するか
+     * @param {boolean} isOverwritten ファイルを上書きして出力するか
      * @param {Result | undefined} callback 結果を返却するコールバック
      */
-    writeSendData(isOutput = false, callback) {
-
+    writeSendData(isOverwritten = false, callback) {
         /**
          * @callback Result
-         * @param {string} id 出力したJSONファイルの識別用日付情報など
-         * @param {number} n かかった手数
-         * @param {[][]} ops 実際の操作手順
+         * @param {string} id 出力したJSONファイルの識別用日付情報など、問題ログと同じものである
+         * @param {{ n: number, ops: { p: number, x: number, y: number, s: number }[]}} data かかった手数と実際の操作手順を格納する送信データ
          */
 
         /**
          * 送信データの大枠
+         * @type {{ n: number, ops: { p: number, x: number, y: number, s: number }[]}}
          */
         let sendData = {
             n: this.answer.order.length,
-            ops: []
+            ops: this.answer.order.map(order => new Object({
+                p: order.patternNumber,
+                x: order.position[0],
+                y: order.position[1],
+                s: order.direction == 1 ? 0 :       // 上
+                   order.direction == 2 ? 3 :       // 右
+                   order.direction == 3 ? 1 :       // 下
+                   order.direction == 4 ? 2 : NaN   // 左 (仮にどれでもない場合はNaN)
+                // 抜き型の操作方向をレギュレーションに合わせる
+            }))
         }
 
-        // orderから各情報を照合して代入
-        for (let i = 0; i < this.answer.order.length; i++) {
-            sendData.ops.push({
-                p: this.answer.order[i].patternNumber,
-                x: this.answer.order[i].position[0],
-                y: this.answer.order[i].position[1],
-                s: 0
-            });
+        if (!fs.existsSync("./process/log/result")) {
+            fs.mkdirSync("./process/log/result", { recursive: true });
         }
 
-        // 抜き型の操作方向をレギュレーションに合わせる
-        for (let i = 0; i < this.answer.order.length; i++) {
-            switch (this.answer.order[i].direction) {
-                // 上（初期値0から変更なし）
-                case 1:
-                    break;
-                // 右
-                case 2:
-                    sendData.ops[i].s = 3;
-                    break;
-                // 下
-                case 3:
-                    sendData.ops[i].s = 1;
-                    break;
-                // 左
-                case 4:
-                    sendData.ops[i].s = 2;
-                    break;
+        const info = `${this.answer.time}_${this.answer.order.length}_${this.#board.start.width}x${this.#board.start.height}`;
+        
+        if (!isOverwritten) {
+            fs.writeFileSync(`./process/log/result/result_${this.#id}_${info}.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => console.error(err));
+        }
+        else {
+            fs.writeFileSync(`./process/log/result/result.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => console.error(err));
+        }
+
+        callback?.call(this, isOverwritten ? "" : this.#id, sendData);
+        return this;
+    }
+
+    /**
+     * スワップによるボード操作の履歴を記録するかどうか指定する
+     * @param {boolean} flag 記録するか
+     * @returns {BoardData} インスタンス
+     */
+    useSwapHistory(flag) {
+        this.answer.swapHistory = flag ? [] : null;
+        return this;
+    }
+
+    /**
+     * スワップによるボード操作の記録を保存する
+     * @param {boolean} isOverwritten 上書きするか（デフォルト: `false`）
+     * @returns {BoardData} インスタンス
+     */
+    writeSwapHistory(isOverwritten = false) {
+        if (this.answer.swapHistory) {
+            if (!fs.existsSync("./process/log/swapHistory")) {
+                fs.mkdirSync("./process/log/swapHistory", { recursive: true });
+            }
+            if (!isOverwritten) {
+                fs.writeFileSync(`./process/log/swapHistory/swapHistory_${this.#id}.json`, JSON.stringify(this.answer.swapHistory, undefined, ' '), 'utf-8', (err) => console.error(err));
+            }
+            else {
+                fs.writeFileSync(`./process/log/swapHistory/swapHistory.json`, JSON.stringify(this.answer.swapHistory, undefined, ' '), 'utf-8', (err) => console.error(err));
             }
         }
-        console.log(sendData);
-        if (isOutput) {
-            fs.writeFileSync(`./process/log/result/result_${this.#date}.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => { console.error(err) });
-        }
-
-        callback?.call(this, this.#date, sendData.n, sendData.ops);
+        return this;
     }
 }
 
@@ -409,13 +452,30 @@ class Answer {
      */
     terminationFlag = false;
 
-    #history;
+    /** 初期の一致数 */
+    #initialMatchValue;
 
+    /**
+     * 1度の`swap()`によるセル交換の記録を記録する
+     * - `orderRelation`: `start`にそのスワップが開始された`order`のインデックス、`end`にそのスワップが完了した`order`のインデックスを記録する
+     * - `targetPosition`: `position1`と`position2`に交換対象の座標をそれぞれ記録する
+     * - `targetSize`: `targetPosition`の位置から周囲を何マス含めてスワップしたか記録する
+     * - `board`: `before`にスワップ実行前、`after`に実行後のボードを文字列にフォーマットして記録する
+     * @type {{ orderRelation: { start: number, end: number }, targetPosition: { position1: [number, number], position2: [number, number] }, targetSize: number, board: { before: string[], after: string[] }}[] | null }
+     */
+    swapHistory;
+    
     /**
      * エラーが発生したときのハンドリングを行うコールバック
      * @type {error.CatchHandler}
      */
     #errorHandler;
+
+    /** 
+     * `completeSort()` の実行時間を計測する\
+     * 1msまでの精度に落として記録する
+     */
+    time = 0;
 
     /**
      * @param {Board} start 初期状態のボード
@@ -423,14 +483,11 @@ class Answer {
      * @param {Board[]} patterns 使用する抜き型
      */
     constructor(start, goal, patterns) {
-        this.current = start;
+        this.current = cloneDeep(start);
         this.goal = goal;
         this.turn = 0;
         this.patterns = patterns;
-    }
-
-    useHistory(flag) {
-        flag ? this.#history = [{}] : null;
+        this.#initialMatchValue = this.countMatchValue();
     }
 
     /**
@@ -468,6 +525,32 @@ class Answer {
             }
         }
         return match;
+    }
+
+    /**
+     * 一致数から処理の進捗の割合を返す
+     * @returns {number} 現在の一致数から初期の一致数を引いた分の進捗
+     */
+    progress() {
+        const cellCount = this.current.width * this.current.height - this.#initialMatchValue;
+        return (this.countMatchValue() - this.#initialMatchValue) / cellCount;
+    }
+
+    /**
+     * `swap()`による操作の記録を追加する
+     * @param {{ start: number, end: number }} orderRelation `start`にそのスワップが開始された`order`のインデックス、`end`にそのスワップが完了した`order`のインデックス
+     * @param {{ position1: [number, number], position2: [number, number] }} targetPosition `position1`と`position2`にそれぞれ交換対象の座標
+     * @param {number} targetSize `targetPosition`の位置から周囲を何マス含めてスワップしたか
+     * @param {{ before: string[], after: string[] }} board `before`にスワップ実行前、`after`に実行後のフォーマット済みボード
+     */
+    #addHistory(orderRelation, targetPosition, targetSize, board) {
+        // `BoardData.useHistory()`で使用しない設定になっていればpushされない
+        this.swapHistory?.push({
+            orderRelation: orderRelation,
+            targetPosition: targetPosition,
+            targetSize: targetSize,
+            board: board
+        })
     }
 
     /**
@@ -583,10 +666,16 @@ class Answer {
      * @param {number[]} position2 2つ目の座標(x,y)
      * @param {number} size 入れ替える配列の大きさ
      * @param {number} priorityCell 指定要素が重なっていたときどちらの要素の形を保つか(0=最短手,1=左側,2=右側)
-     * @param {boolean} inspection エラー処理を行うかどうか
+     * @param {boolean} isRecursived 再帰呼び出しされているかどうか明示的に指定する
      */
-    #swap(position1, position2, size = 1, priorityCell = 0, inspection = true) {
-        if (inspection == true) {
+    #swap(position1, position2, size = 1, priorityCell = 0, isRecursived = false) {
+        // それぞれ`swapHistory`用に情報を格納するオブジェクト
+        const orderRelation = { start: NaN, end: NaN };
+        const targetPosition = { position1: [], position2: [] };
+        const targetSize = size;
+        const board = { before: null, after: null };
+
+        if (!isRecursived) {
             // エラー処理
             /* エラーが起きたか判定する */
             // 主にエラー内容が共存できる部分があるので必要である
@@ -624,9 +713,14 @@ class Answer {
             }
 
             // フラグを参照して関数を中断する
-            if (errorFlag == true) {
+            if (errorFlag) {
                 return null;
             }
+
+            orderRelation.start = this.turn;
+            targetPosition.position1 = cloneDeep(position1);
+            targetPosition.position2 = cloneDeep(position2);
+            board.before = this.current.formatCell();
         }
 
         // 指定した場所が直線上に並んでいるか調べる
@@ -677,14 +771,14 @@ class Answer {
 
             // 優先度の値によって交換の仕方を変える(関数の再帰を行っている)
             if (priority[0] < priority[1]) {
-                this.#swap(position[0], position[2], size, size == 1 ? 0 : (position[0][0] < position[2][0] ? 1 : 2), false);
-                this.#swap(position[1], position[2], size, 0, false);
+                this.#swap(position[0], position[2], size, size == 1 ? 0 : (position[0][0] < position[2][0] ? 1 : 2), true);
+                this.#swap(position[1], position[2], size, 0, true);
                 position2 = position[2];
                 priorityCell = size == 1 ? 0 : (position[0][0] < position[2][0] ? 2 : 1);
             }
             else {
-                this.#swap(position[1], position[2], size, size == 1 ? 0 : (position[1][1] < position[2][1] ? 1 : 2), false);
-                this.#swap(position[0], position[2], size, 0, false);
+                this.#swap(position[1], position[2], size, size == 1 ? 0 : (position[1][1] < position[2][1] ? 1 : 2), true);
+                this.#swap(position[0], position[2], size, 0, true);
                 position1 = position[2];
                 priorityCell = size == 1 ? 0 : (position[1][1] < position[2][1]) ? 2 : 1;
             }
@@ -880,10 +974,17 @@ class Answer {
                 }
                 break;
         }
+
+        if (!isRecursived) {
+            // スワップ操作を終えた時に操作履歴を記録する
+            orderRelation.end = this.turn;
+            board.after = this.current.formatCell();
+            this.#addHistory(orderRelation, targetPosition, targetSize, board);
+        }
     }
 
     /**
-     * 全探索によって現在打てる最善手を操作するソート方法
+     * 全探索によって現在打てる最善手を操作するソート方法\
      * 一手進んだら、次手で一致数変化が著しく低下する
      */
     exhaustiveSort() {
@@ -1022,7 +1123,7 @@ class Answer {
                     }
                 }
             }
-            callback?.call(this, this.countMatchValue());
+            callback?.call(this, this.progress());
         });
     }
 
@@ -1096,7 +1197,7 @@ class Answer {
                 };
                 func(result);
             };
-            callback?.call(this, this.countMatchValue());
+            callback?.call(this, this.progress());
         };
 
         /* ペアのソート */
@@ -1311,15 +1412,25 @@ class Answer {
     /**
      * @callback ProgressOutput 処理の進捗を出力するためのコールバック
      * @param {number} matchValue 現在のセルの一致数
+     * @callback SortStartAction `completeSort()`が開始したときに発火するアクション
+     * @callback SortEndAction `completeSort()`が終了したときに発火するアクション
+     * @param {number} second 実行時間
      */
     /**
      * 上記のソートを組み合わせたソート
-     * @param {ProgressOutput} callback 処理の進捗を出力するためのコールバック
+     * @param {ProgressOutput} onProgress 処理の進捗を出力するためのコールバック
+     * @param {SortStartAction} onStart 実行開始時発火するコールバック
+     * @param {SortEndAction} onEnd 実行終了時発火するコールバック
      */
-    completeSort(callback) {
-        this.straightSort(callback);
-        this.allSort(callback);
-        // this.#makeSendData();
+    completeSort(onProgress, onStart, onEnd) {
+        onStart?.call(this);
+        this.time = performance.now();
+
+        this.straightSort(onProgress);
+        this.allSort(onProgress);
+
+        this.time = Math.floor(performance.now() - this.time) * 0.001;
+        onEnd?.call(this, this.time);
     }
 }
 
@@ -1402,6 +1513,14 @@ class Board {
             this.dimension = 2;
             this.array = array;
         }
+    }
+
+    /**
+     * ボードのセルを送受信データ用にフォーマットする\
+     * @returns `["0000", "1111", "0000", "1111"]`形式の`string[]`
+     */
+    formatCell() {
+        return this.array.map((line) => line.toString().replace(/,/g, ""));
     }
 
     /**
