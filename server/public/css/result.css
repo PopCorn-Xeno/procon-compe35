@@ -1,0 +1,209 @@
+/** --< 基本設定 >-- */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    padding: 2%;
+}
+
+.information {
+    > p {
+        width: fit-content;
+        padding: 0.5rem;
+        margin-right: 0.5rem;
+        display: inline-block;
+    }
+}
+
+.order-area {
+    > .history {
+        padding: 2%;
+        margin: 2%;
+        box-shadow: 0px 0px 15px 1px #b0b0b0;
+        border-radius: 5px;
+    }
+}
+
+.order-json-area {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+
+    > #orders {
+        width: fit-content;
+        height: 100%;
+        overflow: auto;
+        padding: 0 2em;
+        transform: translate(100%, 0);
+    }
+
+    > #orders.active {
+        transform: translate(0%, 0);
+    }
+
+    > button {
+        margin: 1em 2em;
+    }
+}
+
+.board-view-modal-area {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 100%;
+    text-align: center;
+    display: none;
+    opacity: 0;
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        border-radius: 10px;
+        background-color: white;
+    }
+
+    @media (orientation: landscape) {
+        &::before {
+            width: 80vh;
+            height: 80vh;
+        }
+    }
+
+    @media (orientation: portrait) {
+        &::before {
+            width: 80vw;
+            height: 80vw;
+        }
+    }
+
+    > .container {
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        background-color: white;
+        overflow: auto;
+        opacity: 1;
+
+        @media (orientation: landscape) {
+            & {
+                width: 75vh;
+                height: 75vh;
+            }
+        }
+
+        @media (orientation: portrait) {
+            & {
+                width: 75vw;
+                height: 75vw;
+            }
+        }
+    }
+
+    > .board-view-scall-controller {
+        position: absolute;
+        inset: 0;
+        margin: auto auto 2.5%;
+        width: max-content;
+        height: max-content;
+    }
+}
+
+.board-view-modal-area.active {
+    display: block;
+    opacity: 1;
+    backdrop-filter: blur(2px) brightness(0.9);
+}
+
+.board, .board td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+.board {
+    display: inline-table;
+    cursor: pointer;
+    caret-color: transparent;
+
+    td {
+        /* width: 2em;
+        height: 2em; */
+        --cell-height-scale: 2.625;
+        --padding-scale: 0.2;
+        font-family: monospace;
+        text-align: center;
+        padding: calc(1em * var(--padding-scale)) calc(1em * var(--padding-scale) * var(--cell-height-scale));
+    }
+
+    td.position-1 {
+        background-color: rgba(255, 0, 0, 1);
+    }
+
+    td.position-2 {
+        background-color: rgba(0, 0, 255, 1);
+    }
+
+    td.swapped-area-1 {
+        background-color: rgba(255, 0, 0, 0.5);
+    }
+
+    td.swapped-area-2 {
+        background-color: rgba(0, 0, 255, 0.5);
+    }
+
+    .part {
+        border: 1px dashed;
+    }
+}
+
+.number-field {
+    position: relative;
+    display: inline-block;
+
+    > input {
+        text-align: center;
+        width: 4rem;
+        height: 2rem;
+    }
+
+    > input::-webkit-inner-spin-button,
+    > input::-webkit-outer-spin-button {
+        appearance: none;
+        margin: 0;
+    }
+
+    > .increment-upper-triangle, 
+    > .decrement-lower-triangle {
+        inset: 0;
+        font-size: 1rem;
+        text-align: center;
+        cursor: pointer;
+        color: black;
+        border: 0;
+        background: none;
+        cursor: pointer;
+        transition: color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    
+    > .increment-upper-triangle:active, 
+    > .decrement-lower-triangle:active {
+        color: gray;
+    }
+}

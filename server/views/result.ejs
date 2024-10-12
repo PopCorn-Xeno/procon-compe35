@@ -1,10 +1,268 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>処理結果: <%= name %></title>
+        <title>PROCONSOLE / RESULT: <%= name %></title>
+        <link rel="stylesheet" href="/css/result.css"/>
+        <link rel="stylesheet" href="/library/jsonViewer/src/style.css"/>
     </head>
-    <body>
-        <%= orderCount %>
-        <%= orders %>
+    <%# EJS関数 %>
+    <%
+        /**
+         * ボード全体を表示する
+         * @param {string[]} target 受信データのボードデータ
+         * @param {{ position1: [number, number], position2: [number, number], size: number }} markingOption
+         * @returns {string} `<table><tr><td></td>...</tr>...</table>`
+         */
+        function show(target, markingOption) {
+            const tableInner = target.map((line, y) => {
+                let innerHTML = `<tr>`;
+                line.split("").forEach((value, x) => {
+                    // マーカー指定があるとき、セルに色をつける
+                    if (markingOption) {
+                        // セルが`position1`に等しい
+                        if (x === markingOption.position1[0] && y === markingOption.position1[1]) {
+                            innerHTML += `<td class="position-1">${value}</td>`;
+                        }
+                        // セルが`position2`に等しい
+                        else if (x === markingOption.position2[0] && y === markingOption.position2[1]) {
+                            innerHTML += `<td class="position-2">${value}</td>`;
+                        }
+                        // セルがposition1のスワップによる移動範囲に入っている
+                        else if ((x >= markingOption.position1[0] && x < markingOption.position1[0] + markingOption.size) && (y >= markingOption.position1[1] && y < markingOption.position1[1] + markingOption.size)) {
+                            innerHTML += `<td class="swapped-area-1">${value}</td>`;
+                        }
+                        // セルがposition2のスワップによる移動範囲に入っている
+                        else if ((x >= markingOption.position2[0] && x < markingOption.position2[0] + markingOption.size) && (y >= markingOption.position2[1] && y < markingOption.position2[1] + markingOption.size)) {
+                            innerHTML += `<td class="swapped-area-2">${value}</td>`;
+                        }
+                        else {
+                            innerHTML += `<td>${value}</td>`;
+                        }
+                    }
+                    else {
+                        innerHTML += `<td>${value}</td>`;
+                    }
+                });
+                innerHTML += `</tr>`;
+                return innerHTML;
+            }).join("");
+
+            return `<table class="board">${tableInner}</table>`;
+        }
+
+        /**
+         * ボードを部分的に表示する
+         * @param {string[]} target 受信データのボードデータ
+         * @param {number} maxWidth 表示させる最大の横のセルの数
+         * @param {number} maxHeight 表示させる最大の縦のセルの数
+         * @param {string[]} className 完成した<table>に追加するクラス名
+         * @returns {string} `<table><tr><td></td>...</tr>...</table>`
+         */
+        function showPartial(target, maxWidth, maxHeight, ...className) {
+            const visibleCellCount = {
+                x: Math.round(maxWidth / 2) - 1,
+                y: Math.round(maxHeight / 2) - 1
+            };
+            const hiddenCellCount = {
+                x: maxWidth % 2 == 0 ? 2 : 1,
+                y: maxHeight % 2 == 0 ? 2 : 1
+            };
+
+            const tableInner = target.slice(0, visibleCellCount.y)
+                                     .concat(new Array(hiddenCellCount.y).fill("-".repeat(target[0].length)))
+                                     .concat(target.slice(-visibleCellCount.y))
+                                     .map((line) => {
+                                         const splitted = line.split("");
+                                         let innerHTML = `<tr>`;
+                                         splitted.slice(0, visibleCellCount.x).forEach((value) => {
+                                             innerHTML += value === "-" ? `<td class="part">${value}</td>` : `<td>${value}</td>`;
+                                         });
+                                         innerHTML += `<td class="part">-</td>`.repeat(hiddenCellCount.x);
+                                         splitted.slice(-visibleCellCount.x).forEach((value) => {
+                                             innerHTML += value === "-" ? `<td class="part">${value}</td>` : `<td>${value}</td>`;
+                                         });
+                                         innerHTML += `</tr>`
+                                         return innerHTML;
+                                     }).join("");
+            return `<table class="board ${className.join(" ")}">${tableInner}</table>`;
+        }
+    %>
+    <body>        
+        <div class="information">
+            <h1>PROBLEM INFORMATION</h1>
+            <p>サイズ<span><%= board.start.length %> x <%= board.start[0].length %></span></p>
+            <% if (time) { %>
+            <p>処理時間<span id="time"><%= time %></span></p>
+            <% } %>
+            <p>手数<span><%= count %></span></p>
+            <% if (date) { %>
+            <p>日時<span><%= date %></span></p>
+            <% } %>
+            <%- showPartial(board.start, 8, 8, "start") %>
+            <%- showPartial(board.goal, 8, 8, "goal") %>
+        </div>
+
+        <div class="order-area">
+            <%- swapHistory?.map((h) => 
+                `
+                <div class="history">
+                    ${showPartial(h.board.before, 8, 8, "before")}
+                    ${showPartial(h.board.after, 8, 8, "after")}
+                    <ul>
+                        <li>座標1: (${h.targetPosition.position1.join(", ")})</li>
+                        <li>座標2: (${h.targetPosition.position2.join(", ")})</li>
+                        <li>選択範囲: ${h.targetSize} × ${h.targetSize}</li>
+                        <li>
+                            "ops" at 
+                            <a href="javascript:jumpOrdersJSON(${h.orderRelation.start})">
+                                [${h.orderRelation.end - h.orderRelation.start > 1 ? h.orderRelation.start + " ~ " + (h.orderRelation.end - 1) : h.orderRelation.start}]
+                            </a>
+                             in JSON
+                        </li>
+                    </ul>
+                </div>
+                `
+                ).join("")
+            %>
+        </div>
+        
+        <div class="order-json-area">
+            <button>&lt;&lt;</button>
+            <div id="orders"></div>
+        </div>
+
+        <div class="board-view-modal-area">
+            <div class="container">
+                
+            </div>
+            <div class="board-view-scall-controller">
+                <div class="number-field" id="boardViewScale">
+                    <button class="decrement-lower-triangle">－</button>
+                    <input type="number" value="100" min="1">
+                    <button class="increment-upper-triangle">＋</button>
+                </div>
+            </div>
+        </div>
     </body>
+
+    <script type="module">
+        import { StopWatch, NumberField } from "/js/class.js";
+        import JSONViewer from "/library/jsonViewer/src/jsonViewer.js";
+        // EJSタグを用いてクライアントJSの中でもコードを展開する
+        // VSCodeが文法エラーを吐くのでテンプレートリテラルでエスケープしつつ各データ型にパースする
+        /** EJS変数や関数をインポート */
+        const ejsImport = {
+            board: JSON.parse(`<%- JSON.stringify(board) %>`),
+            orders: JSON.parse(`<%- JSON.stringify(orders) %>`),
+            swapHistory: JSON.parse(`<%- JSON.stringify(swapHistory) %>`),
+            // 関数だけ文法エラー突破する方法が思いつかん
+            show: <%- show %>
+        };
+
+        if (`<%- time %>` !== "") {
+            document.getElementById("time").innerHTML = StopWatch.format(`<%- time %>`, 0.001);
+        }
+
+        /* -- モーダルの設定 -- */
+        // モーダル要素取得・閉じる動作登録
+        const modal = document.querySelector(".board-view-modal-area");
+        addEventListener("click", (e) => e.target == modal ? modal.classList.remove("active") : null);
+        // 初期ボードのモーダル登録
+        document.querySelector("table.start").addEventListener("click", () => {
+            modal.querySelector(".container").innerHTML = ejsImport.show.call(this, ejsImport.board.start);
+            modal.classList.add("active");
+        });
+        // 完成ボードのモーダル登録
+        document.querySelector("table.goal").addEventListener("click", () => {
+            modal.querySelector(".container").innerHTML = ejsImport.show.call(this, ejsImport.board.goal);
+            modal.classList.add("active");
+        });
+        // swapHistoryのモーダルをすべて登録
+        document.querySelector(".order-area").querySelectorAll(".history")?.forEach((element, index) => {
+            element.querySelectorAll("table").forEach((table) => {
+                table.addEventListener("click", () => {
+                    modal.querySelector(".container").innerHTML = ejsImport.show.call(
+                        this,
+                        table.classList.contains("before") ? ejsImport.swapHistory[index].board.before :
+                            table.classList.contains("after") ? ejsImport.swapHistory[index].board.after : null,
+                        {
+                            position1: ejsImport.swapHistory[index].targetPosition.position1,
+                            position2: ejsImport.swapHistory[index].targetPosition.position2,
+                            size: ejsImport.swapHistory[index].targetSize
+                        }
+                    );
+                    modal.classList.add("active");
+                });
+            })
+        });
+
+        new NumberField(document.querySelector("#boardViewScale")).onValueChanged = (value) => modal.style.fontSize = `${value}%`;
+        // const numberFields = [...document.querySelectorAll(".number-field")].map((element) => new NumberField(element))
+        // numberFields.find((field) => field.element.parentElement.id === "boardViewScale")
+        //             .onValueChanged = (value) => modal.style.fontSize = `${value}%`;
+
+        /* -- JSONビューアの設定 -- */
+
+        // JSONViewerのプロトタイプにメソッドを拡張
+        /** オブジェクト構造が展開表示されているか確認する */
+        JSONViewer.prototype.isExpanded = function (ele, target) {
+            return ele.classList.contains("add-height") && target.classList.contains("rotate90");
+        };
+
+        /** オブジェクト構造を展開する */
+        JSONViewer.prototype.expandItem = function (ele, target) {
+            if (ele && target) {
+                ele.classList.add('add-height');
+                target.classList.add('rotate90');
+            }
+        };
+
+        /** DOM上に生成したJSONViewer */
+        const orderView = new JSONViewer({
+            container: document.getElementById("orders"),
+            data: JSON.stringify(ejsImport.orders),
+            theme: "light",
+            expand: true
+        });
+
+        /** ビューを開くサイドボタン */
+        const sideButton = document.querySelector(".order-json-area").querySelector("button");
+        
+        // サイドボタンを押すとビューが開くように設定
+        sideButton.addEventListener("click", function() {
+            orderView.options.container.classList.toggle("active");
+            if (orderView.options.container.classList.contains("active")) {
+                this.innerHTML = `>>`;
+                this.parentElement.style.backgroundColor = "white";
+            }
+            else {
+                this.innerHTML = `<<`;
+                this.parentElement.style.backgroundColor = "transparent";
+            }
+        });
+
+        // windowメソッドに登録しないとhtmlから関数を動かせなかったのでやむを得ずこうしたのです
+        window.jumpOrdersJSON = function (index) {
+            const rootDirectory = orderView.options.container.children[0];
+            // オブジェクトの左辺（キー）
+            const left = rootDirectory.children[0];
+            // オブジェクトの右辺（バリュー）
+            const right = rootDirectory.children[1];
+            // ビューの大本が展開されていなかったら展開する
+            // この辺の使い方はJSONViewerの実装方法に合わせてみただけ
+            if (!orderView.isExpanded(right, left.querySelector("span"))) {
+                orderView.expandItem(right, left.querySelector("span"));
+            }
+            // サイドメニューが開いていなかったら展開する
+            if (!orderView.options.container.classList.contains("active")) {
+                orderView.options.container.classList.add("active");
+                sideButton.innerHTML = `>>`;
+                sideButton.parentElement.style.backgroundColor = "white";
+            }
+            orderView.options.container.scrollTo({
+                top: right.children[index].offsetTop,
+                behavior: "smooth"
+            });
+        };
+    </script>
 </html>
