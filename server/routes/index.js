@@ -17,11 +17,11 @@ router.get("/start/:debug", async (req, res) => {
     sub = fork("process/sub.js");
     // 子プロセス生成時、パラメータを送信する
     sub.on("spawn", () => sub.send({
-      width: req.query.width,
-      height: req.query.height,
-      isGenQuestion: req.query.isGenQuestion,
-      isSavedLog: req.query.isSavedLog,
-      isDrawnBoard: req.query.isDrawnBoard
+      width: Number.parseInt(req.query.width),
+      height: Number.parseInt(req.query.height),
+      isGenQuestion: req.query.isGenQuestion === "true",
+      isSavedLog: req.query.isSavedLog === "true",
+      isDrawnBoard: req.query.isDrawnBoard === "true"
     }));
     // 子プロセスからのメッセージを受信後、レスポンスする
     sub.on("message", data => {
@@ -40,52 +40,87 @@ router.get("/start/:debug", async (req, res) => {
   // デバッグモードがOFFの場合
   else if (req.params.debug === "off") {
     // サーバーにFetchする（本番もLANならこれで通じる）
-    await fetch(`http://localhost:${req.query.port}/problem`, {
+    fetch(`http://localhost:${req.query.port}/problem`, {
       method: "GET",
       headers: { "Procon-Token": "kure3037997297c7e6e840bb98658ca5175aa607a40d7f59a343ff7ecf182c45" }
     }).then(response => {
-      switch (response.status) {
-        // 正常に通信できた場合
-        case 200:
-          // レスポンスのJSONデータをパースする
-          response.json().then(data => {
-            // 手始めにボードサイズを送信する
-            res.write(`board: ${data.board.width}, ${data.board.height}\n`);
-            // 子プロセスを起動する
-            sub = fork("process/sub.js");
-            // 子プロセス生成時、パラメータを送信する
-            sub.on("spawn", () => sub.send({
-              problem: data,
-              isSavedLog: req.query.isSavedLog,
-              isDrawnBoard: req.query.isDrawnBoard
-            }));
-            // 子プロセスからのメッセージを受信後、レスポンスする
-            sub.on("message", data => {
-              console.log(data);
+      // 正常に通信できた場合
+      if (response.ok) {
+        // レスポンスのJSONデータをパースする
+        response.json().then((data) => {
+          // 手始めにボードサイズを送信する
+          res.write(`${data.board.width} x ${data.board.height}\n`);
+          // 子プロセスを起動する
+          sub = fork("process/sub.js");
+          // 子プロセス生成時、パラメータを送信する
+          sub.on("spawn", () => sub.send({
+            problem: data,
+            isSavedLog: req.query.isSavedLog === "true",
+            isDrawnBoard: req.query.isDrawnBoard === "true"
+          }));
+          // 子プロセスからのメッセージを受信後、レスポンスする
+          sub.on("message", data => {
+            console.log(data);
+            // オブジェクト形式ではないメッセージは問題の回答情報ではなく全てクライアントにレスポンスするもの
+            if (typeof data !== "object") {
               res.write(data.toString() + "\n");
               res.flushHeaders();
-            });
-            // エラーハンドリング
-            sub.on("error", error => {
-              console.error(error);
-              res.write(error.toString());
-            })
-            // 子プロセスが終了した後、レスポンスを終了させる
-            sub.on("exit", () => res.end());
+            }
+            // オブジェクト形式のメッセージはプロセスから送信された問題の回答情報
+            else {
+              // 指定されたポート番号のローカルサーバーにPOSTする
+              fetch(`http://localhost:${req.query.port}/answer`, {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: {
+                  "Content-Type": "application/json",
+                  "Procon-Token": "kure3037997297c7e6e840bb98658ca5175aa607a40d7f59a343ff7ecf182c45"
+                }
+              }).then((response) => {
+                if (response.ok) {
+                  response.json().then((data) => {
+                    res.write(`Send successed.\nrevision: ${data.revision}\n`);
+                    res.end();
+                  });
+                }
+                else {
+                  switch (response.status) {
+                    case 400:
+                      res.write("Send failed.\nJSON format can be wrong.\n");
+                      break;
+                    default:
+                      res.write("Send failed.\nUnexpected error occured.\n");
+                      break;
+                  }
+                  res.end();
+                }
+              });
+            }
           });
-          break;
-        // 403 Forbidden: サーバーは起動しているが試合がまだ開かれていない
-        case 403:
-          res.status(403).send("The match isn't holding now.");
-          return;
-        // 401 Unauthorized: トークンが違う
-        case 401:
-          res.status(401).send("The token can be wrong.");
-          return;
-        // その他予期しないエラーは500として送信する
-        default:
-          res.status(500).send("Unexpected error occured.");
-          return;
+          // エラーハンドリング
+          sub.on("error", error => {
+            console.error(error);
+            res.write(error.toString());
+          })
+          // 子プロセスが終了した後、レスポンスを終了させる
+          sub.on("exit", () => res.write("Process finished. Sending answer now...\n"));
+        });
+      }
+      else {
+        switch (response.status) {
+          // 403 Forbidden: サーバーは起動しているが試合がまだ開かれていない
+          case 403:
+            res.status(403).send("The match isn't holding now.");
+            return;
+          // 401 Unauthorized: トークンが違う
+          case 401:
+            res.status(401).send("The token can be wrong.");
+            return;
+          // その他予期しないエラーは500として送信する
+          default:
+            res.status(500).send("Unexpected error occured.");
+            return;
+        }
       }
     }).catch(error => res.status(500).send("Failed to connect server. Confirm runnnig status of server."));
   }
@@ -107,24 +142,6 @@ router.get("/stop-server", (req, res) => {
   proconServer.on("exit", () => res.send("Procon simple server stopped running."));
   proconServer.kill();
 })
-//#endregion
-
-//#region 処理結果表示ページエンドポイント
-router.get("/result", (req, res) => {
-  let name = {
-    question: `question_${req.query.id}.json`,
-    result: `result_${req.query.id}.json`
-  };
-  let data = {
-    question: JSON.parse(fs.readFileSync(`./process/log/question/${name.question}`, "utf-8")),
-    result: JSON.parse(fs.readFileSync(`./process/log/result/${name.result}`, "utf-8"))
-  };
-  res.render("result", {
-    name: name.result,
-    orderCount: data.result?.n,
-    orders: data.result?.ops
-  })
-});
 //#endregion
 
 module.exports = router;
