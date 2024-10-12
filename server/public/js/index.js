@@ -52,7 +52,8 @@ const inputs = {
             isSavedLog: this.isSavedLog.element.checked,
             isDrawnBoard: this.isDrawnBoard.element.checked
         }
-    }
+    },
+    options: document.querySelectorAll(".options")
 }
 // 入力系要素・ホバー時の説明表示設定
 const defaultText = document.getElementById("description").innerHTML;
@@ -62,9 +63,6 @@ for (const key in inputs) {
                    .setAction(text => document.getElementById("description").innerHTML = text);
     }
 }
-
-/** 設定項目の「オプション」 */
-const options = document.querySelectorAll(".options");
 
 /** 出力系要素 */
 const outputs = {
@@ -117,13 +115,14 @@ function toCommaDivision(value) {
 //#region DOMイベントリスナー
 document.addEventListener("DOMContentLoaded", () => {
     if (inputs.values().debugMode) {
-        options.item(0).classList.remove("active");
-        options.item(1).classList.add("active");
+        inputs.options.item(0).classList.remove("active");
+        inputs.options.item(1).classList.add("active");
     }
     else {
-        options.item(0).classList.add("active");
-        options.item(1).classList.remove("active");
+        inputs.options.item(0).classList.add("active");
+        inputs.options.item(1).classList.remove("active");
     }
+
     outputs.status.standBy();
     outputs.console.log(
         `Page was loaded at ${new Date().toTimeString().replace(/(日本標準時)/, "JST")}.`,
@@ -132,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })
 
 inputs.debugMode.element.addEventListener("change", () => {
-    options.forEach(element => element.classList.toggle("active"));
+    inputs.options.forEach(element => element.classList.toggle("active"));
 });
 
 inputs.runSimpleServer.element.addEventListener("change", event => {
@@ -152,12 +151,42 @@ inputs.runSimpleServer.element.addEventListener("change", event => {
 
 buttons.start.addEventListener("click", async () => {
     // 共通初期化処理
-    result = new Result();
-    outputs.processedTime.reset().start();
+    result = new Result().setActions({
+        // function記法を使うことでthisのスコープを引き継ぐ。thisはResultとなるのでメンバーを参照できる
+        onMatchValue: (value) => {
+            outputs.progressBar.progress(value);
+            if (value === 1) {
+                // 100%になったら
+                outputs.status.finalize();
+            }
+        },
+        onIdAndCount: (id, count) => {
+            outputs.orderCount.innerHTML = toCommaDivision(count);
+            outputs.console.log(`Log "result${id ? "_" + result.id : ""}.json" was Output.`);
+        },
+        onError: (message) => {
+            outputs.console.error(message);
+            outputs.processedTime.stop();
+            outputs.status.error();
+        }
+    });
+    outputs.processedTime.reset();
     outputs.progressBar.reset();
     outputs.orderCount.innerHTML = "0";
     outputs.status.process();
     outputs.console.log("Process start.");
+
+    /**
+     * プロセスからのレスポンスを受けて、処理時間を計測する\
+     * 通信のタイムラグは桁1つに満たないくらいなので大丈夫
+     * @param {string} message 受信メッセージ
+     */
+    const mesureProcessTimeFromResponce = (message) => {
+        if (/sort/i.test(message)) {
+            if (/start/i.test(message)) outputs.processedTime.start();
+            else if (/end/i.test(message)) outputs.processedTime.stop();
+        }
+    }
 
     /**
      * @callback OnDecode デコードされたときのアクション
@@ -197,43 +226,25 @@ buttons.start.addEventListener("click", async () => {
      */
     const debugOn = async ({ width, height, isGenQuestion, isSavedLog, isDrawnBoard }) => {
         // 初期化
+        result.width = width, result.height = height;
         outputs.expectedTime.display(approximateProcess(width * height, formulas.time));
         outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(width * height, formulas.order));   
         // エンドポイントにアクセス
         return await fetch(`/start/on?width=${width}&height=${height}&isGenQuestion=${isGenQuestion}&isSavedLog=${isSavedLog}&isDrawnBoard=${isDrawnBoard}`)
         .then(async (response) => {
+            // 何か知らんけど関数オブジェクトじゃなくラムダ式で書かないとエラる
             await fetchProcess(response, (decoded) => {
-                // デコードデータがこの正規表現にマッチすれば「一致数」の出力である
-                result.matchValue = decoded.match(/^[0-9]+\n$/)?.at(0);
-                // デコードデータがこの正規表現にマッチすれば「出力ファイルのクエリ」と「処理手数」の出力である
-                let idAndCounts = /^((([0-9-]{2,4}){2,3}_*){2}) ([0-9]+)\n$/.exec(decoded);
-                // デコードデータがこの正規表現にマッチすれば「エラー」の出力である
-                let errorMessage = decoded.match(/error/i);
-                // ファイル名、手数の分割代入
-                if (idAndCounts) {
-                    [result.id, result.orderCount] = [idAndCounts[1], idAndCounts.at(-1)];
-                }
-                // 取得できた値をそれぞれ反映する
-                if (result.matchValue) {
-                    outputs.progressBar.progress(result.matchValue / (width * height));
-                }
-                if (result.id != "" && result.orderCount != 0) {
-                    outputs.orderCount.innerHTML = toCommaDivision(result.orderCount);
-                }
-                if (errorMessage?.input) {
-                    outputs.console.error(errorMessage.input);
-                    outputs.processedTime.stop();
-                    outputs.status.error();
-                    return;
-                }
+                mesureProcessTimeFromResponce(decoded);
+                result.obtain(decoded);
             });
-            // 処理時間を表示する（通信によって多少の誤差はある）
-            outputs.processedTime.stop();
-            outputs.status.complete();
-            outputs.console.log("Process finished.");
+            // エラーなく正常終了したときのみ
+            if (!result.error) {
+                outputs.status.complete();
+                outputs.console.log("Process finished.");
+            }
         })
         .catch((error) => {
-            outputs.console.error(["Fetch failed.", error]);
+            outputs.console.error(["Fetch failed.", error?.stack]);
             outputs.processedTime.stop();
             outputs.status.error();
         });
@@ -249,52 +260,42 @@ buttons.start.addEventListener("click", async () => {
             switch (response.status) {
                 // 正常な通信の場合
                 case 200:
+                    let isSend = true;
                     await fetchProcess(response, (decoded) => {
-                        let widthAndHeight = /^board: ([0-9]+), ([0-9]+)/.exec(decoded);
-                        if (widthAndHeight) {
-                            [result.width, result.height] = widthAndHeight.slice(1, 3)?.map(str => Number.parseInt(str));
-                            outputs.expectedTime.display(approximateProcess(result.width * result.height, formulas.time));
-                            outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(result.width * result.height, formulas.order));
-                            outputs.console.log(["Connecting server successed.", `width: ${result.width}, height: ${result.height}`]);
-                        }
-                        // デコードデータがこの正規表現にマッチすれば「一致数」の出力である
-                        result.matchValue = decoded.match(/^[0-9]+\n$/)?.at(0);
-                        // デコードデータがこの正規表現にマッチすれば「出力ファイルのクエリ」と「処理手数」の出力である
-                        let idAndCounts = /^((([0-9-]{2,4}){2,3}_*){2}) ([0-9]+)\n$/.exec(decoded);
-                        // デコードデータがこの正規表現にマッチすれば「エラー」の出力である
-                        let errorMessage = decoded.match(/error/i);
-                        // ファイル名、手数の分割代入
-                        if (idAndCounts) {
-                            [result.id, result.orderCount] = [idAndCounts[1], idAndCounts.at(-1)];
-                        }
-                        // 取得できた値をそれぞれ反映する
-                        if (result.matchValue) {
-                            outputs.progressBar.progress(result.matchValue / (result.width * result.height));
-                        }
-                        if (result.id != "" && result.orderCount != 0) {
-                            outputs.orderCount.innerHTML = toCommaDivision(result.orderCount);
-                        }
-                        if (errorMessage?.input) {
-                            outputs.console.error(errorMessage.input);   
-                        }
+                        mesureProcessTimeFromResponce(decoded);
+                        result.setActions({
+                            onWidthAndHeight: function(width, height) {
+                                outputs.expectedTime.display(approximateProcess(width * height, formulas.time));
+                                outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(width * height, formulas.order));
+                                outputs.console.log(["Connecting server successed.", `width: ${width}, height: ${height}`]);
+                            },
+                            onSend: (isSend, message) => {
+                                if (isSend) outputs.console.log(message);
+                                else {
+                                    outputs.console.error(message);
+                                    outputs.status.error();
+                                }
+                            }
+                        }).obtain(decoded);
+                        if (/Process finished\./.test(decoded)) outputs.console.log(decoded);
                     });
-                    // 処理時間を表示する（通信によって多少の誤差はある）
-                    outputs.processedTime.stop();
-                    outputs.status.complete();
-                    outputs.console.log("Process finished.");
+                    if (!result.error && result.isSend) {
+                        outputs.status.complete();
+                    }
                     break;
                 // その他飛んでくるエラーステータスの処理をする
                 case 403:
                 case 401:
+                case 400:
                 case 500:
-                    await fetchProcess(response, outputs.console.error);
+                    await fetchProcess(response, (decoded) => outputs.console.error(decoded));
                     outputs.processedTime.stop();
                     outputs.status.error();
                     break;
             }
         })
         .catch((error) => {
-            outputs.console.error(["Fetch failed.", error]);
+            outputs.console.error(["Fetch failed.", error?.stack]);
             outputs.processedTime.stop();
             outputs.status.error();
         });
@@ -311,6 +312,10 @@ buttons.start.addEventListener("click", async () => {
 });
 
 buttons.confirm.addEventListener("click", () => {
-    window.open(`/result?id=${result.id}`);
+    if (result.orderCount) {
+        if (result.id) window.open(`/result?id=${result.id}&isDrawnBoard=${inputs.values().isDrawnBoard}`);
+        else window.open(`/result?isDrawnBoard=${inputs.values().isDrawnBoard}`);
+    }
+    else window.alert("処理が実行されていません")
 });
 //#endregion
