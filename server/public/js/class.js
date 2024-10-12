@@ -31,18 +31,18 @@ export class StopWatch {
     }
 
     /**
-     * ストップウォッチ表示を作成する (`private method`)
+     * ストップウォッチ表示の文字列を作成する
      * @param {number} seconds 秒 
      * @returns `00:00.00`表示の文字列
      */
-    #display(seconds) {
+    static format(seconds, increment = 0.01) {
         /**
          * 入力引数が1の位のみの数字であった場合に10の位を0で埋める
          * @param {string} strValue 文字列に変換された数値
          * @returns 0埋めした文字列数値
          */
         const fillZero = strValue => strValue.length < 2 ? "0" + strValue : strValue;
-        const inversed = 1 / this.increment;
+        const inversed = 1 / increment;
         // 増分値に応じて小数第2位まで丸める
         seconds = Math.floor(seconds * inversed) / inversed;
         // 小数点以下を切り捨てる
@@ -51,16 +51,26 @@ export class StopWatch {
         let min = Math.trunc(seconds / 60).toString();
         let sec = truncated < 60 ? truncated.toString() : (truncated % 60).toString();
         let ms = Math.round((seconds - truncated) * inversed).toString();
-        
+       
         return `${fillZero(min)}:${fillZero(sec)}.${fillZero(ms)}`;
     }
 
     /**
-     * ストップウォッチ表示を作成する
+     * ストップウォッチ表示を作成する (`private method`)\
+     * インスタンス化した後の状態でストップウォッチ表示を利用する場合のメソッド
+     * @param {number} seconds 秒 
+     * @returns `00:00.00`表示の文字列
+     */
+    #format(seconds) {
+        return StopWatch.format(seconds, this.increment);
+    }
+
+    /**
+     * ストップウォッチ表示を作成し、要素に反映する
      * @param {number} seconds 秒 
      */
     display(seconds) {
-        this.outputElement.textContent = this.#display(seconds)
+        this.outputElement.textContent = this.#format(seconds)
         return this;
     }
 
@@ -68,7 +78,7 @@ export class StopWatch {
     start() {
         this.#id = setInterval(() => {
             this.#time += this.increment;
-            this.outputElement.textContent = this.#display(this.#time);
+            this.outputElement.textContent = this.#format(this.#time);
         }, this.increment * 1000);
         return this;
     }
@@ -82,7 +92,7 @@ export class StopWatch {
     /** ストップウォッチをリセットする */
     reset() {
         this.#time = 0;
-        this.outputElement.textContent = this.#display(0);
+        this.outputElement.textContent = this.#format(0);
         return this;
     }
 }
@@ -102,6 +112,12 @@ export class NumberField {
     #judgingTime = 0;
     /** 毎度お馴染み`setInterval`のID保存用 */
     #id = 0;
+    /**
+     * 値が変更されたときに発火するイベント\
+     * コールバックが`Number`型の第1引数を持っていれば、現在の数値を渡す
+     * @type {Function<Number> | null}
+     */
+    onValueChanged = null;
 
     /**
      * @param {HTMLElement} target `<div class="number-field" id="">`
@@ -116,11 +132,13 @@ export class NumberField {
         const increment = () => {
             if (this.value < this.max) this.value++;
             else if (!this.max) this.value++;
+            this.onValueChanged?.call(this, this.value);
         };
         /** 数値を1つ減らす */
         const decrement = () => {
             if (this.value > this.min) this.value--;
             else if (!this.min) this.value--;
+            this.onValueChanged?.call(this, this.value);
         };
         /**
          * ボタンを押しこまれたときのアクション
