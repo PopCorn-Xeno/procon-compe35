@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PROCONSOLE / LOGS</title>
+    <link rel="stylesheet" href="/library/gridjs/dist/theme/mermaid.css">
+</head>
+
+<body>
+    <main></main>
+</body>
+
+<script type="module">
+    import { StopWatch } from "/js/class.js";
+    import * as gridjs from "/library/gridjs/dist/gridjs.mjs";
+
+    /** EJS変数のインポート */
+    const ejsImport = {
+        logs: JSON.parse(`<%- JSON.stringify(logs) %>`)
+    }
+
+    /** Grid.js のインスタンス */
+    const grid = new gridjs.Grid({
+        // キーを行のヘッダーにする
+        columns: Object.keys(ejsImport.logs[0]).map((name) => {
+            switch (name) {
+                case "date": return {
+                    name: "実行日時",
+                    id: name,
+                    width: "fit-content",
+                    // 表示だけ時刻表示に変える
+                    formatter: (cell) => new Date(...cell.split("-")).toLocaleString(),
+                    sort: {
+                        // 一度 Date型 に変換して比較する
+                        compare: (a, b) => {
+                            a = new Date(...a.split("-"));
+                            b = new Date(...b.split("-"));
+                            return a > b ? 1 : a < b ? -1 : 0;
+                        }
+                    }
+                };
+                case "time": return { name: "処理時間", id: name, width: "fit-content" };
+                case "count": return { name: "手数", id: name, width: "fit-content" };
+                case "size": return { name: "ボードサイズ", id: name, width: "fit-content" };
+                case "isDrawnBoard": return {
+                    name: "ボード描画",
+                    id: name,
+                    width: "fit-content",
+                    formatter: (cell) => cell ? "有効" : "無効"
+                };
+            }
+        }).concat(
+            // ログの情報に対してアクション可能な列を追加する
+            [{
+                name: "アクション",
+                id: "actions",
+                formatter: (cell, row) => [
+                    // preactのh関数を使用してbutton要素を作る
+                    gridjs.h("button", {
+                        onclick: () => window.open(`/result?id=${row.cells[0].data}&isDrawnBoard=${row.cells[4].data}`),
+                        className: "cell-button",
+                        id: "view"
+                    }, "閲覧"),
+                    gridjs.h("button", {
+                        onclick: () => {
+                            confirm("このログを完全に削除しますか？") ? 
+                                // deleteエンドポイントでファイル削除
+                                fetch(`/log/delete?id=${row.cells[0].data}`).then((response) => {
+                                    if (response.ok) {
+                                        response.json().then((value) => {
+                                            // 削除後に再度送信されたログの情報でテーブルを更新して再描画する
+                                            grid.updateConfig({
+                                                data: value.logs.map((log) => 
+                                                    Object.values(log).map((value) => 
+                                                        /((([0-9-]{2,4}){2,3}-*){2})/g.test(value) ? value :
+                                                        /([0-9]+\.[0-9]{0,3})/g.test(value) ? StopWatch.format(value, 0.001) :
+                                                        /([0-9]+x[0-9]+)/.test(value) ? `${/([0-9]+)x([0-9]+)/.exec(value)[1]}×${/([0-9]+)x([0-9]+)/.exec(value)[2]}` : 
+                                                        /([0-9]+)/.test(value) ? value : 
+                                                        typeof value === "boolean" ? value : ""
+                                                    )
+                                                )
+                                            }).forceRender();
+                                        })
+                                    }
+                                    else console.error("Log file could not delete.", response.statusText);
+                                }) : null;
+                        },
+                        className: "cell-button",
+                        id: "delete"
+                    }, "削除")
+                ],
+                sort: false,
+                width: "fit-content"
+            }]
+        ),
+        data: ejsImport.logs.map((log) =>
+            Object.values(log).map((value) => 
+                // 実行日時
+                /((([0-9-]{2,4}){2,3}-*){2})/g.test(value) ? value :
+                // 処理時間
+                /([0-9]+\.[0-9]{0,3})/g.test(value) ? StopWatch.format(value, 0.001) :
+                // ボードサイズ
+                /([0-9]+x[0-9]+)/.test(value) ? `${/([0-9]+)x([0-9]+)/.exec(value)[1]}×${/([0-9]+)x([0-9]+)/.exec(value)[2]}` : 
+                // 手数
+                /([0-9]+)/.test(value) ? value : 
+                // ボード描画
+                typeof value === "boolean" ? value : ""
+            )
+        ),
+        sort: true,
+        width: "70%",
+    }).render(document.querySelector("main"));
+</script>
+
+<style>
+    .cell-button {
+        margin: 0 1rem;
+        padding: 0.4rem 0.75rem;
+        font-size: 1em;
+        font-weight: bold;
+        color: #6b7280;
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        cursor: pointer;
+
+        &#view:hover {
+            color: #f0f0f0;
+            background-color: #00d49e;
+            border-color: #0de6c2;
+            transition: all ease-in 0.2s;
+        }
+
+        &#delete:hover{
+            color: #f0f0f0;
+            background-color: #d40055;
+            border-color: #e60d3c;
+            transition: all ease-in 0.2s;
+        }
+    }
+</style>
+
+</html>
