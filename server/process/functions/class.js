@@ -290,10 +290,11 @@ class BoardData {
      * - 受信したJSON（オブジェクト）を指定する
      * - 指定しない或いはそれが`undefined`の場合はクラスが持っているボード情報をシリアライズする
      * @param {ReceptionData | undefined} data 受信データ
-     * @param {boolean} isOverwritten ファイルを上書きして出力するか
+     * @param {boolean} isOverwriting ファイルを上書きして出力するか
      * @param {Problem | undefined} callback 結果を返却するコールバック
+     * @param {boolean} isSaving 実際にファイルを保存するか、特別な場合の時のみ使用する（既定値: `true`）
      */
-    writeReceptionData(data, isOverwritten = false, callback) {
+    writeReceptionData(data, isOverwriting = false, callback, isSaving = true) {
         /**
          * @callback Problem
          * @param {string} id 出力したJSONファイルの識別用日付情報など、結果ログと同じものである
@@ -321,28 +322,31 @@ class BoardData {
             };
         }
 
-        if (!fs.existsSync("./process/log/problem")) {
-            fs.mkdirSync("./process/log/problem", { recursive: true });
-        }
+        if (isSaving) {
+            if (!fs.existsSync("./process/log/problem")) {
+                fs.mkdirSync("./process/log/problem", { recursive: true });
+            }
 
-        if (!isOverwritten) {
-            fs.writeFileSync(`./process/log/problem/problem_${this.#id}.json`, JSON.stringify(data, undefined, ' '), 'utf-8', (err) => console.error(err));
-        }
-        else {
-            fs.writeFileSync("./process/log/problem/problem.json", JSON.stringify(data, undefined, " "), "utf-8", (err) => console.error(err));
+            if (!isOverwriting) {
+                fs.writeFileSync(`./process/log/problem/problem_${this.#id}.json`, JSON.stringify(data, undefined, ' '), 'utf-8', (err) => console.error(err));
+            }
+            else {
+                fs.writeFileSync("./process/log/problem/problem.json", JSON.stringify(data, undefined, " "), "utf-8", (err) => console.error(err));
+            }
         }
         
-        callback?.call(this, isOverwritten ? "" : this.#id, data);
+        callback?.call(this, isOverwriting ? "" : this.#id, data);
         return this;
     }
 
     /**
      * 回答用の送信データを作成し、ファイルに出力する
      * コールバックから元のデータも取得できる
-     * @param {boolean} isOverwritten ファイルを上書きして出力するか
+     * @param {boolean} isOverwriting ファイルを上書きして出力するか
      * @param {Result | undefined} callback 結果を返却するコールバック
+     * @param {boolean} isSaving 実際にファイルを保存するか、特別な場合の時のみ使用する（既定値: `true`）
      */
-    writeSendData(isOverwritten = false, callback) {
+    writeSendData(isOverwriting = false, callback, isSaving = true) {
         /**
          * @callback Result
          * @param {string} id 出力したJSONファイルの識別用日付情報など、問題ログと同じものである
@@ -367,20 +371,22 @@ class BoardData {
             }))
         }
 
-        if (!fs.existsSync("./process/log/result")) {
-            fs.mkdirSync("./process/log/result", { recursive: true });
+        if (isSaving) {
+            if (!fs.existsSync("./process/log/result")) {
+                fs.mkdirSync("./process/log/result", { recursive: true });
+            }
+
+            const info = `${this.answer.time}_${this.answer.order.length}_${this.#board.start.width}x${this.#board.start.height}`;
+            
+            if (!isOverwriting) {
+                fs.writeFileSync(`./process/log/result/result_${this.#id}_${info}.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => console.error(err));
+            }
+            else {
+                fs.writeFileSync(`./process/log/result/result.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => console.error(err));
+            }
         }
 
-        const info = `${this.answer.time}_${this.answer.order.length}_${this.#board.start.width}x${this.#board.start.height}`;
-        
-        if (!isOverwritten) {
-            fs.writeFileSync(`./process/log/result/result_${this.#id}_${info}.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => console.error(err));
-        }
-        else {
-            fs.writeFileSync(`./process/log/result/result.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => console.error(err));
-        }
-
-        callback?.call(this, isOverwritten ? "" : this.#id, sendData);
+        callback?.call(this, isOverwriting ? "" : this.#id, sendData);
         return this;
     }
 
@@ -717,10 +723,12 @@ class Answer {
                 return null;
             }
 
-            orderRelation.start = this.turn;
-            targetPosition.position1 = cloneDeep(position1);
-            targetPosition.position2 = cloneDeep(position2);
-            board.before = this.current.formatCell();
+            if (this.swapHistory) {
+                orderRelation.start = this.turn;
+                targetPosition.position1 = cloneDeep(position1);
+                targetPosition.position2 = cloneDeep(position2);
+                board.before = this.current.formatCell();
+            }
         }
 
         // 指定した場所が直線上に並んでいるか調べる
@@ -975,7 +983,7 @@ class Answer {
                 break;
         }
 
-        if (!isRecursived) {
+        if (!isRecursived && this.swapHistory) {
             // スワップ操作を終えた時に操作履歴を記録する
             orderRelation.end = this.turn;
             board.after = this.current.formatCell();

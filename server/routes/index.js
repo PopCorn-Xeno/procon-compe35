@@ -19,9 +19,9 @@ router.get("/start/:debug", async (req, res) => {
     sub.on("spawn", () => sub.send({
       width: Number.parseInt(req.query.width),
       height: Number.parseInt(req.query.height),
-      isGenQuestion: req.query.isGenQuestion === "true",
-      isSavedLog: req.query.isSavedLog === "true",
-      isDrawnBoard: req.query.isDrawnBoard === "true"
+      isGeneratingQuestion: req.query.isGeneratingQuestion === "true",
+      isSavingLog: req.query.isSavingLog === "true",
+      isDrawingBoard: req.query.isDrawingBoard === "true"
     }));
     // 子プロセスからのメッセージを受信後、レスポンスする
     sub.on("message", data => {
@@ -55,8 +55,8 @@ router.get("/start/:debug", async (req, res) => {
           // 子プロセス生成時、パラメータを送信する
           sub.on("spawn", () => sub.send({
             problem: data,
-            isSavedLog: req.query.isSavedLog === "true",
-            isDrawnBoard: req.query.isDrawnBoard === "true"
+            isSavingLog: req.query.isSavingLog === "true",
+            isDrawingBoard: req.query.isDrawingBoard === "true"
           }));
           // 子プロセスからのメッセージを受信後、レスポンスする
           sub.on("message", data => {

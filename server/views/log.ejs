@@ -43,7 +43,7 @@
                 case "time": return { name: "処理時間", id: name, width: "fit-content" };
                 case "count": return { name: "手数", id: name, width: "fit-content" };
                 case "size": return { name: "ボードサイズ", id: name, width: "fit-content" };
-                case "isDrawnBoard": return {
+                case "isDrawingBoard": return {
                     name: "ボード描画",
                     id: name,
                     width: "fit-content",
@@ -58,7 +58,7 @@
                 formatter: (cell, row) => [
                     // preactのh関数を使用してbutton要素を作る
                     gridjs.h("button", {
-                        onclick: () => window.open(`/result?id=${row.cells[0].data}&isDrawnBoard=${row.cells[4].data}`),
+                        onclick: () => window.open(`/result?id=${row.cells[0].data}&isDrawingBoard=${row.cells[4].data}`),
                         className: "cell-button",
                         id: "view"
                     }, "閲覧"),

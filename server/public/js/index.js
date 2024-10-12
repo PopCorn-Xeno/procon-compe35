@@ -29,16 +29,16 @@ const inputs = {
         new NumberField(document.getElementById("height")),
         "生成するボードの縦幅を入力してください (32~256)。"
     ),
-    isGenQuestion: new InputDescription(
-        document.getElementById("isGenQuestion"),
+    isGeneratingQuestion: new InputDescription(
+        document.getElementById("isGeneratingQuestion"),
         "ON: 簡易サーバーの問題生成に用いる input.json をランダムに生成し、処理は実行しません。"
     ),
-    isSavedLog: new InputDescription(
-        document.getElementById("isSavedLog"),
+    isSavingLog: new InputDescription(
+        document.getElementById("isSavingLog"),
         "ON: 結果・送信データのログを保存します。<br>OFF: ログを毎回上書きします。"
     ),
-    isDrawnBoard: new InputDescription(
-        document.getElementById("isDrawnBoard"),
+    isDrawingBoard: new InputDescription(
+        document.getElementById("isDrawingBoard"),
         "ONにすると処理結果表示においてボードの変化を描画しますが、処理が遅延する可能性があります。"
     ),
     values() {
@@ -48,9 +48,9 @@ const inputs = {
             runSimpleServer: this.runSimpleServer.element.checked,
             width: this.width.element.value,
             height: this.height.element.value,
-            isGenQuestion: this.isGenQuestion.element.checked,
-            isSavedLog: this.isSavedLog.element.checked,
-            isDrawnBoard: this.isDrawnBoard.element.checked
+            isGeneratingQuestion: this.isGeneratingQuestion.element.checked,
+            isSavingLog: this.isSavingLog.element.checked,
+            isDrawingBoard: this.isDrawingBoard.element.checked
         }
     },
     options: document.querySelectorAll(".options")
@@ -224,13 +224,13 @@ buttons.start.addEventListener("click", async () => {
      * デバッグモードONの時の処理\
      * 引数には `inputs.values()` を指定すると楽
      */
-    const debugOn = async ({ width, height, isGenQuestion, isSavedLog, isDrawnBoard }) => {
+    const debugOn = async ({ width, height, isGeneratingQuestion, isSavingLog, isDrawingBoard }) => {
         // 初期化
         result.width = width, result.height = height;
         outputs.expectedTime.display(approximateProcess(width * height, formulas.time));
         outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(width * height, formulas.order));   
         // エンドポイントにアクセス
-        return await fetch(`/start/on?width=${width}&height=${height}&isGenQuestion=${isGenQuestion}&isSavedLog=${isSavedLog}&isDrawnBoard=${isDrawnBoard}`)
+        return await fetch(`/start/on?width=${width}&height=${height}&isGeneratingQuestion=${isGeneratingQuestion}&isSavingLog=${isSavingLog}&isDrawingBoard=${isDrawingBoard}`)
         .then(async (response) => {
             // 何か知らんけど関数オブジェクトじゃなくラムダ式で書かないとエラる
             await fetchProcess(response, (decoded) => {
@@ -254,8 +254,8 @@ buttons.start.addEventListener("click", async () => {
      * デバッグモードOFFの時の処理\
      * 引数には `inputs.values()` を指定すると楽
      */
-    const debugOff = async ({ port, runSimpleServer, isSavedLog, isDrawnBoard }) => {
-        return await fetch(`/start/off?port=${port}&runSimpleServer=${runSimpleServer}&isSavedLog=${isSavedLog}&isDrawnBoard=${isDrawnBoard}`)
+    const debugOff = async ({ port, runSimpleServer, isSavingLog, isDrawingBoard }) => {
+        return await fetch(`/start/off?port=${port}&runSimpleServer=${runSimpleServer}&isSavingLog=${isSavingLog}&isDrawingBoard=${isDrawingBoard}`)
         .then(async (response) => {
             switch (response.status) {
                 // 正常な通信の場合
@@ -313,8 +313,8 @@ buttons.start.addEventListener("click", async () => {
 
 buttons.confirm.addEventListener("click", () => {
     if (result.orderCount) {
-        if (result.id) window.open(`/result?id=${result.id}&isDrawnBoard=${inputs.values().isDrawnBoard}`);
-        else window.open(`/result?isDrawnBoard=${inputs.values().isDrawnBoard}`);
+        if (result.id) window.open(`/result?id=${result.id}&isDrawingBoard=${inputs.values().isDrawingBoard}`);
+        else window.open(`/result?isDrawingBoard=${inputs.values().isDrawingBoard}`);
     }
     else window.alert("処理が実行されていません")
 });
