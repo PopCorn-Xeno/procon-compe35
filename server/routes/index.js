@@ -1,20 +1,26 @@
 const router = require('express').Router();
-const { spawn, fork } = require("child_process");
+const { spawn, fork, ChildProcess } = require("child_process");
 const fs = require("fs");
+
+/** チームのトークン */
+const token = "kure3037997297c7e6e840bb98658ca5175aa607a40d7f59a343ff7ecf182c45";
 
 router.get('/', (req, res) => {
   res.render('index');
 });
 
 //#region sub.js 実行エンドポイント
-/** `sub.js`を起動する`ChildProcess */
+/** 
+ * `sub.js`を起動する`ChildProcess`
+ * @type {ChildProcess | null}
+ */
 let sub = null;
 router.get("/start/:debug", async (req, res) => {
   res.setHeader("Content-Type", "text/plain");
   // デバッグモードがONの場合
   if (req.params.debug === "on") {
     // 子プロセスを起動する --max-old-space-sizeは現状消してみている
-    sub = fork("process/sub.js");
+    sub = fork("process/sub.js", ["--max-old-space-size=32000"]);
     // 子プロセス生成時、パラメータを送信する
     sub.on("spawn", () => sub.send({
       width: Number.parseInt(req.query.width),
@@ -26,14 +32,28 @@ router.get("/start/:debug", async (req, res) => {
     // 子プロセスからのメッセージを受信後、レスポンスする
     sub.on("message", data => {
       console.log(data);
-      res.write(data.toString() + "\n");
-      res.flushHeaders();
+      // オブジェクト形式ではないメッセージは問題の回答情報ではなく全てクライアントにレスポンスするもの
+      if (typeof data !== "object") {
+        res.write(data.toString() + "\n");
+        res.flushHeaders();
+      }
+			// オブジェクト形式のメッセージはプロセスから送信された生成した問題の情報
+      else {
+				const inputData = {
+					teams: [token],
+					duration: 300,
+					problem: data
+				};
+				// 簡易サーバーのinput.jsonを保存する
+				fs.writeFileSync("../simple-server/input.json", JSON.stringify(inputData));
+				res.send("input.json was updated.\nRestart simple server to reset problem data.");
+			}
     });
     // エラーハンドリング
     sub.on("error", error => {
       console.error(error);
       res.write(error.toString());
-    })
+    });
     // プロセスが終了した後、レスポンスを終了させる
     sub.on("exit", () => res.end());
   }
@@ -42,7 +62,7 @@ router.get("/start/:debug", async (req, res) => {
     // サーバーにFetchする（本番もLANならこれで通じる）
     fetch(`http://localhost:${req.query.port}/problem`, {
       method: "GET",
-      headers: { "Procon-Token": "kure3037997297c7e6e840bb98658ca5175aa607a40d7f59a343ff7ecf182c45" }
+      headers: { "Procon-Token": token }
     }).then(response => {
       // 正常に通信できた場合
       if (response.ok) {

@@ -40,13 +40,12 @@
                         }
                     }
                 };
-                case "time": return { name: "処理時間", id: name, width: "fit-content" };
-                case "count": return { name: "手数", id: name, width: "fit-content" };
-                case "size": return { name: "ボードサイズ", id: name, width: "fit-content" };
+                case "time": return { name: "処理時間", id: name };
+                case "count": return { name: "手数", id: name};
+                case "size": return { name: "ボードサイズ", id: name};
                 case "isDrawingBoard": return {
                     name: "ボード描画",
                     id: name,
-                    width: "fit-content",
                     formatter: (cell) => cell ? "有効" : "無効"
                 };
             }
@@ -91,7 +90,6 @@
                     }, "削除")
                 ],
                 sort: false,
-                width: "fit-content"
             }]
         ),
         data: ejsImport.logs.map((log) =>

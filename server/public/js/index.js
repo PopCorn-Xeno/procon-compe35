@@ -39,7 +39,7 @@ const inputs = {
     ),
     isDrawingBoard: new InputDescription(
         document.getElementById("isDrawingBoard"),
-        "ONにすると処理結果表示においてボードの変化を描画しますが、処理が遅延する可能性があります。"
+        "ONにすると結果表示においてボードの変化を描画しますが、処理の遅延やGCが発生する可能性があります。"
     ),
     values() {
         return {
@@ -227,8 +227,10 @@ buttons.start.addEventListener("click", async () => {
     const debugOn = async ({ width, height, isGeneratingQuestion, isSavingLog, isDrawingBoard }) => {
         // 初期化
         result.width = width, result.height = height;
-        outputs.expectedTime.display(approximateProcess(width * height, formulas.time));
-        outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(width * height, formulas.order));   
+        if (!isGeneratingQuestion) {
+            outputs.expectedTime.display(approximateProcess(width * height, formulas.time));
+            outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(width * height, formulas.order));   
+        }
         // エンドポイントにアクセス
         return await fetch(`/start/on?width=${width}&height=${height}&isGeneratingQuestion=${isGeneratingQuestion}&isSavingLog=${isSavingLog}&isDrawingBoard=${isDrawingBoard}`)
         .then(async (response) => {
@@ -236,6 +238,10 @@ buttons.start.addEventListener("click", async () => {
             await fetchProcess(response, (decoded) => {
                 mesureProcessTimeFromResponce(decoded);
                 result.obtain(decoded);
+                // 問題の生成のみ行うときは、単なる文章の文字列しか送られてこないので全てコンソールに出力してよい
+                if (isGeneratingQuestion) {
+                    outputs.console.log(decoded);
+                }
             });
             // エラーなく正常終了したときのみ
             if (!result.error) {
@@ -260,7 +266,7 @@ buttons.start.addEventListener("click", async () => {
             switch (response.status) {
                 // 正常な通信の場合
                 case 200:
-                    let isSend = true;
+                    // let isSend = true;
                     await fetchProcess(response, (decoded) => {
                         mesureProcessTimeFromResponce(decoded);
                         result.setActions({
@@ -277,6 +283,7 @@ buttons.start.addEventListener("click", async () => {
                                 }
                             }
                         }).obtain(decoded);
+                        // メインプロセスが終了したとき（まだ回答は送信されていない状態）
                         if (/Process finished\./.test(decoded)) outputs.console.log(decoded);
                     });
                     if (!result.error && result.isSend) {
