@@ -1,6 +1,7 @@
 const fs = require('fs');
 const error = require("./error");
-const cloneDeep = require("lodash/cloneDeep")
+const cloneDeep = require("lodash/cloneDeep");
+const { arrayBuffer } = require('stream/consumers');
 
 /**
  * 問題を解くためのクラス
@@ -334,7 +335,7 @@ class BoardData {
                 fs.writeFileSync("./process/log/problem/problem.json", JSON.stringify(data, undefined, " "), "utf-8", (err) => console.error(err));
             }
         }
-        
+
         callback?.call(this, isOverwriting ? "" : this.#id, data);
         return this;
     }
@@ -364,9 +365,9 @@ class BoardData {
                 x: order.position[0],
                 y: order.position[1],
                 s: order.direction == 1 ? 0 :       // 上
-                   order.direction == 2 ? 3 :       // 右
-                   order.direction == 3 ? 1 :       // 下
-                   order.direction == 4 ? 2 : NaN   // 左 (仮にどれでもない場合はNaN)
+                    order.direction == 2 ? 3 :       // 右
+                        order.direction == 3 ? 1 :       // 下
+                            order.direction == 4 ? 2 : NaN   // 左 (仮にどれでもない場合はNaN)
                 // 抜き型の操作方向をレギュレーションに合わせる
             }))
         }
@@ -377,7 +378,7 @@ class BoardData {
             }
 
             const info = `${this.answer.time}_${this.answer.order.length}_${this.#board.start.width}x${this.#board.start.height}`;
-            
+
             if (!isOverwriting) {
                 fs.writeFileSync(`./process/log/result/result_${this.#id}_${info}.json`, JSON.stringify(sendData, undefined, ' '), 'utf-8', (err) => console.error(err));
             }
@@ -447,6 +448,12 @@ class Answer {
     goal;
 
     /**
+     * ボードの一致状況
+     * @type {Board}
+     */
+    mutchFlag;
+
+    /**
      * 経過ターン数
      * @type {number}
      */
@@ -470,7 +477,7 @@ class Answer {
      * @type {{ orderRelation: { start: number, end: number }, targetPosition: { position1: [number, number], position2: [number, number] }, targetSize: number, board: { before: string[], after: string[] }}[] | null }
      */
     swapHistory;
-    
+
     /**
      * エラーが発生したときのハンドリングを行うコールバック
      * @type {error.CatchHandler}
@@ -491,6 +498,8 @@ class Answer {
     constructor(start, goal, patterns) {
         this.current = cloneDeep(start);
         this.goal = goal;
+        this.mutchFlag = new Board(new Array(this.current.height).fill(0).map(array => array = new Array(this.current.width).fill(0)));
+        this.refreshMatchFlag();
         this.turn = 0;
         this.patterns = patterns;
         this.#initialMatchValue = this.countMatchValue();
@@ -531,6 +540,20 @@ class Answer {
             }
         }
         return match;
+    }
+
+    /**mutchFlagのボード一致状況を更新する */
+    refreshMatchFlag() {
+        for (let i = 0; i < this.current.height; i++) {
+            for (let j = 0; j < this.current.width; j++) {
+                if (this.current.array[i][j] == this.goal.array[i][j]) {
+                    this.mutchFlag.array[i][j] = 1;
+                }
+                else {
+                    this.mutchFlag.array[i][j] = 0;
+                }
+            }
+        }
     }
 
     /**
