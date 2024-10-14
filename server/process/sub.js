@@ -10,7 +10,12 @@ process.once("message", ({ problem, width, height, isGeneratingQuestion, isSavin
         // 受信データを使用しない場合
         if (width && height && isGeneratingQuestion !== undefined) {
             boardData = new BoardData(null, null, width, height);
-            // if (isGeneratingQuestion) process.send()
+            if (isGeneratingQuestion) {
+                boardData.writeReceptionData(undefined, undefined, (id, data) => {
+                    process.send(data);
+                    process.exit();
+                }, false);
+            }
         }
         // 受信データを使用する場合
         else if (problem) {
