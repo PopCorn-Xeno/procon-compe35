@@ -13,7 +13,7 @@ function scanLogs() {
                  time: /([0-9]+\.[0-9]{0,3})/g.exec(filename)[1],
                  count: /_([0-9]+)_/.exec(filename)[1],
                  size: /([0-9]+x[0-9]+)/.exec(filename)[1],
-                 isDrawnBoard: fs.existsSync(`./process/log/swapHistory/swapHistory_${/((([0-9-]{2,4}){2,3}-*){2})/g.exec(filename)[1]}.json`),
+                 isDrawingBoard: fs.existsSync(`./process/log/swapHistory/swapHistory_${/((([0-9-]{2,4}){2,3}-*){2})/g.exec(filename)[1]}.json`),
                  filename: filename
              }));
 }

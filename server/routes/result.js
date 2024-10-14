@@ -14,7 +14,7 @@ router.get("/", (req, res) => {
         result: req.query.id
                     ? fs.readdirSync("./process/log/result").find((filename) => new RegExp(req.query.id).test(filename))
                     : "result.json",
-        swapHistory: req.query.isDrawnBoard.toString() === "true"
+        swapHistory: req.query.isDrawingBoard.toString() === "true"
                     ? req.query.id
                         ? fs.readdirSync("./process/log/swapHistory").find((filename) => new RegExp(req.query.id).test(filename))
                         : "swapHistory.json"
