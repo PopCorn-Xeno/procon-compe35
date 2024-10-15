@@ -94,7 +94,7 @@ router.get("/start/:debug", async (req, res) => {
                 body: JSON.stringify(data),
                 headers: {
                   "Content-Type": "application/json",
-                  "Procon-Token": "kure3037997297c7e6e840bb98658ca5175aa607a40d7f59a343ff7ecf182c45"
+                  "Procon-Token": token
                 }
               }).then((response) => {
                 if (response.ok) {

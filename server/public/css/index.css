@@ -21,28 +21,46 @@ main {
     border: 2px violet solid;
     font-size: calc((1.6vw + 0.9vh) * 0.5);
     caret-color: transparent;
+    overflow: hidden;
 }
 
 /** -- 立体に見せる要素 -- */
 /* 立体に見せる設定 */
 .cubic-element {
+    --animation-duration: 1.25s;
+    --animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    --animation-fill-mode: forwards;
+    --animation-delay: 0s;
     transform-style: preserve-3d;
+    perspective: 450px;
     height: 100%;
     position: absolute;
 }
 
 /* 上下部分の共通設定 */
 .cubic-element.upper-side, .cubic-element.lower-side {
+    --positionY-offset: 10%;
+    --rotateX-offset: 20deg;
+    --rotateX-delta-offset: 70deg;
     height: 50%;
     inset: auto 0;
     margin: 0 auto;
 
-    .content {
-        position: relative;
-        margin: 0 auto;
+    > .hexagon, .octagon {
+        transform-origin: center top 150px;
+        animation-name: y-side-element-appear;
+        animation-duration: var(--animation-duration);
+        animation-timing-function: var(--animation-timing-function);
+        animation-fill-mode: var(--animation-fill-mode);
+        animation-delay: var(--animation-delay);
 
-        > h1 {
-            font-size: 1em;
+        > .content {
+            position: relative;
+            margin: 0 auto;
+    
+            > h1 {
+                font-size: 1em;
+            }
         }
     }
 }
@@ -55,9 +73,12 @@ main {
     /* 六角形オブジェクト */
     > .hexagon {
         --vertex-margin: 20%;
+        --positionZ-after: 50px;
+        --direction-factor: 1;
+        --rotateX-after: calc(360deg - var(--rotateX-offset));
+        --rotateX-before: calc(var(--rotateX-after) - var(--rotateX-delta-offset));
         width: 100%;
         height: 30%;
-        transform: translateY(75%);
         clip-path: polygon(calc(25% - var(--vertex-margin)) 0%,
                            calc(75% + var(--vertex-margin)) 0%, 100% 50%,
                            calc(75% + var(--vertex-margin)) 100%,
@@ -79,6 +100,7 @@ main {
                     width: 0%;
                     height: 100%;
                     background-color: white;
+                    transition: width ease 0.5s;
                 }
 
                 > p {
@@ -89,6 +111,7 @@ main {
                     height: 100%;
                     text-align: center;
                     color: white;
+                    font-family: "DSEG7 Classic", "Source Code Pro";
                 }
             }
         }
@@ -102,9 +125,12 @@ main {
     > .octagon {
         --vertex-margin-width: 27.5%;
         --vertex-margin-height: 20%;
+        --positionZ-after: -10px;
+        --direction-factor: -1;
+        --rotateX-after: calc(360deg + var(--rotateX-offset));
+        --rotateX-before: calc(var(--rotateX-after) + var(--rotateX-delta-offset));
         width: 100%;
         height: 40%;
-        transform: translateY(125%);
         clip-path: polygon(calc(30% - var(--vertex-margin-width)) 0%,
                            calc(70% + var(--vertex-margin-width)) 0%,
                            100% calc(30% - var(--vertex-margin-height)),
@@ -125,11 +151,13 @@ main {
                 margin: 0.5em 0;
                 padding: 0 0.5em 0.5em 2em;
                 overflow-y: auto;
+                scrollbar-width: thin;
 
                 > li {
                     width: 100%;
                     overflow-wrap: break-word;
                     font-size: 0.85em;
+                    font-family: "Source Code Pro";
                     color: white;
                     margin-top: 0.5em;
 
@@ -139,7 +167,7 @@ main {
                 }
 
                 > li.log::marker {
-                    color: green;
+                    color: #37be5f;
                 }
 
                 > li.error {
@@ -155,16 +183,23 @@ main {
 }
 
 .cubic-element.left-side, .cubic-element.right-side {
-    perspective: 450px;
+    --angleY-after: 35deg;
+    --angleY-before: 70deg;
+    --positionX-after: -5%;
+    --positionX-before: -100%;
+    --positionY: 17.5%;
+    --positionZ-after: -80px;
+    --positionZ-before: -100px;
     width: 50%;
     overflow: hidden;
-    --angleY: 35deg;
-    --translateX: -5%;
-    --translateY: 17.5%;
-    --translateZ: -80px;
 
     > .hexagon {
         --vertex-margin: 5%;
+        animation-name: x-side-element-appear;
+        animation-duration: var(--animation-duration);
+        animation-timing-function: var(--animation-timing-function);
+        animation-fill-mode: var(--animation-fill-mode);
+        animation-delay: var(--animation-delay);
         width: 100%;
         height: 75%;
         clip-path: polygon(calc(25% - var(--vertex-margin)) 0%,
@@ -182,11 +217,12 @@ main {
 }
 
 .cubic-element.left-side {
+    --direction-factor: 1;
     left: 0;
 
     > .hexagon {
-        transform: rotateY(var(--angleY))
-                   translate3d(var(--translateX), var(--translateY), var(--translateZ));
+        transform: rotateY(var(--angleY-after))
+                   translate3d(var(--positionX-after), var(--positionY), var(--positionZ-after));
         
         .item-area {
             margin-left: 2.5%;
@@ -195,16 +231,21 @@ main {
 
         .side-button-area {
             inset: 2% -31% 0 auto;
+            
+            > button:hover {
+                transform: translate3d(10.5%, 0, 15px) scale(1.05);
+            }
         }
     }
 }
 
 .cubic-element.right-side {
+    --direction-factor: -1;
     right: 0;
 
     > .hexagon {
-        transform: rotateY(calc(-1 * var(--angleY)))
-                   translate3d(calc(-1 * var(--translateX)), var(--translateY), var(--translateZ));
+        transform: rotateY(calc(-1 * var(--angleY-after)))
+                   translate3d(calc(-1 * var(--positionX-after)), var(--positionY), var(--positionZ-after));
     
         .item-area {
             margin-left: auto;
@@ -216,6 +257,10 @@ main {
 
             > button {
                 transform: rotate(180deg);
+                
+                &:hover {
+                    transform: rotate(180deg) translate3d(10.5%, 0, 15px) scale(1.05);
+                }
             }
         }
     }
@@ -234,11 +279,23 @@ main {
         margin-bottom: 3%;
         border-bottom: white 2px solid;
 
-        > span {
+        > .content-title {
+            font-family: "Noto Serif JP";
+            transform: scaleX(0.75);
+            display: inline-block;
+            margin-left: -0.25em;
+            letter-spacing: 0.15em;
+        }
+
+        > .content-subtitle {
             position:absolute;
-            right: 5%;
+            right: 2.5%;
             bottom: 5%;
-            font-size: 0.6em;
+            font-size: 0.7em;
+            font-family: "Century Gothic";
+            font-weight: normal;
+            transform: scaleY(0.85);
+            letter-spacing: -0.05em;
         }
     }
 
@@ -268,6 +325,8 @@ main {
                 position: relative;
                 color: white;
                 font-size: 1.25em;
+                font-family: "Hiragino Sans StdN";
+                letter-spacing: 0.1em;
                 display: block;
                 padding: 2px 0.5em 2px 0;
                 margin: 0.75em 0 1em;
@@ -278,8 +337,9 @@ main {
                     position: absolute;
                     top: 100%;
                     margin: 2% 4%;
-                    font-size: 0.5em;
-                    font-family: monospace;
+                    font-size: 0.55em;
+                    font-family: "Source Code Pro";
+                    letter-spacing: normal;
                     white-space: nowrap;
                 }
             }
@@ -434,6 +494,7 @@ main {
             --scaleX: 0.8;
             --scaleY: 1.2;
             font-size: 2.25em;
+            font-family: "Hiragino Sans StdN";
             font-weight: 900;
             margin: 0.5em 0;
             transform: scale(var(--scaleX), var(--scaleY));
@@ -443,6 +504,7 @@ main {
                 display: block;
                 width: 100%;
                 font-size: 0.35em;
+                font-family: "Century Gothic";
                 font-weight: normal;
                 text-align: center;
                 letter-spacing: 0.6em;
@@ -453,47 +515,58 @@ main {
 
         .processed-time-area {
             font-size: 2.5em;
+            font-family: "Source Code Pro";
             margin: 0.5em 0;
             color: white;
-
-            > span {
-                display: block;
-            }
+            letter-spacing: -0.025em;
 
             > #processedTime {
-                font-size: 1em;
-                font-weight: 700;
+                font-family: "DSEG7 Classic";
+                font-size: 0.9em;
+                font-weight: bold;
+                letter-spacing: normal;
             }
 
-            > span {
-                font-size: 0.35em;
-                font-weight: 300;
+            > span:last-child {
+                display: block;
+                font-size: 0.4em;
+                font-weight: normal;
                 text-align: end;
+                margin-top: 0.6em;
 
                 > #expectedTime {
-                    font-size: 1.75em;
+                    font-family: "DSEG7 Classic";
+                    font-size: 1.25em;
+                    letter-spacing: normal;
                 }
             }
         }
 
         .order-count {
-            font-size: 1.25em;
+            font-size: calc(2.5em * 0.9 / 2);
+            font-family: "Source Code Pro", "Hiragino Sans StdN";
             margin: 0.5em 0;
             color: white;
             text-align: end;
+            letter-spacing: -0.025em;
 
             > #orderCount {
+                font-family: "DSEG7 Classic";
                 font-size: 2em;
-                font-weight: 700;
+                font-weight: bold;
+                letter-spacing: normal;
             }
 
             > span:last-child {
                 display: block;
-                font-size: 0.7em;
-                font-weight: 300;
+                font-size: calc(1em * 2 / 0.9 * 0.35);
+                font-weight: normal;
+                margin-top: calc(1em * 2 / 0.9 * 0.2);
 
                 > #expectedCount {
-                    font-size: 1.75em;
+                    font-family: "DSEG7 Classic";
+                    font-size: 1.25em;
+                    letter-spacing: normal;
                 }
             }
         }
@@ -506,6 +579,8 @@ main {
         margin: 5% 0;
         padding: 2% 4%;
         font-size: 0.9em;
+        font-family: "Helvetica Neue", "Hiragino Sans StdN";
+        letter-spacing: 0.05em;
         color: white;
         background-color: rgba(0, 0, 0, 0.25);
     }
@@ -524,6 +599,12 @@ main {
             height: 100%;
             border: 0;
             cursor: pointer;
+            font-size: 1em;
+            transition: all ease-in-out 0.3s;
+
+            &:hover {
+                filter: drop-shadow(0px 0px 3px white);
+            }
     
             > span {
                 color: white;
@@ -531,6 +612,8 @@ main {
                 letter-spacing: 0.5em;
                 text-align: center;
                 font-size: 1.25em;
+                font-family: "Helvetica Neue";
+                font-weight: 500;
                 width: 100%;
                 height: 100%;
                 margin: auto 0;
@@ -547,5 +630,90 @@ main {
                 }
             }
         }
+    }
+}
+
+@font-face {
+    font-family: "DSEG7 Classic";
+    font-weight: normal;
+    src: url("../fonts/DSEG7Classic-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "DSEG7 Classic";
+    font-weight: bold;
+    src: url("../fonts/DSEG7Classic-Bold.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Noto Serif JP";
+    font-weight: 900;
+    src: url("../fonts/NotoSerifJP-Black.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Noto Serif JP";
+    font-weight: 400;
+    src: url("../fonts/NotoSerifJP-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Century Gothic";
+    src: url("../fonts/CenturyGothic-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Hiragino Sans StdN";
+    font-weight: 400;
+    src: url("../fonts/HiraginoSansStdN-W4.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Hiragino Sans StdN";
+    font-weight: 900;
+    src: url("../fonts/HiraginoSansStdN-W9.woff2");
+}
+
+@font-face {
+    font-family: "Helvetica Neue";
+    font-weight: 400;
+    src: url("../fonts/HelveticaNeue-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Helvetica Neue";
+    font-weight: 500;
+    src: url("../fonts/HelveticaNeue-Medium.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Source Code Pro";
+    font-weight: normal;
+    src: url("../fonts/SourceCodePro-Regular.ttf.woff2");
+}
+
+@keyframes y-side-element-appear {
+    0% {
+        transform: translateY(calc(100% + var(--direction-factor) * var(--positionY-offset)))
+                   rotateX(var(--rotateX-before))
+                   translateZ(var(--positionZ-after));
+    }
+
+    100% {
+        transform: translateY(calc(100% + var(--direction-factor) * var(--positionY-offset)))
+                   rotateX(var(--rotateX-after))
+                   translateZ(var(--positionZ-after));
+    }
+}
+
+@keyframes x-side-element-appear {
+    0% {
+        transform: rotateY(calc(var(--direction-factor) * var(--angleY-before)))
+                   translate3d(calc(var(--direction-factor) * var(--positionX-before)), var(--positionY), var(--positionZ-before));
+    }
+
+    100% {
+        transform: rotateY(calc(var(--direction-factor) * var(--angleY-after)))
+                   translate3d(calc(var(--direction-factor) * var(--positionX-after)), var(--positionY), var(--positionZ-after));
     }
 }
