@@ -383,11 +383,11 @@ export class ConsoleWindow {
             element = this.#console.appendChild(element);
             //  スクロールしていないときだけ下部に強制スクロール
             if (!this.isScrolled) {
-                element.scrollIntoView({
-                    block: "end",
-                    inline: "nearest",
+                // 新たに生成した要素が見える位置までスクロールする
+                this.#console.scrollTo({
+                    top: element.offsetTop,
                     behavior: "smooth"
-                });
+                })
             }
         });
     }
