@@ -56,13 +56,10 @@ const inputs = {
     options: document.querySelectorAll(".options")
 }
 // 入力系要素・ホバー時の説明表示設定
-const defaultText = document.getElementById("description").innerHTML;
-for (const key in inputs) {
-    if (inputs[key] instanceof InputDescription) {
-        inputs[key].setDefault(defaultText)
-                   .setAction(text => document.getElementById("description").innerHTML = text);
-    }
-}
+Object.values(inputs).filter((input) => input instanceof InputDescription).forEach((input) => {
+    input.setDefault("各項目のスイッチに触れると説明が表示されます。設定終了後に、STARTボタンを押して処理の実行を開始してください。")
+         .setAction((text) => document.getElementById("description").innerHTML = text);
+})
 
 /** 出力系要素 */
 const outputs = {
