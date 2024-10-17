@@ -1,22 +1,24 @@
 # 全国高専プロコン 第35回奈良大会 競技部門 呉高専 ソースリポジトリ
-## 使用言語と開発環境
+## 使用言語・ライブラリ・フォントと開発環境
 ### バックエンド
 - Node.js
-  - Express
-  - lodash
+  - [Express](https://expressjs.com)
+  - [lodash](https://lodash.com)
   
 ### フロントエンド
 - JavaScript
-  - Grid.js
-  - JSON Viewer
+  - [Grid.js](https://gridjs.io)
+  - [JSON Viewer](https://github.com/renhongl/json-viewer-js?tab=readme-ov-file)
 - CSS
 - EJS
 
-### ライブラリ
-> https://expressjs.com
+### フォント
+- Noto Sans JP
+- ヒラギノ角ゴ StdN
+- DSEG7 Classic
+- Source Code Pro
+- Century Gothic
+- Helvetica Neue
 
-> https://lodash.com
+ソースコードの参考等は適宜ファイル内に記載
 
-> https://gridjs.io
- 
-> https://github.com/renhongl/json-viewer-js?tab=readme-ov-file
