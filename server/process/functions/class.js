@@ -1,7 +1,6 @@
 const fs = require('fs');
 const error = require("./error");
 const cloneDeep = require("lodash/cloneDeep");
-const { arrayBuffer } = require('stream/consumers');
 
 /**
  * 問題を解くためのクラス
@@ -451,7 +450,7 @@ class Answer {
      * ボードの一致状況
      * @type {Board}
      */
-    mutchFlag;
+    matchFlag;
 
     /**
      * 経過ターン数
@@ -498,8 +497,8 @@ class Answer {
     constructor(start, goal, patterns) {
         this.current = cloneDeep(start);
         this.goal = goal;
-        this.mutchFlag = new Board(new Array(this.current.height).fill(0).map(array => array = new Array(this.current.width).fill(0)));
-        this.refreshMatchFlag();
+        this.matchFlag = new Board(new Array(this.current.height).fill(0).map(array => array = new Array(this.current.width).fill(0)));
+        this.updateMatchFlag();
         this.turn = 0;
         this.patterns = patterns;
         this.#initialMatchValue = this.countMatchValue();
@@ -542,15 +541,15 @@ class Answer {
         return match;
     }
 
-    /**mutchFlagのボード一致状況を更新する */
-    refreshMatchFlag() {
+    /** `matchFlag`のボード一致状況を更新する */
+    updateMatchFlag() {
         for (let i = 0; i < this.current.height; i++) {
             for (let j = 0; j < this.current.width; j++) {
                 if (this.current.array[i][j] == this.goal.array[i][j]) {
-                    this.mutchFlag.array[i][j] = 1;
+                    this.matchFlag.array[i][j] = 1;
                 }
                 else {
-                    this.mutchFlag.array[i][j] = 0;
+                    this.matchFlag.array[i][j] = 0;
                 }
             }
         }
