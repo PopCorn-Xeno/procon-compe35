@@ -72,7 +72,7 @@ console.log("計算時間=" + result + "秒");
 
 // fullLog(boardData.answer.current.array);
 
-/*必勝祈願:サモトラケのニケ
+/* 必勝祈願: サモトラケのニケ
               ` . .` .
        .?1zz+-..`` ! __.`-                                                   `      .((JywXa.
    .-((+zU&G+zrI-_<~`. ._ _<-     `    `    `    `    `    `    `    `   `   `` -.(+QQkWWY3+Ci.
