@@ -393,29 +393,39 @@ class BoardData {
     /**
      * スワップによるボード操作の履歴を記録するかどうか指定する
      * @param {boolean} flag 記録するか
+     * @param {boolean} isOverwriting ファイルを上書きして出力するか
      * @returns {BoardData} インスタンス
      */
-    useSwapHistory(flag) {
-        this.answer.swapHistory = flag ? [] : null;
-        return this;
-    }
-
-    /**
-     * スワップによるボード操作の記録を保存する
-     * @param {boolean} isOverwritten 上書きするか（デフォルト: `false`）
-     * @returns {BoardData} インスタンス
-     */
-    writeSwapHistory(isOverwritten = false) {
-        if (this.answer.swapHistory) {
+    useSwapHistory(flag, isOverwriting = false) {
+        if (flag) {
             if (!fs.existsSync("./process/log/swapHistory")) {
                 fs.mkdirSync("./process/log/swapHistory", { recursive: true });
             }
-            if (!isOverwritten) {
-                fs.writeFileSync(`./process/log/swapHistory/swapHistory_${this.#id}.json`, JSON.stringify(this.answer.swapHistory, undefined, ' '), 'utf-8', (err) => console.error(err));
+            if (!isOverwriting) {
+                this.answer.swapHistory = new SwapHistory(`./process/log/swapHistory/swapHistory_${this.#id}.json`);
             }
             else {
-                fs.writeFileSync(`./process/log/swapHistory/swapHistory.json`, JSON.stringify(this.answer.swapHistory, undefined, ' '), 'utf-8', (err) => console.error(err));
+                this.answer.swapHistory = new SwapHistory(`./process/log/swapHistory/swapHistory.json`);
             }
+        }
+        else {
+            this.answer.swapHistory = null;
+        }
+    }
+
+    /**
+     * スワップによるボード操作の記録を保存する\
+     * **記録を保存しない場合でも指定したコールバックは必ず発火する**
+     * @param {Function<void>} callback ファイルの保存が完了した後に行う処理、保存しない場合は即時発火する
+     * @returns {BoardData} インスタンス
+     */
+    writeSwapHistory(callback) {
+        if (this.answer.swapHistory) {
+            this.answer.swapHistory.onFinish = callback;
+            this.answer.swapHistory.end();
+        }
+        else {
+            callback?.call(this);
         }
         return this;
     }
@@ -447,10 +457,10 @@ class Answer {
     goal;
 
     /**
-     * ボードの一致状況
-     * @type {Board}
+     * 現在のボードの一致している位置を格納する
+     * @type {[number, number][]}
      */
-    matchFlag;
+    matchPositions;
 
     /**
      * 経過ターン数
@@ -468,12 +478,7 @@ class Answer {
     #initialMatchValue;
 
     /**
-     * 1度の`swap()`によるセル交換の記録を記録する
-     * - `orderRelation`: `start`にそのスワップが開始された`order`のインデックス、`end`にそのスワップが完了した`order`のインデックスを記録する
-     * - `targetPosition`: `position1`と`position2`に交換対象の座標をそれぞれ記録する
-     * - `targetSize`: `targetPosition`の位置から周囲を何マス含めてスワップしたか記録する
-     * - `board`: `before`にスワップ実行前、`after`に実行後のボードを文字列にフォーマットして記録する
-     * @type {{ orderRelation: { start: number, end: number }, targetPosition: { position1: [number, number], position2: [number, number] }, targetSize: number, board: { before: string[], after: string[] }}[] | null }
+     * @type {SwapHistory | null}
      */
     swapHistory;
 
@@ -497,7 +502,6 @@ class Answer {
     constructor(start, goal, patterns) {
         this.current = cloneDeep(start);
         this.goal = goal;
-        this.matchFlag = new Board(new Array(this.current.height).fill(0).map(array => array = new Array(this.current.width).fill(0)));
         this.updateMatchFlag();
         this.turn = 0;
         this.patterns = patterns;
@@ -543,13 +547,12 @@ class Answer {
 
     /** `matchFlag`のボード一致状況を更新する */
     updateMatchFlag() {
+        this.matchPositions = [];
         for (let i = 0; i < this.current.height; i++) {
             for (let j = 0; j < this.current.width; j++) {
                 if (this.current.array[i][j] == this.goal.array[i][j]) {
-                    this.matchFlag.array[i][j] = 1;
-                }
-                else {
-                    this.matchFlag.array[i][j] = 0;
+                    // 一致しているセルの座標を格納する
+                    this.matchPositions.push([i, j]);
                 }
             }
         }
@@ -562,23 +565,6 @@ class Answer {
     progress() {
         const cellCount = this.current.width * this.current.height - this.#initialMatchValue;
         return (this.countMatchValue() - this.#initialMatchValue) / cellCount;
-    }
-
-    /**
-     * `swap()`による操作の記録を追加する
-     * @param {{ start: number, end: number }} orderRelation `start`にそのスワップが開始された`order`のインデックス、`end`にそのスワップが完了した`order`のインデックス
-     * @param {{ position1: [number, number], position2: [number, number] }} targetPosition `position1`と`position2`にそれぞれ交換対象の座標
-     * @param {number} targetSize `targetPosition`の位置から周囲を何マス含めてスワップしたか
-     * @param {{ before: string[], after: string[] }} board `before`にスワップ実行前、`after`に実行後のフォーマット済みボード
-     */
-    #addHistory(orderRelation, targetPosition, targetSize, board) {
-        // `BoardData.useHistory()`で使用しない設定になっていればpushされない
-        this.swapHistory?.push({
-            orderRelation: orderRelation,
-            targetPosition: targetPosition,
-            targetSize: targetSize,
-            board: board
-        })
     }
 
     /**
@@ -702,6 +688,7 @@ class Answer {
         const targetPosition = { position1: [], position2: [] };
         const targetSize = size;
         const board = { before: null, after: null };
+        const matchPositions = { before: null, after: null };
 
         if (!isRecursived) {
             // エラー処理
@@ -750,6 +737,7 @@ class Answer {
                 targetPosition.position1 = cloneDeep(position1);
                 targetPosition.position2 = cloneDeep(position2);
                 board.before = this.current.formatCell();
+                matchPositions.before = this.matchPositions;
             }
         }
 
@@ -1009,7 +997,9 @@ class Answer {
             // スワップ操作を終えた時に操作履歴を記録する
             orderRelation.end = this.turn;
             board.after = this.current.formatCell();
-            this.#addHistory(orderRelation, targetPosition, targetSize, board);
+            this.updateMatchFlag();
+            matchPositions.after = this.matchPositions;
+            this.swapHistory.write(orderRelation, targetPosition, targetSize, board, matchPositions);
         }
     }
 
@@ -1567,6 +1557,76 @@ class Board {
         else if (this.dimension == 1) {
             this.array = this.array.map(element => new Array(1).fill(element));
             this.dimension = 2;
+        }
+    }
+}
+
+/**
+ * `Answer.swap()`による操作履歴を管理する
+ */
+class SwapHistory {
+    /**
+     * 書き込みストリーム\
+     * `null`の場合これを使用しないことを示す
+     * @type {fs.WriteStream | null}
+     */
+    #writeStream = null;
+
+    /**
+     * **スワップの操作履歴を残さない場合はインスタンス化しないこと**
+     * @param {string} path 書き込み先のパス
+     * @returns {SwapHistory} インスタンス
+     */
+    constructor(path) {
+        if (path) {
+            this.#writeStream = fs.createWriteStream(path);
+            /** 追加しようとしたオブジェクトが最初の要素がどうか */
+            this.isFirstObject = true;
+        }
+        return this;
+    }
+
+    /**
+     * `swap()`による操作の記録をストリームに追記する
+     * @param {{ start: number, end: number }} orderRelation `start`にそのスワップが開始された`order`のインデックス、`end`にそのスワップが完了した`order`のインデックス
+     * @param {{ position1: [number, number], position2: [number, number] }} targetPosition `position1`と`position2`にそれぞれ交換対象の座標
+     * @param {number} targetSize `targetPosition`の位置から周囲を何マス含めてスワップしたか
+     * @param {{ before: string[], after: string[] }} board `before`にスワップ実行前、`after`に実行後のフォーマット済みボード
+     * @param {{ before: [number, number][], after: [number, number][] }} matchPositions その時点でゴールと一致しているボード上の位置
+     */
+    write(orderRelation, targetPosition, targetSize, board, matchPositions) {
+        // 最初の要素でなかったら、一度コンマを打つ
+        if (!this.isFirstObject) {
+            this.#writeStream.write(",");
+        }
+        // 最初の要素だったら、フラグを下げる
+        else {
+            this.#writeStream.write("[");
+            this.isFirstObject = false;
+        }
+        // 書き込む
+        this.#writeStream.write(JSON.stringify({
+            orderRelation: orderRelation,
+            targetPosition: targetPosition,
+            targetSize: targetSize,
+            board: board,
+            matchPositions: matchPositions
+        }));
+    }
+
+    /** ストリームを終了する */
+    end() {
+        this.#writeStream.write("]");
+        this.#writeStream.end();
+    }
+
+    /**
+     * ストリームが完了したときに発火するコールバックを指定する
+     * @param {Function<void>} callback コールバック
+     */
+    set onFinish(callback) {
+        if (callback) {
+            this.#writeStream.on("finish", callback)
         }
     }
 }

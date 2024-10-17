@@ -21,7 +21,7 @@ process.once("message", ({ problem, width, height, isGeneratingQuestion, isSavin
         else if (problem) {
             boardData = new BoardData(problem.board, problem.general.patterns)
         }
-        boardData.useSwapHistory(isDrawingBoard);
+        boardData.useSwapHistory(isDrawingBoard, !isSavingLog);
     }
     // エラーハンドラーを設定、ソート開始
     boardData.answer.setErrorHandler((error) => {
@@ -33,13 +33,14 @@ process.once("message", ({ problem, width, height, isGeneratingQuestion, isSavin
      * 元々`true`=>`false`:「上書きしないで固有IDとともに保存
      * 元々`false`=>`true`:「上書き保存」
      */
-    boardData.writeSwapHistory(!isSavingLog).writeReceptionData(problem, !isSavingLog).writeSendData(!isSavingLog,
-        (id, answer) => {
-            process.send(`${id} ${answer.n}`);
-            if (problem) process.send(answer);
-        });
-
-    process.exit();
+    boardData.writeSwapHistory(() => {
+        boardData.writeReceptionData(problem, !isSavingLog)
+                 .writeSendData(!isSavingLog, (id, answer) => {
+                    process.send(`${id} ${answer.n}`);
+                    if (problem) process.send(answer);
+                 });
+        process.exit();
+    })
 });
 
 /* 必勝祈願: サモトラケのニケ
