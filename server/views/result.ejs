@@ -10,7 +10,7 @@
         /**
          * ボード全体を表示する
          * @param {string[]} target 受信データのボードデータ
-         * @param {{ position1: [number, number], position2: [number, number], size: number }} markingOption
+         * @param {{ position1: [number, number], position2: [number, number], size: number, matchPosition: [number, number][] }} markingOption `swapHistory`の構造参考
          * @returns {string} `<table><tr><td></td>...</tr>...</table>`
          */
         function show(target, markingOption) {
@@ -36,7 +36,16 @@
                             innerHTML += `<td class="swapped-area-2">${value}</td>`;
                         }
                         else {
-                            innerHTML += `<td>${value}</td>`;
+                            let isMatch = false;
+                            // セルが既にゴールと一致している
+                            for (const position of markingOption.matchPositions) {
+                                // 1次元の線形探索
+                                if ([x, y].toString() === position.toString()) {
+                                    isMatch = true;
+                                    break;
+                                }
+                            }
+                            innerHTML += isMatch ? `<td class="match">${value}</td>` : `<td>${value}</td>`;
                         }
                     }
                     else {
@@ -55,10 +64,10 @@
          * @param {string[]} target 受信データのボードデータ
          * @param {number} maxWidth 表示させる最大の横のセルの数
          * @param {number} maxHeight 表示させる最大の縦のセルの数
-         * @param {string[]} className 完成した<table>に追加するクラス名
+         * @param {string[]} dataType 完成した<table>のクラスとカスタム属性`data-type`に追加するプロパティ
          * @returns {string} `<table><tr><td></td>...</tr>...</table>`
          */
-        function showPartial(target, maxWidth, maxHeight, ...className) {
+        function showPartial(target, maxWidth, maxHeight, ...dataType) {
             const visibleCellCount = {
                 x: Math.round(maxWidth / 2) - 1,
                 y: Math.round(maxHeight / 2) - 1
@@ -84,40 +93,51 @@
                                          innerHTML += `</tr>`
                                          return innerHTML;
                                      }).join("");
-            return `<table class="board ${className.join(" ")}">${tableInner}</table>`;
+            return `<table class="board ${dataType.join(" ")}" data-type="${dataType.join(" ")}">${tableInner}</table>`;
         }
     %>
-    <body>        
+    <body>
+        <div id="splash" class="loading">
+            <div class="load-circle"></div>
+            <div class="load-text load-blink load-absolute">LOADING</div>
+        </div>
+
         <div class="information">
-            <h1>PROBLEM INFORMATION</h1>
-            <p>サイズ<span><%= board.start.length %> x <%= board.start[0].length %></span></p>
+            <h1><span>問題情報</span><span>PROBLEM INFORMATION</span></h1>
+            <p class="card box">サイズ<span><%= board.start.length %> × <%= board.start[0].length %></span></p>
             <% if (time) { %>
-            <p>処理時間<span id="time"><%= time %></span></p>
+            <p class="card box">処理時間<span id="time"><%= time %></span></p>
             <% } %>
-            <p>手数<span><%= count %></span></p>
+            <p class="card box">手数<span><%= count %></span></p>
             <% if (date) { %>
-            <p>日時<span><%= date %></span></p>
+            <p class="card box">日時<span><%= new Date(...date.split("-")).toLocaleString() %></span></p>
             <% } %>
-            <%- showPartial(board.start, 8, 8, "start") %>
-            <%- showPartial(board.goal, 8, 8, "goal") %>
+            <div class="box">
+                <%- showPartial(board.start, 8, 8, "start") %>
+                <%- showPartial(board.goal, 8, 8, "goal") %>
+                </div>
+            </div>
         </div>
 
         <div class="order-area">
+            <h1><span>スワップ履歴</span><span>SWAP HISTORY</span></h1>
             <%- swapHistory?.map((h) => 
                 `
-                <div class="history">
+                <div class="history box">
                     ${showPartial(h.board.before, 8, 8, "before")}
                     ${showPartial(h.board.after, 8, 8, "after")}
                     <ul>
-                        <li>座標1: (${h.targetPosition.position1.join(", ")})</li>
-                        <li>座標2: (${h.targetPosition.position2.join(", ")})</li>
-                        <li>選択範囲: ${h.targetSize} × ${h.targetSize}</li>
-                        <li>
-                            "ops" at 
-                            <a href="javascript:jumpOrdersJSON(${h.orderRelation.start})">
-                                [${h.orderRelation.end - h.orderRelation.start > 1 ? h.orderRelation.start + " ~ " + (h.orderRelation.end - 1) : h.orderRelation.start}]
-                            </a>
-                             in JSON
+                        <li class="card box">座標1: <span>(${h.targetPosition.position1.join(", ")})</span></li>
+                        <li class="card box">座標2: <span>(${h.targetPosition.position2.join(", ")})</span></li>
+                        <li class="card box">選択範囲: <span>${h.targetSize} × ${h.targetSize}</span></li>
+                        <li class="card box">
+                            JSONでのインデックス
+                            <span>
+                                "ops" at 
+                                <a href="javascript:jumpOrdersJSON(${h.orderRelation.start})">
+                                    [${h.orderRelation.end - h.orderRelation.start > 1 ? h.orderRelation.start + " ~ " + (h.orderRelation.end - 1) : h.orderRelation.start}]
+                                </a>
+                            </span>
                         </li>
                     </ul>
                 </div>
@@ -183,12 +203,17 @@
                 table.addEventListener("click", () => {
                     modal.querySelector(".container").innerHTML = ejsImport.show.call(
                         this,
+                        // ここから`show()`の引数
+                        // 1. board
                         table.classList.contains("before") ? ejsImport.swapHistory[index].board.before :
                             table.classList.contains("after") ? ejsImport.swapHistory[index].board.after : null,
+                        // 2. markingOption
                         {
                             position1: ejsImport.swapHistory[index].targetPosition.position1,
                             position2: ejsImport.swapHistory[index].targetPosition.position2,
-                            size: ejsImport.swapHistory[index].targetSize
+                            size: ejsImport.swapHistory[index].targetSize,
+                            matchPositions: table.classList.contains("before") ? ejsImport.swapHistory[index].matchPositions.before :
+                                                table.classList.contains("after") ? ejsImport.swapHistory[index].matchPositions.after : null,
                         }
                     );
                     modal.classList.add("active");
@@ -196,10 +221,8 @@
             })
         });
 
+        // モーダル内のボードの表示スケールを変更する設定
         new NumberField(document.querySelector("#boardViewScale")).onValueChanged = (value) => modal.style.fontSize = `${value}%`;
-        // const numberFields = [...document.querySelectorAll(".number-field")].map((element) => new NumberField(element))
-        // numberFields.find((field) => field.element.parentElement.id === "boardViewScale")
-        //             .onValueChanged = (value) => modal.style.fontSize = `${value}%`;
 
         /* -- JSONビューアの設定 -- */
 
@@ -264,5 +287,10 @@
                 behavior: "smooth"
             });
         };
+
+        // ロードが完了したらローディングスプラッシュを消す
+        window.addEventListener("load", () => {
+            document.getElementById("splash").classList.add("inactive");
+        })
     </script>
 </html>
