@@ -7,6 +7,7 @@
   </head>
   <body>
     <main>
+      <canvas width="1920" height="1080"></canvas>
       <div class="cubic-element upper-side">
         <div class="hexagon">
           <div class="content">
@@ -54,7 +55,18 @@
               </div>
 
               <div class="item">
-                <a href="/log">ログ一覧</a>
+                <div class="functional-button">
+                  <div class="overflow-wrap hidden">
+                    <span>LOG VIEW</span>
+                  </div>
+                  <div class="overflow-wrap visible">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  <a href="/log" target="_blank"><span>ログ一覧</span></a>
+                </div>
               </div>
             </div>
 
@@ -70,7 +82,7 @@
             <h1><span class="content-title">設定</span><span class="content-subtitle">SETTING</span></h1>
             <div class="item-area">
               <div class="item">
-                <p>デバッグモード
+                <p class="bold">デバッグモード
                   <span class="type">debugMode: boolean</span>
                 </p>
                 <input type="checkbox" class="toggle" id="debugMode" name="debugMode">
