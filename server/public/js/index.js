@@ -72,6 +72,8 @@ const outputs = {
     console: new ConsoleWindow(document.getElementById("console"))
 }
 
+const canvas = document.querySelector("canvas");
+
 /** 処理の予想に用いる近似式 */
 const formulas = {
     time: (x) => -8.145e-19 * x**4 - 1.106e-13 * x**3 + 4.685e-8 * x**2 + 5.737e-4 * x - 0.41,
@@ -122,9 +124,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     outputs.status.standBy();
     outputs.console.log(
-        `Page was loaded at ${new Date().toTimeString().replace(/(日本標準時)/, "JST")}.`,
+        `PROCONSOLE was loaded at ${new Date().toTimeString().replace(/(日本標準時)/, "JST")}. Welcome.`,
         "Process has been ready."
     )
+
+    const ctx = canvas.getContext("2d");
+    const space = canvas.width / 24;
+    for (let x = 0; x <= canvas.width; x += space) {
+        for (let y = 0; y <= canvas.height; y += space) {
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, Math.PI * 2); // 円を描画
+            ctx.fillStyle = 'lightgray'; // 色を設定
+            ctx.fill();
+        }
+    }
 })
 
 inputs.debugMode.element.addEventListener("change", () => {
