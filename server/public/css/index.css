@@ -208,8 +208,8 @@ main {
         animation-timing-function: var(--animation-timing-function);
         animation-fill-mode: var(--animation-fill-mode);
         animation-delay: var(--animation-delay);
-        width: 100%;
-        height: 75%;
+        width: calc(100% + 1.5vw);
+        height: calc(75% + 1.5vw);
         clip-path: polygon(calc(25% - var(--vertex-margin)) 0%,
                            calc(75% + var(--vertex-margin)) 0%, 100% 50%,
                            calc(75% + var(--vertex-margin)) 100%,
