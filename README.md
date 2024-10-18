@@ -44,5 +44,5 @@
 ![screenshot of log](/server/public/images/log.png)
 
 ## 開発者
-- メインプログラム・アルゴリズム：@stonekiln
-- GUI・通信：@PopCorn-Xeno
+- メインプログラム・アルゴリズム： @stonekiln
+- GUI・通信： @PopCorn-Xeno
