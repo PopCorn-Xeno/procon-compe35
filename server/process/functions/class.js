@@ -1101,11 +1101,11 @@ class Answer {
         { size: 4, min: 4 },
         { size: 2, min: 2 }].map(element => {
             let breakFlag = true;
-            while (breakFlag) {
+            for (let i = 1; breakFlag; i++) {
                 breakFlag = false;
                 //基準となる座標を一つ選択する
-                for (let Y = 0; Y <= this.current.height - element.size; Y += element.size) {
-                    for (let X = 0; X <= this.current.width - element.size; X += element.size) {
+                for (let Y = (Math.pow(-1, i) == 1 ? element.size / 2 : 0); Y <= this.current.height - element.size; Y += element.size) {
+                    for (let X = (Math.pow(-1, i) == 1 ? element.size / 2 : 0); X <= this.current.width - element.size; X += element.size) {
                         //ターゲットになるもう一つの座標を決める
                         //条件は以下の通り
                         //1.基準の座標から直線上にある座標
