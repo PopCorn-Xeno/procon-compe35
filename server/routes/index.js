@@ -59,8 +59,15 @@ router.get("/start/:debug", async (req, res) => {
   }
   // デバッグモードがOFFの場合
   else if (req.params.debug === "off") {
+    /**
+     * 簡易サーバーで動かすとき：`localhost`\
+     * 本番サーバーで動かすとき：`172.29.1.2`
+     */
+    const url = req.query.runSimpleServer === "true" ? 
+                `http://localhost:${req.query.port}/` :
+                `http://172.29.1.2:${req.query.port}/`;
     // サーバーにFetchする（本番もLANならこれで通じる）
-    fetch(`http://localhost:${req.query.port}/problem`, {
+    fetch(`${url}problem`, {
       method: "GET",
       headers: { "Procon-Token": token }
     }).then(response => {
@@ -89,7 +96,7 @@ router.get("/start/:debug", async (req, res) => {
             // オブジェクト形式のメッセージはプロセスから送信された問題の回答情報
             else {
               // 指定されたポート番号のローカルサーバーにPOSTする
-              fetch(`http://localhost:${req.query.port}/answer`, {
+              fetch(`${url}answer`, {
                 method: "POST",
                 body: JSON.stringify(data),
                 headers: {
@@ -128,6 +135,9 @@ router.get("/start/:debug", async (req, res) => {
       }
       else {
         switch (response.status) {
+          //  404 Not Found: URLが違うまたは本番環境のLANに繋がっていない
+          case 404:
+            res.status(404).send("The url can be wrong.");
           // 403 Forbidden: サーバーは起動しているが試合がまだ開かれていない
           case 403:
             res.status(403).send("The match isn't holding now.");
