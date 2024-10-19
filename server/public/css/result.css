@@ -282,6 +282,22 @@ h1 {
         background-color: rgb(100, 240, 24);
     }
 
+    td.white {
+        background-color: whitesmoke;
+    }
+
+    td.red {
+        background-color: rgb(231, 183, 174);
+    }
+
+    td.blue {
+        background-color: rgb(95, 167, 192);
+    }
+
+    td.yellow {
+        background-color: rgb(255, 229, 175);
+    }
+
     .part {
         border: 1px dashed;
     }

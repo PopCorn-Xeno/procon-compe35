@@ -255,6 +255,11 @@ buttons.start.addEventListener("click", async () => {
             });
             // エラーなく正常終了したときのみ
             if (!result.error) {
+                // レスポンスのラグで進捗が100%になっていないとき、無理やり修正する
+                if (result.matchValue !== 1) {
+                    result.matchValue = 1;
+                    outputs.progressBar.progress(1);
+                }
                 outputs.status.complete();
                 outputs.console.log("Process finished.");
             }
@@ -297,6 +302,11 @@ buttons.start.addEventListener("click", async () => {
                         if (/Process finished\./.test(decoded)) outputs.console.log(decoded);
                     });
                     if (!result.error && result.isSend) {
+                        // レスポンスのラグで進捗が100%になっていないとき、無理やり修正する
+                        if (result.matchValue !== 1) {
+                            result.matchValue = 1;
+                            outputs.progressBar.progress(1);
+                        }
                         outputs.status.complete();
                     }
                     break;

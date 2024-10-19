@@ -10,7 +10,7 @@
         /**
          * ボード全体を表示する
          * @param {string[]} target 受信データのボードデータ
-         * @param {{ position1: [number, number], position2: [number, number], size: number, matchPosition: [number, number][] }} markingOption `swapHistory`の構造参考
+         * @param {{ position1: [number, number], position2: [number, number], size: number, matchPosition: [number, number][], color: boolean }} markingOption `swapHistory`の構造参考
          * @returns {string} `<table><tr><td></td>...</tr>...</table>`
          */
         function show(target, markingOption) {
@@ -20,32 +20,40 @@
                     // マーカー指定があるとき、セルに色をつける
                     if (markingOption) {
                         // セルが`position1`に等しい
-                        if (x === markingOption.position1[0] && y === markingOption.position1[1]) {
+                        if (x === markingOption?.position1?.at(0) && y === markingOption?.position1?.at(1)) {
                             innerHTML += `<td class="position-1">${value}</td>`;
                         }
                         // セルが`position2`に等しい
-                        else if (x === markingOption.position2[0] && y === markingOption.position2[1]) {
+                        else if (x === markingOption?.position2?.at(0) && y === markingOption?.position2?.at(1)) {
                             innerHTML += `<td class="position-2">${value}</td>`;
                         }
                         // セルがposition1のスワップによる移動範囲に入っている
-                        else if ((x >= markingOption.position1[0] && x < markingOption.position1[0] + markingOption.size) && (y >= markingOption.position1[1] && y < markingOption.position1[1] + markingOption.size)) {
+                        else if ((x >= markingOption?.position1?.at(0) && x < markingOption?.position1?.at(0) + markingOption?.size) && (y >= markingOption?.position1?.at(1) && y < markingOption?.position1?.at(1) + markingOption?.size)) {
                             innerHTML += `<td class="swapped-area-1">${value}</td>`;
                         }
                         // セルがposition2のスワップによる移動範囲に入っている
-                        else if ((x >= markingOption.position2[0] && x < markingOption.position2[0] + markingOption.size) && (y >= markingOption.position2[1] && y < markingOption.position2[1] + markingOption.size)) {
+                        else if ((x >= markingOption?.position2?.at(0) && x < markingOption?.position2?.at(0) + markingOption?.size) && (y >= markingOption?.position2?.at(1) && y < markingOption?.position2?.at(1) + markingOption?.size)) {
                             innerHTML += `<td class="swapped-area-2">${value}</td>`;
                         }
                         else {
                             let isMatch = false;
                             // セルが既にゴールと一致している
-                            for (const position of markingOption.matchPositions) {
-                                // 1次元の線形探索
-                                if ([x, y].toString() === position.toString()) {
-                                    isMatch = true;
-                                    break;
+                            if (markingOption.matchPosition) {
+                                for (const position of markingOption.matchPositions) {
+                                    // 1次元の線形探索
+                                    if ([x, y].toString() === position.toString()) {
+                                        isMatch = true;
+                                        break;
+                                    }
                                 }
                             }
-                            innerHTML += isMatch ? `<td class="match">${value}</td>` : `<td>${value}</td>`;
+                            console.log(markingOption?.color)
+                            const cellColor = markingOption?.color ?
+                                              value === "0" ? "white" :
+                                              value === "1" ? "red" :
+                                              value === "2" ? "blue" :
+                                              value === "3" ? "yellow" : "" : "";
+                            innerHTML += isMatch ? `<td class="match">${value}</td>` : `<td class="${cellColor}">${value}</td>`;
                         }
                     }
                     else {
@@ -189,12 +197,12 @@
         addEventListener("click", (e) => e.target == modal ? modal.classList.remove("active") : null);
         // 初期ボードのモーダル登録
         document.querySelector("table.start").addEventListener("click", () => {
-            modal.querySelector(".container").innerHTML = ejsImport.show.call(this, ejsImport.board.start);
+            modal.querySelector(".container").innerHTML = ejsImport.show.call(this, ejsImport.board.start, { color: true });
             modal.classList.add("active");
         });
         // 完成ボードのモーダル登録
         document.querySelector("table.goal").addEventListener("click", () => {
-            modal.querySelector(".container").innerHTML = ejsImport.show.call(this, ejsImport.board.goal);
+            modal.querySelector(".container").innerHTML = ejsImport.show.call(this, ejsImport.board.goal, { color: true });
             modal.classList.add("active");
         });
         // swapHistoryのモーダルをすべて登録
