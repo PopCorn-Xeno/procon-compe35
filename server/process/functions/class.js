@@ -101,15 +101,25 @@ class BoardData {
         }
         else if (board == 0) {
             let sample = [];
-            for (let i = 1; i <= height; i++) {
-                let temporary = [];
-                for (let j = 1; j <= width; j++) {
-                    temporary.push(j * 10 + i);
+            const data = JSON.parse(fs.readFileSync("./log/imgFile/smallGray.json"));
+            sample = data.imgData.map(array => array.split(',').map(element => {
+                element = Number(element)
+                if (element < 64) {
+                    return 0;
                 }
-                sample.push(temporary);
-            }
+                else if (element < 128) {
+                    return 1;
+                }
+                else if (element < 192) {
+                    return 2;
+                }
+                else {
+                    return 3;
+                }
+            }));
 
-            this.#board.start = new Board(sample);
+            this.#board.goal = new Board(sample);
+            this.#board.start = new Board(this.#shuffleBoard(sample));
         }
 
         if (patterns == null) {
@@ -138,6 +148,45 @@ class BoardData {
     }
 
     /**
+    * ボードをランダムに並び替える
+    * @param {number[][]} array 並び替えるボード（2次元配列）
+    */
+    #shuffleBoard = array => {
+        /** 引数の対象配列をコピーしたシャッフル用の配列 */
+        let clone = new Array(array.height);
+        for (let i = 0; i < array.length; i++) {
+            let temporaryArray = new Array(array.width);
+            for (let j = 0; j < array[0].length; j++) {
+                temporaryArray[j] = array[i][j];
+            }
+            clone[i] = temporaryArray;
+        }
+
+        /** 与えられた引数の縦の要素数 */
+        const height = clone.length;
+
+        /** 与えられた引数の横の要素数 */
+        const width = clone[0].length;
+
+        for (let i = height - 1; -1 < i; i--) {
+            for (let j = width - 1; -1 < j; j--) {
+                /** ランダムに抽選された縦列の数値 */
+                let randomHeight = Math.floor(Math.random() * (i + 1));
+
+                /** ランダムに抽選された横列の数値 */
+                let randomWidth = Math.floor(Math.random() * (j + 1));
+
+                /** スワップする数値を一時的に保存する変数 */
+                let temporaryElement = clone[i][j];
+
+                clone[i][j] = clone[randomHeight][randomWidth];
+                clone[randomHeight][randomWidth] = temporaryElement;
+            }
+        }
+        return clone;
+    }
+
+    /**
      * 問題のボードと完成形のボードをランダムに作成する関数
      * @param {number} height 配列の縦の要素数
      * @param {number} width 配列の横の要素数
@@ -158,45 +207,6 @@ class BoardData {
 
         /** 問題の完成形の1次元配列*/
         let elementArray = [];
-
-        /**
-        * ボードをランダムに並び替える
-        * @param {number[][]} array 並び替えるボード（2次元配列）
-        */
-        const shuffleBoard = array => {
-            /** 引数の対象配列をコピーしたシャッフル用の配列 */
-            let clone = new Array(array.height);
-            for (let i = 0; i < array.length; i++) {
-                let temporaryArray = new Array(array.width);
-                for (let j = 0; j < array[0].length; j++) {
-                    temporaryArray[j] = array[i][j];
-                }
-                clone[i] = temporaryArray;
-            }
-
-            /** 与えられた引数の縦の要素数 */
-            const height = clone.length;
-
-            /** 与えられた引数の横の要素数 */
-            const width = clone[0].length;
-
-            for (let i = height - 1; -1 < i; i--) {
-                for (let j = width - 1; -1 < j; j--) {
-                    /** ランダムに抽選された縦列の数値 */
-                    let randomHeight = Math.floor(Math.random() * (i + 1));
-
-                    /** ランダムに抽選された横列の数値 */
-                    let randomWidth = Math.floor(Math.random() * (j + 1));
-
-                    /** スワップする数値を一時的に保存する変数 */
-                    let temporaryElement = clone[i][j];
-
-                    clone[i][j] = clone[randomHeight][randomWidth];
-                    clone[randomHeight][randomWidth] = temporaryElement;
-                }
-            }
-            return clone;
-        }
 
         // それぞれの要素数は全体の要素数の10%以上あるという法則の最低保証をつくるfor文
         for (let i = 0; i <= 3; i++) {
@@ -233,8 +243,8 @@ class BoardData {
         }
 
         // 2次元配列をランダムに並び替える
-        this.#board.start = new Board(shuffleBoard(regularArray));
-        this.#board.goal = new Board(shuffleBoard(this.#board.start.array));
+        this.#board.start = new Board(this.#shuffleBoard(regularArray));
+        this.#board.goal = new Board(this.#shuffleBoard(this.#board.start.array));
     }
 
     /**

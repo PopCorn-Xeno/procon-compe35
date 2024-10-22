@@ -1,4 +1,5 @@
 //ファイルインポート
+const e = require("express");
 const { BoardData, Board } = require("./functions/class");
 const fs = require('fs');
 const { inspect } = require("util");
@@ -53,7 +54,7 @@ node main.js
 
 //measurePerformance();
 
-const boardData = new BoardData(null, null, 256, 256);
+const boardData = new BoardData(0, null, 256, 256);
 
 console.log("一致数:" + boardData.answer.countMatchValue());
 
