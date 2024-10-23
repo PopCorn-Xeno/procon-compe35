@@ -100,26 +100,11 @@ class BoardData {
             this.#makeRandom(height, width);
         }
         else if (board == 0) {
-            let sample = [];
-            const data = JSON.parse(fs.readFileSync("./log/imgFile/smallGray.json"));
-            sample = data.imgData.map(array => array.split(',').map(element => {
-                element = Number(element)
-                if (element < 64) {
-                    return 0;
-                }
-                else if (element < 128) {
-                    return 1;
-                }
-                else if (element < 192) {
-                    return 2;
-                }
-                else {
-                    return 3;
-                }
-            }));
-
-            this.#board.goal = new Board(sample);
-            this.#board.start = new Board(this.#shuffleBoard(sample));
+            let problem = [];
+            const data = JSON.parse(fs.readFileSync("./log/imgFile/problem.json"));
+            problem = data.ejima.map(array => array.split(','));
+            this.#board.goal = new Board(problem);
+            this.#board.start = new Board(this.#shuffleBoard(problem));
         }
 
         if (patterns == null) {
