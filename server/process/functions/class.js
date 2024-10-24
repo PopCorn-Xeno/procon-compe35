@@ -101,8 +101,8 @@ class BoardData {
         }
         else if (board == 0) {
             let problem = [];
-            const data = JSON.parse(fs.readFileSync("./log/imgFile/problem.json"));
-            problem = data.ejima.map(array => array.split(','));
+            const data = JSON.parse(fs.readFileSync("./imgFile/problem.json"));
+            problem = data.yaju.map(array => array.split(','));
             this.#board.goal = new Board(problem);
             this.#board.start = new Board(this.#shuffleBoard(problem));
         }
