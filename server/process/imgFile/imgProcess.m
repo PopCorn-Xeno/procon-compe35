@@ -1,4 +1,4 @@
-img=imread("810.jpg");
+img=imread("elon.jpg");
 img=rgb2gray(img);
 imgData=zeros(1,256);
 [height,width]=size(img);
@@ -12,7 +12,7 @@ writelines("","./imgText.txt");
 for i=1:height
     strArray="a";
     strArray=strrep(strArray,'a','"');
-    limit=[70,145,175];
+    limit=[25,135,200];
     for j=1:width
         if img(i,j)<limit(1)
             img(i,j)=0;

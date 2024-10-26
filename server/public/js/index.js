@@ -365,6 +365,16 @@ buttons.start.addEventListener("click", async () => {
                             outputs.console.log([`width: ${width}, height: ${height}`]);
                         }
                     }).obtain(decoded);
+                    // `Result`の`onWidthHeight`が反応しないので応急処置
+                    if (/^[0-9]{2,3} x [0-9]{2,3}/.test(decoded)) {
+                        console.log(/^([0-9]{2,3}) x ([0-9]{2,3})/.exec(decoded));
+                        let [width, height] = /^([0-9]{2,3}) x ([0-9]{2,3})/.exec(decoded)
+                                                                            .slice(1)
+                                                                            .map(str => Number.parseInt(str));
+                        outputs.expectedTime.display(approximateProcess(width * height, formulas.time));
+                        outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(width * height, formulas.order));
+                        outputs.console.log([`width: ${width}, height: ${height}`]);
+                    }
                 });
                 // エラーなく正常終了したときのみ
                 if (!result.error) {
