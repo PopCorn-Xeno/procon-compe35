@@ -28,7 +28,9 @@ router.get("/", (req, res) => {
                     ? JSON.parse(fs.readFileSync(`./process/log/swapHistory/${name.swapHistory}`, "utf-8"))
                     : null
     };
+    
     res.render("result", {
+        id: req.query.id,
         name: name.result,
         date: /((([0-9-]{2,4}){2,3}-*){2})/g.exec(name.result)?.at(1),
         time: /([0-9]+\.[0-9]{0,3})/g.exec(name.result)?.at(1),

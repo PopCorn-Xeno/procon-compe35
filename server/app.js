@@ -30,6 +30,7 @@ app.use(sesstion({
 app.use('/', require('./routes/index'));
 app.use('/result', require('./routes/result'));
 app.use('/log', require('./routes/log'));
+app.use('/replay', require('./routes/replay'));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

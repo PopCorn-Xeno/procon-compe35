@@ -72,8 +72,9 @@ class BoardData {
      * @param {ProblemPattern[] | null} patterns 受信データの抜き型JSON
      * @param {number} width ボードの横幅
      * @param {number} height ボードの縦幅
+     * @param {string} contentName スペシャルコンテンツの名前
      */
-    constructor(board = null, patterns = null, width = 0, height = 0) {
+    constructor(board = null, patterns = null, width = 0, height = 0, contentName = null) {
         // 定型抜き型を用意する
         for (let i = 0; i < 25; i++) {
             this.#patterns.push(this.#setFormatPattern(i));
@@ -96,13 +97,13 @@ class BoardData {
         }
 
         // 受信データを使用しなかった場合、問題をランダムで作るモードに移行する、また0に指定すると座標を表す数値を出力する
-        if (board === null) {
+        if (board === null && patterns === null && width && height) {
             this.#makeRandom(height, width);
         }
-        else if (board == 0) {
+        else if (contentName) {
             let problem = [];
-            const data = JSON.parse(fs.readFileSync("./imgFile/problem.json"));
-            problem = data.yaju.map(array => array.split(','));
+            const data = JSON.parse(fs.readFileSync("./process/imgFile/problem.json"));
+            problem = data[contentName].map(array => array.split(','));
             this.#board.goal = new Board(problem);
             this.#board.start = new Board(this.#shuffleBoard(problem));
         }

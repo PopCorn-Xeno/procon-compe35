@@ -1,6 +1,6 @@
 const { BoardData } = require("./functions/class");
 
-process.once("message", ({ problem, width, height, isGeneratingQuestion, isSavingLog, isDrawingBoard}) => {
+process.once("message", ({ problem, width, height, isGeneratingQuestion, isSavingLog, isDrawingBoard, content }) => {
     /**
      * @type {BoardData}
      */
@@ -22,6 +22,12 @@ process.once("message", ({ problem, width, height, isGeneratingQuestion, isSavin
             boardData = new BoardData(problem.board, problem.general.patterns)
         }
         boardData.useSwapHistory(isDrawingBoard, !isSavingLog);
+    }
+    else if (content) {
+      boardData = new BoardData(null, null, 0, 0, content);
+      boardData.writeReceptionData(undefined, undefined, (id, data) => {
+        process.send(`${data.board.width} x ${data.board.height}`);
+      }, false);
     }
     // エラーハンドラーを設定、ソート開始
     boardData.answer.setErrorHandler((error) => {

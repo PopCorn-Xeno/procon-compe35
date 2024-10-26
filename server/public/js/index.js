@@ -41,24 +41,39 @@ const inputs = {
         document.getElementById("isDrawingBoard"),
         "ONにすると結果表示においてボードの変化を描画しますが、処理の遅延やGCが発生する可能性があります。"
     ),
+    // スペシャルコンテンツ
+    buddha: new InputDescription(document.getElementById("buddha"), ""),
+    yamato: new InputDescription(document.getElementById("yamato"), ""),
+    ICTicon: new InputDescription(document.getElementById("ICTicon"), ""),
+    ejima: new InputDescription(document.getElementById("ejima"), ""),
+    elon: new InputDescription(document.getElementById("elon"), ""),
+    yaju: new InputDescription(document.getElementById("yaju"), ""),
+
     values() {
         return {
-            debugMode: this.debugMode.element.checked,
-            port: this.port.element.value,
-            runSimpleServer: this.runSimpleServer.element.checked,
-            width: this.width.element.value,
-            height: this.height.element.value,
-            isGeneratingQuestion: this.isGeneratingQuestion.element.checked,
-            isSavingLog: this.isSavingLog.element.checked,
-            isDrawingBoard: this.isDrawingBoard.element.checked
+            debugMode: this.debugMode?.element?.checked,
+            port: this.port?.element?.value,
+            runSimpleServer: this.runSimpleServer?.element?.checked,
+            width: this.width?.element?.value,
+            height: this.height?.element?.value,
+            isGeneratingQuestion: this.isGeneratingQuestion?.element?.checked,
+            isSavingLog: this.isSavingLog?.element?.checked,
+            isDrawingBoard: this.isDrawingBoard?.element?.checked,
+            // スペシャルコンテンツ
+            buddha: this.buddha?.element?.checked,
+            yamato: this.yamato?.element?.checked,
+            ICTicon: this.ICTicon?.element?.checked,
+            ejima: this.ejima?.element?.checked,
+            elon: this.elon?.element?.checked,
+            yaju: this.yaju?.element?.checked,
         }
     },
-    options: document.querySelectorAll(".options")
+    options: document.querySelectorAll(".options"),
 }
 // 入力系要素・ホバー時の説明表示設定
 Object.values(inputs).filter((input) => input instanceof InputDescription).forEach((input) => {
-    input.setDefault("各項目のスイッチに触れると説明が表示されます。設定終了後に、STARTボタンを押して処理の実行を開始してください。")
-         .setAction((text) => document.getElementById("description").innerHTML = text);
+    input?.setDefault("各項目のスイッチに触れると説明が表示されます。設定終了後に、STARTボタンを押して処理の実行を開始してください。")
+         ?.setAction((text) => { if (document.getElementById("description")) document.getElementById("description").innerHTML = text });
 })
 
 /** 出力系要素 */
@@ -113,13 +128,14 @@ function toCommaDivision(value) {
 
 //#region DOMイベントリスナー
 document.addEventListener("DOMContentLoaded", () => {
+    // デバッグモードのON、OFFで表示を変える
     if (inputs.values().debugMode) {
         inputs.options.item(0).classList.remove("active");
         inputs.options.item(1).classList.add("active");
     }
     else {
-        inputs.options.item(0).classList.add("active");
-        inputs.options.item(1).classList.remove("active");
+        inputs.options?.item(0)?.classList?.add("active");
+        inputs.options?.item(1)?.classList?.remove("active");
     }
 
     outputs.status.standBy();
@@ -140,11 +156,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 })
 
-inputs.debugMode.element.addEventListener("change", () => {
+inputs?.debugMode?.element?.addEventListener("change", () => {
     inputs.options.forEach(element => element.classList.toggle("active"));
 });
 
-inputs.runSimpleServer.element.addEventListener("change", event => {
+inputs?.runSimpleServer?.element?.addEventListener("change", event => {
     if (event.target.checked) {
         fetch(`/run-server/${inputs.port.element.value}`).then(response => {
             response.text().then((message) => {
@@ -328,13 +344,58 @@ buttons.start.addEventListener("click", async () => {
         });
     }
 
+    const special = async ({ buddha, yamato, ICTicon, ejima, elon, yaju }) => {
+        const url = buddha ? `/start/buddha` :
+                    yamato ? `/start/yamato` :
+                    ICTicon ? `/start/ICTicon` :
+                    ejima ? `/start/ejima` :
+                    elon ? `/start/elon` :
+                    yaju ? `/start/yaju` : null;
+        if (url) {
+            // エンドポイントにアクセス
+        return await fetch(url)
+            .then(async (response) => {
+                // 何か知らんけど関数オブジェクトじゃなくラムダ式で書かないとエラる
+                await fetchProcess(response, (decoded) => {
+                    mesureProcessTimeFromResponce(decoded);
+                    result.setActions({
+                        onWidthAndHeight: function(width, height) {
+                            outputs.expectedTime.display(approximateProcess(width * height, formulas.time));
+                            outputs.expectedCount.innerHTML = toCommaDivision(approximateProcess(width * height, formulas.order));
+                            outputs.console.log([`width: ${width}, height: ${height}`]);
+                        }
+                    }).obtain(decoded);
+                });
+                // エラーなく正常終了したときのみ
+                if (!result.error) {
+                    // レスポンスのラグで進捗が100%になっていないとき、無理やり修正する
+                    if (result.matchValue !== 1) {
+                        result.matchValue = 1;
+                        outputs.progressBar.progress(1);
+                    }
+                    outputs.status.complete();
+                    outputs.console.log("Process finished.");
+                }
+            })
+            .catch((error) => {
+                outputs.console.error(["Fetch failed.", error?.stack]);
+                outputs.processedTime.stop();
+                outputs.status.error();
+            });
+        }
+        else {
+            window.alert("1つだけ試したいコンテンツのボタンをONにしてください");
+        }
+    }
+
     // デバッグモードがONのとき
     if (inputs.values().debugMode) {
         debugOn(inputs.values());
     }
     // OFFのとき
     else {
-        debugOff(inputs.values());
+        if (window.location.pathname === "/special") special(inputs.values());
+        else debugOff(inputs.values());
     }
 });
 
@@ -343,6 +404,6 @@ buttons.confirm.addEventListener("click", () => {
         if (result.id) window.open(`/result?id=${result.id}&isDrawingBoard=${inputs.values().isDrawingBoard}`);
         else window.open(`/result?isDrawingBoard=${inputs.values().isDrawingBoard}`);
     }
-    else window.alert("処理が実行されていません")
+    else window.alert("処理が実行されていません");
 });
 //#endregion

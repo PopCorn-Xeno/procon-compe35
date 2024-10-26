@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>PROCONSOLE / REPLAY</title>
+        <link rel="stylesheet" href="/css/result.css">
+    </head>
+    <body>
+        <p id="count"></p>
+        <div id="container"></div>
+    </body>
+    <script type="module">
+        import BoardData from "/js/client_process_class.js";
+
+        const ejsImport = {
+            problem: JSON.parse(`<%- JSON.stringify(problem) %>`),
+            result: JSON.parse(`<%- JSON.stringify(result) %>`)
+        };
+        const boardData = new BoardData(ejsImport.problem.board, ejsImport.problem.general.patterns);
+        const container = document.getElementById("container");
+        const count = document.getElementById("count");
+
+        /**
+         * ボード全体を表示する
+         * @param {string[]} target 受信データのボードデータ
+         * @param {{ position1: [number, number], position2: [number, number], size: number, matchPosition: [number, number][], color: boolean, value: boolean }} markingOption `swapHistory`の構造参考
+         * @returns {string} `<table><tr><td></td>...</tr>...</table>`
+         */
+         function show(target, markingOption) {
+            const tableInner = target.map((line, y) => {
+                let innerHTML = `<tr>`;
+                line.split("").forEach((value, x) => {
+                    // マーカー指定があるとき、セルに色をつける
+                    if (markingOption) {
+                        // セルが`position1`に等しい
+                        if (x === markingOption?.position1?.at(0) && y === markingOption?.position1?.at(1)) {
+                            innerHTML += `<td class="position-1">${value}</td>`;
+                        }
+                        // セルが`position2`に等しい
+                        else if (x === markingOption?.position2?.at(0) && y === markingOption?.position2?.at(1)) {
+                            innerHTML += `<td class="position-2">${value}</td>`;
+                        }
+                        // セルがposition1のスワップによる移動範囲に入っている
+                        else if ((x >= markingOption?.position1?.at(0) && x < markingOption?.position1?.at(0) + markingOption?.size) && (y >= markingOption?.position1?.at(1) && y < markingOption?.position1?.at(1) + markingOption?.size)) {
+                            innerHTML += `<td class="swapped-area-1">${value}</td>`;
+                        }
+                        // セルがposition2のスワップによる移動範囲に入っている
+                        else if ((x >= markingOption?.position2?.at(0) && x < markingOption?.position2?.at(0) + markingOption?.size) && (y >= markingOption?.position2?.at(1) && y < markingOption?.position2?.at(1) + markingOption?.size)) {
+                            innerHTML += `<td class="swapped-area-2">${value}</td>`;
+                        }
+                        else {
+                            let isMatch = false;
+                            // セルが既にゴールと一致している
+                            if (markingOption.matchPosition) {
+                                for (const position of markingOption.matchPositions) {
+                                    // 1次元の線形探索
+                                    if ([x, y].toString() === position.toString()) {
+                                        isMatch = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            const cellColor = markingOption?.color ?
+                                              value === "0" ? "white" :
+                                              value === "1" ? "red" :
+                                              value === "2" ? "blue" :
+                                              value === "3" ? "yellow" : "" : "";
+                            innerHTML += isMatch ? `<td class="match">${value}</td>` : `<td class="${cellColor}">${value}</td>`;
+                        }
+                    }
+                    else {
+                        innerHTML += `<td>${value}</td>`;
+                    }
+                });
+                innerHTML += `</tr>`;
+                return innerHTML;
+            }).join("");
+
+            return `<table class="board">${tableInner}</table>`;
+        }
+
+        function fitBoard() {
+            const boardTable = container.querySelector("table");
+            const scale = Math.min(container.clientWidth / boardTable.offsetWidth, container.clientHeight / boardTable.offsetHeight, 1);
+            boardTable.style = `transform: scale(${scale})`;
+        }
+        
+        
+        container.innerHTML = show(boardData.answer.current.formatCell(), { color: true })
+        const duration = boardData.board.start.width >= boardData.board.start.height
+                            ? Math.round(Math.log2(boardData.board.start.width) * 100)
+                            : Math.round(Math.log2(boardData.board.start.height) * 100);
+        let j = 0;
+        const replay = () => ejsImport.result.ops.map((operation, i) => {
+            setTimeout(() => {
+                boardData.answer.pullOut(
+                    boardData.answer.current, 
+                    operation.p, 
+                    [operation.x, operation.y], 
+                    operation.s == 0 ? 1 :       // 上
+                        operation.s == 3 ? 2 :       // 右
+                            operation.s == 1 ? 3 :       // 下
+                                operation.s == 2 ? 4 : NaN   // 左 (仮にどれでもない場合はNaN)
+                );
+                if (i >= j * duration || i == ejsImport.result.ops.length - 1) {
+                    container.innerHTML = show(boardData.answer.current.formatCell(), { color: true });
+                    count.innerHTML = i + 1;
+                    j++;
+                    fitBoard();
+                }               
+                // console.log(boardData.answer.progress());
+            }, 0.2);
+        });
+
+        window.addEventListener("load", replay);
+        window.addEventListener("load", fitBoard);
+        window.addEventListener("resize", fitBoard);
+    </script>
+
+    <style>
+        #container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: flex-start;
+            overflow: hidden;
+        }
+
+        .board {
+            width: auto;
+            height: auto;
+            max-width: 100%;
+            max-height: 100%;
+            transform-origin: top left;
+        }
+    </style>
+</html>

@@ -1,13 +1,18 @@
 const router = require('express').Router();
 const { spawn, fork, ChildProcess } = require("child_process");
 const fs = require("fs");
+const path = require("path");
 
 /** チームのトークン */
 const token = "kure3037997297c7e6e840bb98658ca5175aa607a40d7f59a343ff7ecf182c45";
 
 router.get('/', (req, res) => {
-  res.render('index');
+  res.render('index', { special: false });
 });
+
+router.get("/special", (req, res) => {
+  res.render("index", { special: true });
+})
 
 //#region sub.js 実行エンドポイント
 /** 
@@ -20,7 +25,7 @@ router.get("/start/:debug", async (req, res) => {
   // デバッグモードがONの場合
   if (req.params.debug === "on") {
     // 子プロセスを起動する --max-old-space-sizeは現状消してみている
-    sub = fork("process/sub.js", ["--max-old-space-size=32000"]);
+    sub = fork(path.resolve(__dirname, "../process/sub.js"));
     // 子プロセス生成時、パラメータを送信する
     sub.on("spawn", () => sub.send({
       width: Number.parseInt(req.query.width),
@@ -78,7 +83,7 @@ router.get("/start/:debug", async (req, res) => {
           // 手始めにボードサイズを送信する
           res.write(`${data.board.width} x ${data.board.height}\n`);
           // 子プロセスを起動する
-          sub = fork("process/sub.js");
+          sub = fork(path.resolve(__dirname, "../process/sub.js"));
           // 子プロセス生成時、パラメータを送信する
           sub.on("spawn", () => sub.send({
             problem: data,
@@ -154,6 +159,30 @@ router.get("/start/:debug", async (req, res) => {
       }
     }).catch(error => res.status(500).send("Failed to connect server. Confirm runnnig status of server."));
   }
+  // デバッグモードもといスペシャルコンテンツモード
+  else if (req.params.debug === "buddha" || req.params.debug === "yamato" || req.params.debug === "ICTicon" || req.params.debug === "ejima" || req.params.debug === "elon" || req.params.debug === "yaju") {
+    res.setHeader("Content-Type", "text/plain");
+    // 子プロセスを起動する --max-old-space-sizeは現状消してみている
+    sub = fork(path.resolve(__dirname, "../process/sub.js"));
+    // 子プロセス生成時、パラメータを送信する
+    sub.on("spawn", () => sub.send({ content: req.params.debug }));
+    // 子プロセスからのメッセージを受信後、レスポンスする
+    sub.on("message", data => {
+      console.log(data);
+      // オブジェクト形式ではないメッセージは問題の回答情報ではなく全てクライアントにレスポンスするもの
+      if (typeof data !== "object") {
+        res.write(data.toString() + "\n");
+        res.flushHeaders();
+      }
+    });
+    // エラーハンドリング
+    sub.on("error", error => {
+      console.error(error);
+      res.write(error.toString());
+    });
+    // プロセスが終了した後、レスポンスを終了させる
+    sub.on("exit", () => res.end());
+    }
 })
 //#endregion
 

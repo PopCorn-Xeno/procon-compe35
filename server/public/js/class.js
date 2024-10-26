@@ -123,6 +123,10 @@ export class NumberField {
      * @param {HTMLElement} target `<div class="number-field" id="">`
      */
     constructor(target) {
+        if (!target) {
+            console.error("No target.");
+            return null;
+        }
         // フィールドを取得
         this.#inputField = target.querySelector("input");
         this.#incrementButton = target.querySelector(".increment-upper-triangle");
@@ -210,7 +214,8 @@ export class InputDescription {
             this.element = element;
         }
         else {
-            throw new Error("A parameter `element` is must be instance of `NumberField` or `HTMLInputElement`");
+            console.error("A parameter `element` is must be instance of `NumberField` or `HTMLInputElement`");
+            return null;
         }
         this.description.unique = description;
     }
@@ -228,6 +233,7 @@ export class InputDescription {
      * @returns インスタンス
      */
     setAction(onMousehover) {
+        if (!this.element) return null;
         this.element.addEventListener("mouseover", () => {
             onMousehover.call(this, this.description.unique);
             this.element.addEventListener("mouseleave", () => {

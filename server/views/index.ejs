@@ -81,6 +81,7 @@
           <div class="content">
             <h1><span class="content-title">設定</span><span class="content-subtitle">SETTING</span></h1>
             <div class="item-area">
+              <% if (!special) { %>
               <div class="item">
                 <p class="bold">デバッグモード
                   <span class="type">debugMode: boolean</span>
@@ -153,10 +154,48 @@
                 </p>
                 <input type="checkbox" class="toggle" id="isDrawingBoard" name="isDrawingBoard">
               </div>
-            </div>
 
-            <div class="description-area" id="description">
-              各項目のスイッチに触れると説明が表示されます。設定終了後に、STARTボタンを押して処理の実行を開始してください。
+              <div class="description-area" id="description">
+                各項目のスイッチに触れると説明が表示されます。設定終了後に、STARTボタンを押して処理の実行を開始してください。
+              </div>
+              <% } else { %>
+              <div class="item">
+                <p>奈良の大仏
+                  <span class="type">buddha: boolean</span>
+                </p>
+                <input type="checkbox" class="toggle" id="buddha" name="buddha">
+              </div>
+              <div class="item">
+                <p>戦艦大和の模型
+                  <span class="type">yamato: boolean</span>
+                </p>
+                <input type="checkbox" class="toggle" id="yamato" name="yamato">
+              </div>
+              <div class="item">
+                <p>ICT科学部のロゴ
+                  <span class="type">ICTicon: boolean</span>
+                </p>
+                <input type="checkbox" class="toggle" id="ICTicon" name="ICTicon">
+              </div>
+              <div class="item">
+                <p>ICT科学部現部長
+                  <span class="type">ejima: boolean</span>
+                </p>
+                <input type="checkbox" class="toggle" id="ejima" name="ejima">
+              </div>
+              <div class="item">
+                <p>イーロン・マスク
+                  <span class="type">elon: boolean</span>
+                </p>
+                <input type="checkbox" class="toggle" id="elon" name="elon">
+              </div>
+              <div class="item">
+                <p>田所浩二
+                  <span class="type">yaju: boolean</span>
+                </p>
+                <input type="checkbox" class="toggle" id="yaju" name="yaju">
+              </div>
+              <% } %>
             </div>
 
             <div class="side-button-area">
